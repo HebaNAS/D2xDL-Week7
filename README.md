@@ -1,0 +1,1 @@
+[Lecture 1 Binder Link:](https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/27278c968a88d1dc93d7887c19b4b3de6c3d95b9?urlpath=lab%2Ftree%2FPerceptron.ipynb)
