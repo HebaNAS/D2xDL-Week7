@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Hyperplane Animation</title>
+        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script
+            id="MathJax-script"
+            async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+        ></script>
+        <script>
+            window.MathJax = {
+                tex: {
+                    inlineMath: [
+                        ["$", "$"],
+                        ["\\(", "\\)"],
+                    ],
+                    displayMath: [
+                        ["$$", "$$"],
+                        ["\\[", "\\]"],
+                    ],
+                },
+            };
+        </script>
+        <style>
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    "Helvetica Neue", Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background: white;
+            }
+            .slide-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 40px;
+            }
+            h1 {
+                font-size: 48px;
+                font-weight: 700;
+                margin-bottom: 10px;
+                color: #2c3e50;
+            }
+            .divider {
+                width: 50%;
+                height: 3px;
+                background: linear-gradient(to right, #3274b5, #a62b17);
+                margin: 20px 0 30px 0;
+                border-radius: 2px;
+            }
+            .content {
+                display: flex;
+                gap: 40px;
+                align-items: flex-start;
+            }
+            .text-section {
+                flex: 1;
+                padding-right: 20px;
+            }
+            .text-section ul {
+                font-size: 24px;
+                line-height: 1.8;
+                color: #333;
+            }
+            .text-section li {
+                margin-bottom: 15px;
+            }
+            .highlight-red {
+                color: #a62b17;
+                font-weight: 600;
+            }
+            .highlight-blue {
+                color: #3274b5;
+                font-weight: 600;
+            }
+            .visualization-section {
+                flex: 1;
+            }
+            .viz-container {
+                background: #f9f9f9;
+                border-radius: 20px;
+                padding: 20px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .viz-title {
+                text-align: center;
+                margin: 0 0 15px 0;
+                font-size: 28px;
+                color: #2c3e50;
+                font-weight: 600;
+            }
+            #plotDiv {
+                background: white;
+                border-radius: 15px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            }
+            .viz-caption {
+                text-align: center;
+                margin-top: 20px;
+                font-size: 20px;
+                color: #555;
+            }
+            .legend {
+                display: flex;
+                justify-content: center;
+                gap: 40px;
+                margin: 15px 0;
+                font-size: 18px;
+                color: #555;
+            }
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .legend-line {
+                width: 30px;
+                height: 4px;
+                border-radius: 2px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="slide-container">
+            <h1>Geometric Intuition: Hyperplane</h1>
+            <div class="divider"></div>
+
+            <div class="content">
+                <div class="text-section">
+                    <ul>
+                        <li>
+                            The hyperplane is just a
+                            <span style="color: #a62b17"
+                                >decision boundary</span
+                            >
+                        </li>
+                        <li>
+                            $w$ tells us the
+                            <span style="color: #3274b5">"positive"</span>
+                            direction
+                        </li>
+                        <li>
+                            The arrow (representing the vector $w$) defines:
+                            <ul>
+                                <li>Its direction: positive side</li>
+                                <li>Perpendicular to it: the boundary</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="visualization-section">
+                    <div class="viz-container">
+                        <h3 class="viz-title">2D Space ($\mathbb{R}^2$)</h3>
+                        <div id="plotDiv"></div>
+                        <div class="viz-caption">
+                            Hyperplane:
+                            <span style="color: #ff4444; font-weight: bold"
+                                >1D line</span
+                            >
+                            dividing 2D space
+                        </div>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <div
+                                    class="legend-line"
+                                    style="background: #ff4444"
+                                ></div>
+                                <span>Hyperplane (1D line)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div
+                                    class="legend-line"
+                                    style="background: #4444ff"
+                                ></div>
+                                <span>Normal vector <strong>w</strong></span>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-top: 20px">
+                            <button
+                                id="randomBtn"
+                                style="
+                                    background: #3274b5;
+                                    color: white;
+                                    border: none;
+                                    padding: 12px 24px;
+                                    font-size: 16px;
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    font-weight: 600;
+                                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                    transition: all 0.3s ease;
+                                "
+                                onmouseover="this.style.background='#2563a0'"
+                                onmouseout="this.style.background='#3274b5'"
+                            >
+                                Generate Random Hyperplane
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            var angle = Math.PI / 4; // Start at 45 degrees
+            var plotDiv = document.getElementById("plotDiv");
+            var randomBtn = document.getElementById("randomBtn");
+
+            function createFrame(currentAngle) {
+                var cos_angle = Math.cos(currentAngle);
+                var sin_angle = Math.sin(currentAngle);
+                var cos_perp = Math.cos(currentAngle + Math.PI / 2);
+                var sin_perp = Math.sin(currentAngle + Math.PI / 2);
+
+                // Create circular shaded regions
+                var n_points = 50;
+                var theta_start = currentAngle - Math.PI / 2;
+                var theta_end = currentAngle + Math.PI / 2;
+
+                // Positive semicircle (in the direction of the normal vector)
+                var pos_x = [0];
+                var pos_y = [0];
+                for (var i = 0; i <= n_points; i++) {
+                    var theta =
+                        theta_start +
+                        ((theta_end - theta_start) * i) / n_points;
+                    pos_x.push(3 * Math.cos(theta));
+                    pos_y.push(3 * Math.sin(theta));
+                }
+                pos_x.push(0);
+                pos_y.push(0);
+
+                // Negative semicircle (opposite to the normal vector)
+                var neg_x = [0];
+                var neg_y = [0];
+                for (var i = 0; i <= n_points; i++) {
+                    var theta = theta_end + (Math.PI * i) / n_points;
+                    neg_x.push(3 * Math.cos(theta));
+                    neg_y.push(3 * Math.sin(theta));
+                }
+                neg_x.push(0);
+                neg_y.push(0);
+
+                // Calculate arrow head points for proper orientation
+                var arrowLength = 0.15;
+                var arrowWidth = 0.08;
+                var arrowTipX = 1.2 * cos_angle;
+                var arrowTipY = 1.2 * sin_angle;
+
+                // Arrow head vertices (triangle pointing in direction of vector)
+                var arrow_x = [
+                    arrowTipX,
+                    arrowTipX -
+                        arrowLength * cos_angle -
+                        arrowWidth * sin_angle,
+                    arrowTipX -
+                        arrowLength * cos_angle +
+                        arrowWidth * sin_angle,
+                ];
+                var arrow_y = [
+                    arrowTipY,
+                    arrowTipY -
+                        arrowLength * sin_angle +
+                        arrowWidth * cos_angle,
+                    arrowTipY -
+                        arrowLength * sin_angle -
+                        arrowWidth * cos_angle,
+                ];
+
+                var data = [
+                    // Positive half-space (green - in direction of normal)
+                    {
+                        type: "scatter",
+                        x: pos_x,
+                        y: pos_y,
+                        fill: "toself",
+                        fillcolor: "rgba(200, 255, 220, 0.4)",
+                        line: { color: "rgba(0,0,0,0)" },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                    // Negative half-space (red - opposite to normal)
+                    {
+                        type: "scatter",
+                        x: neg_x,
+                        y: neg_y,
+                        fill: "toself",
+                        fillcolor: "rgba(255, 200, 200, 0.4)",
+                        line: { color: "rgba(0,0,0,0)" },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                ];
+
+                // Add grid lines
+                for (var i = 0; i < 13; i++) {
+                    // Vertical lines
+                    data.push({
+                        type: "scatter",
+                        x: [-3 + i * 0.5, -3 + i * 0.5],
+                        y: [-3, 3],
+                        mode: "lines",
+                        line: { color: "#d0d0d0", width: 0.5 },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    });
+                    // Horizontal lines
+                    data.push({
+                        type: "scatter",
+                        x: [-3, 3],
+                        y: [-3 + i * 0.5, -3 + i * 0.5],
+                        mode: "lines",
+                        line: { color: "#d0d0d0", width: 0.5 },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    });
+                }
+
+                // Add axes
+                data.push(
+                    // X-axis
+                    {
+                        type: "scatter",
+                        x: [-3, 3],
+                        y: [0, 0],
+                        mode: "lines",
+                        line: { color: "#333", width: 2 },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                    // Y-axis
+                    {
+                        type: "scatter",
+                        x: [0, 0],
+                        y: [-3, 3],
+                        mode: "lines",
+                        line: { color: "#333", width: 2 },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                    // Hyperplane (red line)
+                    {
+                        type: "scatter",
+                        x: [-3 * cos_perp, 3 * cos_perp],
+                        y: [-3 * sin_perp, 3 * sin_perp],
+                        mode: "lines",
+                        line: { color: "#ff4444", width: 4 },
+                        name: "Hyperplane",
+                    },
+                    // Normal vector (blue arrow shaft)
+                    {
+                        type: "scatter",
+                        x: [0, 1.05 * cos_angle],
+                        y: [0, 1.05 * sin_angle],
+                        mode: "lines",
+                        line: { color: "#4444ff", width: 4 },
+                        name: "Normal w",
+                    },
+                    // Arrow head (filled triangle)
+                    {
+                        type: "scatter",
+                        x: arrow_x,
+                        y: arrow_y,
+                        mode: "markers",
+                        fill: "toself",
+                        fillcolor: "#4444ff",
+                        marker: {
+                            color: "#4444ff",
+                            size: 0,
+                        },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                    // w label
+                    {
+                        type: "scatter",
+                        x: [0.6 * cos_angle - 0.2],
+                        y: [0.6 * sin_angle],
+                        mode: "text",
+                        text: ["<b>w</b>"],
+                        textfont: {
+                            size: 20,
+                            color: "#333",
+                            family: "Arial",
+                        },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                    // Plus sign in positive region (direction of normal)
+                    {
+                        type: "scatter",
+                        x: [1.8 * cos_angle],
+                        y: [1.8 * sin_angle],
+                        mode: "text",
+                        text: ["<b>+</b>"],
+                        textfont: {
+                            size: 32,
+                            color: "rgba(76, 175, 80, 0.8)",
+                            family: "Arial",
+                        },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                    // Minus sign in negative region (opposite to normal)
+                    {
+                        type: "scatter",
+                        x: [-1.8 * cos_angle],
+                        y: [-1.8 * sin_angle],
+                        mode: "text",
+                        text: ["<b>−</b>"],
+                        textfont: {
+                            size: 32,
+                            color: "rgba(255, 0, 0, 0.6)",
+                            family: "Arial",
+                        },
+                        hoverinfo: "skip",
+                        showlegend: false,
+                    },
+                );
+
+                return data;
+            }
+
+            var layout = {
+                xaxis: {
+                    range: [-2.5, 2.5],
+                    showgrid: false,
+                    zeroline: false,
+                    showticklabels: false,
+                    showline: false,
+                    fixedrange: true,
+                },
+                yaxis: {
+                    range: [-2.5, 2.5],
+                    showgrid: false,
+                    zeroline: false,
+                    showticklabels: false,
+                    showline: false,
+                    scaleanchor: "x",
+                    scaleratio: 1,
+                    fixedrange: true,
+                },
+                showlegend: false,
+                margin: { l: 10, r: 10, t: 10, b: 10 },
+                height: 450,
+                paper_bgcolor: "white",
+                plot_bgcolor: "white",
+                hovermode: false,
+            };
+
+            var config = {
+                displayModeBar: false,
+                responsive: true,
+                staticPlot: false,
+            };
+
+            // Initial plot
+            Plotly.newPlot(plotDiv, createFrame(angle), layout, config);
+
+            // Button click handler for random hyperplane
+            randomBtn.addEventListener("click", function () {
+                // Generate random angle between 0 and 2π
+                angle = Math.random() * 2 * Math.PI;
+
+                // Update the plot with the new angle
+                Plotly.react(plotDiv, createFrame(angle), layout);
+            });
+        </script>
+    </body>
+</html>
