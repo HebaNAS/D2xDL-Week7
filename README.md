@@ -1,1 +1,3 @@
-[Lecture 1 Binder Link](https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/27278c968a88d1dc93d7887c19b4b3de6c3d95b9?urlpath=lab%2Ftree%2FPerceptron.ipynb)
+[Lecture 1 - Linear Regression (Binder Link)](https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/513823265787f986b863cb9d3f3f9d9e78004b0a?urlpath=lab%2Ftree%2FLinearRegression.ipynb)  
+
+[Lecture 2 - Neural Networks (Binder Link)](https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/513823265787f986b863cb9d3f3f9d9e78004b0a?urlpath=lab%2Ftree%2FNeuralNetworks.ipynb)
