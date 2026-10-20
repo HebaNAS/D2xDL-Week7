@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XOR Hidden Space</title>
+<script>
+  // Apply ?theme=light|dark before first paint (the RISE embed forces light).
+  (function () {
+    try {
+      var t = new URLSearchParams(location.search).get('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
+  --pos: #3274b5;   /* positive class (+1) and positive weights: HWU blue used on the slides */
+  --neg: #a62b17;   /* negative class (-1) and negative weights: the slides' red */
+  --unit1: #1b8a7a; --unit2: #c7841a;  /* hidden unit 1 / 2 lines (XOR demo) */
+  --ink-btn: #1f2a37; --ink-btn-fg: #ffffff; --focus: #3274b5;
+  --note-bg: #eef2f7;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-math: "Cambria Math", "STIX Two Math", "Times New Roman", Times, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.app {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px;
+  height: 100vh; height: 100dvh;
+  padding-block: 10px 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Header */
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px 20px; flex-wrap: wrap; }
+h1 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.2; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.formula { display: grid; grid-template-columns: auto auto; column-gap: 10px; row-gap: 0; align-items: baseline;
+  font-family: var(--font-math); font-size: 16.5px; line-height: 1.25; white-space: nowrap; }
+.formula .lyr { font-family: var(--font-ui); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.formula i, .m { font-family: var(--font-math); font-style: italic; }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 308px; gap: 16px; min-height: 0; }
+.plots { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; min-height: 0; min-width: 0; }
+.plot-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-height: 0; }
+.card { display: flex; flex-direction: column; gap: 4px; margin: 0; background: var(--panel); border-radius: 12px;
+  padding: 8px 10px 6px; min-height: 0; min-width: 0; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; }
+.lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.lbl .m { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.legend svg { display: block; overflow: visible; }
+.legend .m { font-size: 13.5px; color: var(--fg); }
+.cv-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.cv-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; }
+
+/* Table + status */
+.below { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.tbl-wrap { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 13px; }
+th { font-family: var(--font-math); font-style: italic; font-weight: 400; font-size: 15px; color: var(--fg);
+  text-align: right; padding: 1px 7px 3px; border-bottom: 1px solid var(--line); }
+th.word { font-family: var(--font-ui); font-style: normal; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+th.u1 { color: var(--unit1); } th.u2 { color: var(--unit2); }
+td { text-align: right; padding: 2px 7px; height: 24px; white-space: nowrap; }
+.gs { border-left: 1px solid var(--line); }
+.pt { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; }
+.pt svg { flex: none; }
+tbody tr { cursor: default; }
+tbody tr.hl td { background: var(--note-bg); }
+.pos { color: var(--pos); font-weight: 600; } .neg { color: var(--neg); font-weight: 600; }
+.ok { color: var(--fg); } .bad { color: var(--neg); font-weight: 700; }
+.summary { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; font-size: 14px; }
+.summary .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 600; }
+.status { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13.5px; }
+.note { margin: 0; padding: 6px 10px; background: var(--note-bg); border-left: 3px solid var(--muted); border-radius: 0 6px 6px 0; }
+.note.hint { border-left-color: var(--line); color: var(--muted); }
+.note[hidden] { display: none; }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1px 2px 2px; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec + .sec { border-top: 1px solid var(--line); padding-top: 10px; }
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sec-head .aside { font-size: 12px; color: var(--muted); font-family: var(--font-num); }
+.btn-row { display: flex; gap: 6px; }
+.btn-row > button { flex: 1 1 0; }
+button { font: inherit; font-size: 13px; height: 30px; padding: 0 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); white-space: nowrap; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--ink-btn); color: var(--ink-btn-fg); border-color: var(--ink-btn); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 92px; }
+button.primary svg { fill: currentColor; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.seg label { font-size: 13px; padding: 3px 12px; border-radius: 6px; cursor: pointer; user-select: none; }
+.seg input:checked + label { background: var(--ink-btn); color: var(--ink-btn-fg); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 1px; }
+.check { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; cursor: pointer; }
+.check input { accent-color: var(--pos); width: 16px; height: 16px; margin: 0; }
+.group { display: flex; flex-direction: column; }
+.ghead { display: flex; align-items: center; gap: 6px; margin-bottom: 1px; }
+.srow { display: grid; grid-template-columns: 30px minmax(0, 1fr) 52px; align-items: center; column-gap: 8px; height: 26px; }
+.srow label { font-family: var(--font-math); font-style: italic; font-size: 16px; line-height: 1; }
+.srow output, .val { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; text-align: right; }
+.srow.off { opacity: .45; }
+input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 18px; cursor: pointer; }
+input[type=range]:disabled { cursor: not-allowed; }
+.epoch { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+footer { font-size: 12px; color: var(--muted); }
+
+/* Phone / narrow */
+@media (max-width: 899px) {
+  .app { display: flex; flex-direction: column; height: auto; min-height: 100vh; gap: 14px; padding-block: 12px 14px; }
+  .main { display: flex; flex-direction: column; gap: 16px; }
+  .plots { display: flex; flex-direction: column; gap: 14px; }
+  .plot-pair { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .cv-wrap { flex: none; aspect-ratio: 1 / 1; width: 100%; }
+  .below { grid-template-columns: minmax(0, 1fr); }
+  .controls { overflow: visible; }
+  td, th { padding-left: 4px; padding-right: 4px; }
+  table { font-size: 12.5px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <h1>XOR Hidden Space</h1>
+      <p class="sub">One line cannot split XOR. The tanh hidden layer moves the four points to a space where one line can.</p>
+    </div>
+    <div class="formula" id="formula" aria-label="Network equations"></div>
+  </header>
+
+  <main class="main">
+    <section class="plots" aria-label="Plots">
+      <div class="plot-pair">
+        <figure class="card">
+          <figcaption class="card-head">
+            <span class="lbl">Input space <span class="m">(x₁, x₂)</span></span>
+            <span class="legend" aria-hidden="true">
+              <span><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" style="fill:var(--pos)" stroke="currentColor" stroke-width="1"/></svg>+1</span>
+              <span><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" style="fill:var(--neg)" stroke="currentColor" stroke-width="1"/></svg>−1</span>
+              <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--fg)" stroke-width="2.5"/></svg><span class="m">ŷ</span> = 0</span>
+            </span>
+          </figcaption>
+          <div class="cv-wrap"><canvas id="cvIn" role="img" aria-label="Input space plot"></canvas></div>
+        </figure>
+        <figure class="card">
+          <figcaption class="card-head">
+            <span class="lbl">Hidden space <span class="m">(h₁, h₂)</span></span>
+            <span class="legend" aria-hidden="true">
+              <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--fg)" stroke-width="2.5"/></svg><span class="m">ŷ</span> = 0</span>
+              <span id="legTanh"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" fill="none" style="stroke:var(--muted)" stroke-width="1" stroke-dasharray="2 2"/></svg>tanh range [−1, 1]²</span>
+            </span>
+          </figcaption>
+          <div class="cv-wrap"><canvas id="cvHid" role="img" aria-label="Hidden space plot"></canvas></div>
+        </figure>
+      </div>
+
+      <div class="below">
+        <div class="tbl-wrap">
+          <table id="tbl" aria-label="Forward pass for each input">
+            <thead>
+              <tr>
+                <th>x₁</th><th>x₂</th>
+                <th class="gs u1">h₁</th><th class="u2">h₂</th>
+                <th class="gs">ŷ</th>
+                <th class="gs word">target</th>
+                <th class="gs word">✓/✗</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div class="summary">
+            <span>Errors: <span class="num" id="errTxt">0 of 4</span></span>
+            <span>Loss <span class="m">L</span> = ½ Σ (<span class="m">y</span> − <span class="m">ŷ</span>)² = <span class="num" id="lossTxt">0</span></span>
+          </div>
+        </div>
+        <div class="status" aria-live="polite">
+          <p class="note" id="noteBias" hidden>Without biases, tanh(−<span class="m">a</span>) = −tanh(<span class="m">a</span>), so (1,1) and (−1,−1) land on opposite sides of any output line through the origin. One of them is always wrong.</p>
+          <p class="note" id="noteAct" hidden>With a linear hidden layer, hidden space is just a stretched copy of input space, so XOR stays unsolvable.</p>
+          <p class="note" id="noteOne" hidden>Unit 2 is switched off, so the output depends on one line only: 3 of 4 correct at best. Training cannot revive it, because every unit-2 gradient contains <span class="m">v₂</span> = 0 or <span class="m">h₂</span> = 0.</p>
+          <p class="note hint" id="hint"></p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="sec">
+        <div class="sec-head"><span class="lbl" id="presetLbl">Presets</span><span class="aside" id="seedTxt"></span></div>
+        <button type="button" id="btnSolved" title="h₁ ≈ OR(x₁, x₂), h₂ ≈ AND(x₁, x₂), ŷ = h₁ − h₂ − 1">Solved: OR and not AND</button>
+        <div class="btn-row">
+          <button type="button" id="btnRandom">Random start</button>
+          <button type="button" id="btnOne">One line only</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="row">
+          <span class="lbl" id="actLbl">Hidden activation</span>
+          <div class="seg" role="radiogroup" aria-labelledby="actLbl">
+            <input type="radio" name="act" id="actTanh" value="tanh" checked><label for="actTanh">tanh</label>
+            <input type="radio" name="act" id="actId" value="identity"><label for="actId">identity</label>
+          </div>
+        </div>
+        <label class="check" for="useBias"><input type="checkbox" id="useBias" checked> Use biases</label>
+      </div>
+
+      <div class="sec" id="sliders"></div>
+
+      <div class="sec">
+        <span class="lbl">Training</span>
+        <div class="srow">
+          <label for="eta">η</label>
+          <input type="range" id="eta" min="0" max="100" step="1" value="50" aria-describedby="etaVal">
+          <output id="etaVal" for="eta">0.100</output>
+        </div>
+        <div class="row">
+          <div class="btn-row">
+            <button type="button" class="primary" id="btnPlay" aria-pressed="false"></button>
+            <button type="button" id="btnStep">Step</button>
+          </div>
+          <span class="epoch" id="epochTxt">Epoch 0</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= Model (pure functions) ================= */
+// XOR in the lecture's ±1 encoding (slide table).
+const X = [[1, 1], [-1, -1], [1, -1], [-1, 1]];
+const Y = [-1, -1, 1, 1];
+const KEYS = ['w11', 'w12', 'b1', 'w21', 'w22', 'b2', 'v1', 'v2', 'c'];
+const BIAS_KEYS = ['b1', 'b2', 'c'];
+// Parameters are clamped to ±PMAX after every gradient step. This is only so the
+// ±10 sliders can always show the current value; it is not part of backprop itself.
+const PMAX = 10;
+const INIT_SCALE = 0.5;   // "small random weights": uniform in [-0.5, 0.5]
+const DEFAULT_SEED = 1;   // verified: trains to 0 errors at epoch 134 with eta = 0.1
+const DEFAULT_ETA = 0.1;
+
+const clampP = v => Math.max(-PMAX, Math.min(PMAX, v));
+const actF = (a, act) => (act === 'identity' ? a : Math.tanh(a));
+
+function forward(p, x, act = 'tanh') {
+  const a1 = p.w11 * x[0] + p.w12 * x[1] + p.b1;
+  const a2 = p.w21 * x[0] + p.w22 * x[1] + p.b2;
+  const h1 = actF(a1, act), h2 = actF(a2, act);
+  return { a1, a2, h1, h2, yhat: p.v1 * h1 + p.v2 * h2 + p.c };
+}
+function loss(p, act = 'tanh') {
+  let L = 0;
+  for (let n = 0; n < 4; n++) { const e = Y[n] - forward(p, X[n], act).yhat; L += 0.5 * e * e; }
+  return L;
+}
+function errors(p, act = 'tanh') {
+  let k = 0;
+  for (let n = 0; n < 4; n++) if (Math.sign(forward(p, X[n], act).yhat) !== Y[n]) k++;
+  return k;
+}
+// Backprop exactly as on the slides, extended with biases:
+// e = y - ŷ; dL/dv = -Σ e h; dL/dc = -Σ e; dL/dw_i = -Σ e v_i (1 - h_i²) x; dL/db_i = -Σ e v_i (1 - h_i²)
+function grad(p, act = 'tanh') {
+  const g = {}; for (const k of KEYS) g[k] = 0;
+  for (let n = 0; n < 4; n++) {
+    const x = X[n], o = forward(p, x, act), e = Y[n] - o.yhat;
+    g.v1 -= e * o.h1; g.v2 -= e * o.h2; g.c -= e;
+    const d1 = act === 'identity' ? 1 : 1 - o.h1 * o.h1;
+    const d2 = act === 'identity' ? 1 : 1 - o.h2 * o.h2;
+    const s1 = e * p.v1 * d1, s2 = e * p.v2 * d2;
+    g.w11 -= s1 * x[0]; g.w12 -= s1 * x[1]; g.b1 -= s1;
+    g.w21 -= s2 * x[0]; g.w22 -= s2 * x[1]; g.b2 -= s2;
+  }
+  return g;
+}
+// One epoch of full-batch gradient descent: θ ← θ − η ∂L/∂θ (all gradients computed first).
+function gdStep(p, eta, useBias, act) {
+  const g = grad(p, act);
+  for (const k of KEYS) {
+    if (!useBias && BIAS_KEYS.includes(k)) { p[k] = 0; continue; }
+    p[k] = clampP(p[k] - eta * g[k]);
+  }
+  return p;
+}
+function withBiasRule(p, useBias) {
+  const q = { ...p };
+  if (!useBias) for (const k of BIAS_KEYS) q[k] = 0;
+  return q;
+}
+function trainFrom(params, eta, epochs, opts = {}) {
+  const useBias = opts.useBias !== false, act = opts.act || 'tanh';
+  const p = withBiasRule(params, useBias);
+  for (let t = 0; t < epochs; t++) gdStep(p, eta, useBias, act);
+  return p;
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function randomParams(seed) {
+  const r = mulberry32((seed * 2654435761) >>> 0);
+  const p = {};
+  for (const k of KEYS) p[k] = (2 * r() - 1) * INIT_SCALE;
+  return p;
+}
+function solvedPreset() {
+  // h1 = tanh(5x1 + 5x2 + 5) ≈ OR,  h2 = tanh(5x1 + 5x2 − 5) ≈ AND,  ŷ = h1 − h2 − 1
+  return { w11: 5, w12: 5, b1: 5, w21: 5, w22: 5, b2: -5, v1: 1, v2: -1, c: -1 };
+}
+function oneLinePreset() {
+  // A single tanh unit: h1 = tanh(3x1 − 3x2 − 3), ŷ = h1. Unit 2 and v2 are zero. 3 of 4 correct.
+  return { w11: 3, w12: -3, b1: -3, w21: 0, w22: 0, b2: 0, v1: 1, v2: 0, c: 0 };
+}
+
+/* ================= State ================= */
+const qs = new URLSearchParams(location.search);
+const seed0 = Math.max(1, parseInt(qs.get('seed') || DEFAULT_SEED, 10) || DEFAULT_SEED);
+const S = {
+  p: randomParams(seed0), useBias: true, act: 'tanh', eta: DEFAULT_ETA,
+  playing: false, epoch: 0, solvedAt: null, seed: seed0, source: 'random', edited: false, hover: -1,
+};
+const EPOCHS_PER_SEC = 40;
+const TRAIL_MS = 900;
+
+/* ================= DOM helpers ================= */
+const $ = id => document.getElementById(id);
+const MINUS = '−';
+function fmt(v, d) {
+  const s = Math.abs(v).toFixed(d);
+  return (v < 0 && +s !== 0 ? MINUS : '') + s;
+}
+const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= Colours (read from CSS tokens) ================= */
+const C = {};
+const probe = document.createElement('canvas').getContext('2d');
+function normColor(str) { probe.fillStyle = '#000000'; probe.fillStyle = (str || '').trim() || '#000000'; return probe.fillStyle; }
+function toRGB(s) {
+  if (s[0] === '#') return [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+  const m = s.match(/[\d.]+/g) || [0, 0, 0]; return [+m[0], +m[1], +m[2]];
+}
+function rgba(rgb, a) { return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`; }
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'panel', 'fg', 'muted', 'line', 'pos', 'neg', 'unit1', 'unit2']) {
+    C[k] = normColor(cs.getPropertyValue('--' + k)); C[k + 'RGB'] = toRGB(C[k]);
+  }
+  C.fontNum = cs.getPropertyValue('--font-num').trim() || 'monospace';
+  C.fontMath = cs.getPropertyValue('--font-math').trim() || 'serif';
+  C.fontUI = cs.getPropertyValue('--font-ui').trim() || 'sans-serif';
+  C.dark = (C.bgRGB[0] + C.bgRGB[1] + C.bgRGB[2]) < 300;
+}
+
+/* ================= Sliders (built from config, stable ids) ================= */
+const GROUPS = [
+  { title: 'Hidden unit 1', tok: '--unit1', dash: true, keys: [['w11', 'w₁₁'], ['w12', 'w₁₂'], ['b1', 'b₁']] },
+  { title: 'Hidden unit 2', tok: '--unit2', dash: true, keys: [['w21', 'w₂₁'], ['w22', 'w₂₂'], ['b2', 'b₂']] },
+  { title: 'Output', tok: '--fg', dash: false, keys: [['v1', 'v₁'], ['v2', 'v₂'], ['c', 'c']] },
+];
+const sl = {};
+(function buildSliders() {
+  const host = $('sliders');
+  for (const gr of GROUPS) {
+    const g = document.createElement('div'); g.className = 'group';
+    const head = document.createElement('div'); head.className = 'ghead';
+    head.innerHTML = `<svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(${gr.tok})" stroke-width="${gr.dash ? 2 : 2.5}" ${gr.dash ? 'stroke-dasharray="5 3"' : ''}/></svg><span class="lbl">${gr.title}</span>`;
+    g.appendChild(head);
+    for (const [k, sym] of gr.keys) {
+      const row = document.createElement('div'); row.className = 'srow';
+      row.innerHTML = `<label for="s-${k}">${sym}</label><input type="range" id="s-${k}" min="-10" max="10" step="0.1" value="0"><output id="v-${k}" for="s-${k}">0.00</output>`;
+      g.appendChild(row);
+      const inp = row.querySelector('input'), out = row.querySelector('output');
+      sl[k] = { inp, out, row };
+      inp.addEventListener('input', () => {
+        cancelTween(true);
+        if (S.playing) setPlaying(false);
+        S.p[k] = +inp.value; S.edited = true;
+        requestDraw();
+      });
+    }
+    host.appendChild(g);
+  }
+})();
+
+/* ================= Canvas plumbing ================= */
+function makePlot(id) {
+  const cv = $(id);
+  return { cv, ctx: cv.getContext('2d'), w: 0, h: 0, dpr: 1, g: null, off: document.createElement('canvas'), pts: [], ariaLast: '' };
+}
+const IN = makePlot('cvIn'), HID = makePlot('cvHid');
+const byWrap = new Map([[IN.cv.parentElement, IN], [HID.cv.parentElement, HID]]);
+const ro = new ResizeObserver(entries => {
+  for (const e of entries) {
+    const st = byWrap.get(e.target); if (!st) continue;
+    const r = e.contentRect; st.w = r.width; st.h = r.height; st.dpr = window.devicePixelRatio || 1;
+    st.cv.width = Math.max(1, Math.round(r.width * st.dpr));
+    st.cv.height = Math.max(1, Math.round(r.height * st.dpr));
+  }
+  draw();
+});
+for (const w of byWrap.keys()) ro.observe(w);
+
+function geom(w, h, lo, hi) {
+  const ml = 28, mr = 8, mt = 6, mb = 22;
+  const size = Math.max(40, Math.min(w - ml - mr, h - mt - mb));
+  const x0 = ml + Math.max(0, (w - ml - mr - size) / 2);
+  const y0 = mt + Math.max(0, (h - mt - mb - size) / 2);
+  const k = size / (hi - lo);
+  return { x0, y0, size, lo, hi, k,
+    sx: v => x0 + (v - lo) * k, sy: v => y0 + (hi - v) * k,
+    ix: px => lo + (px - x0) / k, iy: py => hi - (py - y0) / k };
+}
+
+const HEAT_N = 120;
+const ALPHA_MAX = 0.32;
+function heatmap(st, g, fn, alphaMax = ALPHA_MAX) {
+  const N = HEAT_N, off = st.off;
+  if (off.width !== N) { off.width = N; off.height = N; }
+  const octx = off.getContext('2d');
+  const img = octx.createImageData(N, N), d = img.data;
+  const P = C.posRGB, Q = C.negRGB, span = g.hi - g.lo;
+  for (let j = 0; j < N; j++) {
+    const yv = g.hi - (j + 0.5) / N * span;
+    for (let i = 0; i < N; i++) {
+      const xv = g.lo + (i + 0.5) / N * span;
+      const v = fn(xv, yv);
+      const col = v >= 0 ? P : Q;
+      const a = alphaMax * Math.min(Math.abs(v), 1);
+      const o = (j * N + i) * 4;
+      d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = Math.round(a * 255);
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  const ctx = st.ctx;
+  ctx.save(); ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, g.x0, g.y0, g.size, g.size);
+  ctx.restore();
+}
+
+// Marching squares for the ŷ = 0 curve in input space.
+function contour(ctx, g, fn, G) {
+  const span = g.hi - g.lo, h = span / G;
+  const vals = new Float64Array((G + 1) * (G + 1));
+  for (let j = 0; j <= G; j++) for (let i = 0; i <= G; i++) vals[j * (G + 1) + i] = fn(g.lo + i * h, g.lo + j * h);
+  const V = (i, j) => vals[j * (G + 1) + i];
+  let nSeg = 0;
+  ctx.beginPath();
+  const lerp = (x0, y0, v0, x1, y1, v1) => { const t = v0 / (v0 - v1); return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]; };
+  for (let j = 0; j < G; j++) {
+    for (let i = 0; i < G; i++) {
+      const xa = g.lo + i * h, xb = xa + h, ya = g.lo + j * h, yb = ya + h;
+      const a = V(i, j), b = V(i + 1, j), c = V(i + 1, j + 1), d = V(i, j + 1); // a: (xa,ya) b: (xb,ya) c: (xb,yb) d: (xa,yb)
+      const pa = a > 0, pb = b > 0, pc = c > 0, pd = d > 0;
+      if (pa === pb && pb === pc && pc === pd) continue;
+      const E = {};
+      if (pa !== pb) E.bot = lerp(xa, ya, a, xb, ya, b);
+      if (pb !== pc) E.rig = lerp(xb, ya, b, xb, yb, c);
+      if (pc !== pd) E.top = lerp(xb, yb, c, xa, yb, d);
+      if (pd !== pa) E.lef = lerp(xa, yb, d, xa, ya, a);
+      const seg = (P, Q) => { nSeg++; ctx.moveTo(g.sx(P[0]), g.sy(P[1])); ctx.lineTo(g.sx(Q[0]), g.sy(Q[1])); };
+      const ks = Object.keys(E);
+      if (ks.length === 2) seg(E[ks[0]], E[ks[1]]);
+      else if (ks.length === 4) {
+        const centre = fn((xa + xb) / 2, (ya + yb) / 2) > 0;
+        if (centre === pa) { seg(E.bot, E.rig); seg(E.top, E.lef); } else { seg(E.lef, E.bot); seg(E.rig, E.top); }
+      }
+    }
+  }
+  ctx.stroke();
+  return nSeg;
+}
+
+function clipLine(wa, wb, b, lo, hi) {
+  // Points (x, y) in [lo, hi]² with wa x + wb y + b = 0.
+  const pts = [], eps = 1e-12;
+  if (Math.abs(wb) > eps) for (const x of [lo, hi]) { const y = -(wa * x + b) / wb; if (y >= lo - 1e-9 && y <= hi + 1e-9) pts.push([x, y]); }
+  if (Math.abs(wa) > eps) for (const y of [lo, hi]) { const x = -(wb * y + b) / wa; if (x >= lo - 1e-9 && x <= hi + 1e-9) pts.push([x, y]); }
+  if (pts.length < 2) return null;
+  let best = null, bd = -1;
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    const dd = (pts[i][0] - pts[j][0]) ** 2 + (pts[i][1] - pts[j][1]) ** 2;
+    if (dd > bd) { bd = dd; best = [pts[i], pts[j]]; }
+  }
+  return bd > 1e-10 ? best : null;
+}
+
+function drawGrid(ctx, g, step, ticks, names) {
+  const { x0, y0, size } = g;
+  ctx.save();
+  ctx.lineWidth = 1; ctx.strokeStyle = C.line;
+  ctx.beginPath();
+  const n0 = Math.ceil(g.lo / step - 1e-9), n1 = Math.floor(g.hi / step + 1e-9);
+  for (let n = n0; n <= n1; n++) {
+    const v = n * step; if (Math.abs(v) < 1e-9) continue;
+    const px = Math.round(g.sx(v)) + 0.5, py = Math.round(g.sy(v)) + 0.5;
+    ctx.moveTo(px, y0); ctx.lineTo(px, y0 + size);
+    ctx.moveTo(x0, py); ctx.lineTo(x0 + size, py);
+  }
+  ctx.stroke();
+  ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(size) - 1, Math.round(size) - 1);
+  // tick labels
+  ctx.fillStyle = C.muted; ctx.font = `12px ${C.fontNum}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const t of ticks) ctx.fillText(fmt(t, Number.isInteger(t) ? 0 : 1), g.sx(t), y0 + size + 4);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const t of ticks) ctx.fillText(fmt(t, Number.isInteger(t) ? 0 : 1), x0 - 5, g.sy(t));
+  // axis names at the ends
+  ctx.font = `italic 15px ${C.fontMath}`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = names[2] || C.fg; ctx.fillText(names[0], x0 + size, y0 + size + 3);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = names[3] || C.fg; ctx.fillText(names[1], x0 - 5, y0 - 1);
+  ctx.restore();
+}
+
+function haloText(ctx, text, x, y, color) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = 3.5; ctx.strokeStyle = C.panel;
+  ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y);
+}
+
+function arrow(ctx, x, y, dx, dy, len, color) {
+  const L = Math.hypot(dx, dy); if (L < 1e-12) return;
+  const ux = dx / L, uy = dy / L, ex = x + ux * len, ey = y + uy * len, hs = 6;
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex - ux * hs * 0.6, ey - uy * hs * 0.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - ux * hs * 1.5 - uy * hs * 0.85, ey - uy * hs * 1.5 + ux * hs * 0.85);
+  ctx.lineTo(ex - ux * hs * 1.5 + uy * hs * 0.85, ey - uy * hs * 1.5 - ux * hs * 0.85);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function markerPath(ctx, x, y, cls, r) {
+  ctx.beginPath();
+  if (cls > 0) ctx.arc(x, y, r, 0, Math.PI * 2);
+  else { const s = r * 0.9; ctx.rect(x - s, y - s, 2 * s, 2 * s); }
+}
+function drawMarker(ctx, x, y, cls, r, hl) {
+  ctx.save(); ctx.setLineDash([]);
+  if (hl) { ctx.beginPath(); ctx.arc(x, y, r + 6, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = C.fg; ctx.stroke(); }
+  markerPath(ctx, x, y, cls, r + 1.5); ctx.fillStyle = C.bg; ctx.fill();
+  markerPath(ctx, x, y, cls, r); ctx.fillStyle = cls > 0 ? C.pos : C.neg; ctx.fill();
+  ctx.lineWidth = 1; ctx.strokeStyle = C.fg; ctx.stroke();
+  ctx.restore();
+}
+const ptLabel = n => `(${fmt(X[n][0], 0)}, ${fmt(X[n][1], 0)})`;
+
+// ---- Label placement: score candidate boxes against obstacles and the plot frame ----
+const ovl = (A, B) => Math.max(0, Math.min(A.r, B.r) - Math.max(A.l, B.l)) * Math.max(0, Math.min(A.b, B.b) - Math.max(A.t, B.t));
+const frameBox = g => ({ l: g.x0 + 2, t: g.y0 + 2, r: g.x0 + g.size - 2, b: g.y0 + g.size - 2 });
+const ptBox = (x, y, r) => ({ l: x - r - 2, t: y - r - 2, r: x + r + 2, b: y + r + 2 });
+function pickBox(cands, obst, frame, extra) {
+  let best = cands[0], bs = Infinity;
+  cands.forEach((b, idx) => {
+    let s = ((b.r - b.l) * (b.b - b.t) - ovl(b, frame)) * 50 + idx * 2;
+    for (const o of obst) s += ovl(b, o) * (o.wt || 8);
+    if (extra) s += extra(b);
+    if (s < bs) { bs = s; best = b; }
+  });
+  return best;
+}
+const boxAt = (cx, cy, w, h) => ({ l: cx - w / 2, t: cy - h / 2, r: cx + w / 2, b: cy + h / 2 });
+
+// Line labels ("h₁ = 0"): candidates are given as centre points in preference order.
+function placeLineLabels(ctx, g, specs, obst) {
+  ctx.save(); ctx.font = `italic 14px ${C.fontMath}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const fr = frameBox(g), placed = [];
+  for (const sp of specs) {
+    const w = ctx.measureText(sp.text).width + 6, h = 17;
+    const box = pickBox(sp.cands.map(([x, y]) => boxAt(x, y, w, h)), obst.concat(placed), fr);
+    placed.push({ ...box, wt: 20 });
+    haloText(ctx, sp.text, (box.l + box.r) / 2, (box.t + box.b) / 2, sp.col);
+  }
+  ctx.restore();
+  return placed;
+}
+
+// Point labels: try 8 positions around each point, avoid other labels, markers, line labels and the frame.
+function drawLabels(ctx, g, items, r, extraObst) {
+  ctx.save();
+  ctx.font = `12px ${C.fontNum}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const lh = 14, pad = 2;
+  const cx = g.x0 + g.size / 2, cy = g.y0 + g.size / 2;
+  const placed = [];
+  const obst = items.flatMap(it => it.members.map(m => ptBox(m.x, m.y, r))).concat(extraObst || []);
+  const fr = frameBox(g);
+  for (const it of items) {
+    const w = Math.max(...it.lines.map(s => ctx.measureText(s).width)) + 2 * pad;
+    const h = it.lines.length * lh;
+    const sx = it.x >= cx ? 1 : -1, sy = it.y >= cy ? 1 : -1;
+    const d = r + 4, dd = r * 0.75 + 3;
+    const order = [[sx, sy], [sx, 0], [0, sy], [-sx, sy], [sx, -sy], [-sx, 0], [0, -sy], [-sx, -sy]];
+    const cands = order.map(([dx, dy]) => {
+      const off = dx !== 0 && dy !== 0 ? dd : d;
+      const l = dx > 0 ? it.x + off : dx < 0 ? it.x - off - w : it.x - w / 2;
+      const t = dy > 0 ? it.y + off : dy < 0 ? it.y - off - h : it.y - h / 2;
+      return { l, t, r: l + w, b: t + h };
+    });
+    const best = pickBox(cands, obst.concat(placed), fr);
+    placed.push({ ...best, wt: 20 });
+    it.lines.forEach((line, i) => haloText(ctx, line, best.l + pad, best.t + lh * i + lh / 2, C.fg));
+  }
+  ctx.restore();
+}
+
+// Unit lines share one dash pattern; unit 2 is offset by one dash so that if both lines
+// coincide (e.g. identical weights) they alternate colours instead of hiding each other.
+const UNIT_DASH = [6, 6];
+// When a line misses the plotted square, say so in a corner (free of points) instead of leaving students guessing.
+function offPlotText(name, wa, wb, b, sgnAtCentre) {
+  if (Math.abs(wa) < 1e-9 && Math.abs(wb) < 1e-9 && Math.abs(b) < 1e-9) return `${name} = 0 everywhere`;
+  return `${name} = 0 is off the plot: ${name} ${sgnAtCentre >= 0 ? '>' : '<'} 0 everywhere here`;
+}
+// lineFns: functions of data (x, y) whose zero sets are drawn; a box that straddles one is penalised.
+function crossesPenalty(g, lineFns) {
+  if (!lineFns || !lineFns.length) return null;
+  return b => {
+    let pen = 0;
+    for (const f of lineFns) {
+      let pos = false, neg = false;
+      for (let i = 0; i <= 6; i++) for (let j = 0; j <= 2; j++) {
+        const v = f(g.ix(b.l + (b.r - b.l) * i / 6), g.iy(b.t + (b.b - b.t) * j / 2));
+        if (v > 0) pos = true; else if (v < 0) neg = true;
+      }
+      if (pos && neg) pen += 4000;
+    }
+    return pen;
+  };
+}
+function drawOffNotes(ctx, g, notes, obst, lineFns) {
+  if (!notes.length) return [];
+  ctx.save(); ctx.font = `12.5px ${C.fontUI}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  const lh = 16, w = Math.max(...notes.map(n => ctx.measureText(n.text).width)) + 8, h = notes.length * lh + 4;
+  const L = g.x0 + 6, R = g.x0 + g.size - 6 - w, T = g.y0 + 6, B = g.y0 + g.size - 6 - h;
+  const cands = [[L, B], [L, T], [R, B], [R, T]].map(([l, t]) => ({ l, t, r: l + w, b: t + h }));
+  const box = pickBox(cands, obst, frameBox(g), crossesPenalty(g, lineFns));
+  notes.forEach((n, i) => haloText(ctx, n.text, box.l + 4, box.t + 2 + lh * i + lh / 2, n.col));
+  ctx.restore();
+  return [{ ...box, wt: 20 }];
+}
+
+function dashedLine(ctx, P, Q, color, width, dash, offset) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []); ctx.lineDashOffset = offset || 0;
+  ctx.beginPath(); ctx.moveTo(P[0], P[1]); ctx.lineTo(Q[0], Q[1]); ctx.stroke(); ctx.restore();
+}
+
+function markerRadius(g) { return Math.max(6, Math.min(8.5, g.size / 52)); }
+
+/* ---------- Input space ---------- */
+function drawInput() {
+  const st = IN, { ctx, w, h, dpr } = st;
+  if (!w || !h) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  const g = geom(w, h, -2, 2); st.g = g;
+  const p = S.p, act = S.act;
+  const fy = (x1, x2) => {
+    const a1 = p.w11 * x1 + p.w12 * x2 + p.b1, a2 = p.w21 * x1 + p.w22 * x2 + p.b2;
+    return act === 'identity' ? p.v1 * a1 + p.v2 * a2 + p.c : p.v1 * Math.tanh(a1) + p.v2 * Math.tanh(a2) + p.c;
+  };
+  drawGrid(ctx, g, 0.5, [-1, 0, 1], ['x₁', 'x₂']);
+  heatmap(st, g, fy);
+  // zero axes
+  ctx.save(); ctx.strokeStyle = rgba(toRGB(C.muted), 0.55); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(g.sx(0), g.y0); ctx.lineTo(g.sx(0), g.y0 + g.size);
+  ctx.moveTo(g.x0, g.sy(0)); ctx.lineTo(g.x0 + g.size, g.sy(0)); ctx.stroke(); ctx.restore();
+
+  // hidden unit lines wᵢ·x + bᵢ = 0, each with an arrow pointing to its positive side (hᵢ > 0)
+  const r = markerRadius(g);
+  st.pts = X.map(x => [g.sx(x[0]), g.sy(x[1])]);
+  const obst = st.pts.map(q => ptBox(q[0], q[1], r));
+  const units = [[p.w11, p.w12, p.b1, C.unit1, 'h₁ = 0', 0.38], [p.w21, p.w22, p.b2, C.unit2, 'h₂ = 0', 0.62]];
+  const specs = [], notes = [];
+  units.forEach(([wa, wb, b, col, text, at], u) => {
+    const seg = clipLine(wa, wb, b, g.lo, g.hi);
+    if (!seg) { notes.push({ text: offPlotText(text.slice(0, 2), wa, wb, b, b), col }); return; }
+    let P = [g.sx(seg[0][0]), g.sy(seg[0][1])], Q = [g.sx(seg[1][0]), g.sy(seg[1][1])];
+    // orient P → Q left-to-right (or bottom-to-top) so "at" fractions are stable
+    if (Q[0] < P[0] - 1 || (Math.abs(Q[0] - P[0]) <= 1 && Q[1] > P[1])) { const T = P; P = Q; Q = T; }
+    dashedLine(ctx, P, Q, col, 2, UNIT_DASH, u * UNIT_DASH[0]);
+    const nL = Math.hypot(wa, wb), nx = wa / nL, ny = -wb / nL;   // screen-space unit normal, positive side
+    const A = [P[0] + (Q[0] - P[0]) * at, P[1] + (Q[1] - P[1]) * at];
+    arrow(ctx, A[0], A[1], nx, ny, 22, col);
+    obst.push({ l: Math.min(A[0], A[0] + nx * 22) - 5, t: Math.min(A[1], A[1] + ny * 22) - 5,
+                r: Math.max(A[0], A[0] + nx * 22) + 5, b: Math.max(A[1], A[1] + ny * 22) + 5 });
+    const at2 = (f, side) => [P[0] + (Q[0] - P[0]) * f + nx * 13 * side, P[1] + (Q[1] - P[1]) * f + ny * 13 * side];
+    specs.push({ text, col, cands: [at2(0.88, 1), at2(0.12, 1), at2(0.88, -1), at2(0.12, -1), at2(0.75, 1), at2(0.25, 1), at2(0.75, -1), at2(0.25, -1)] });
+  });
+  // ŷ = 0 boundary
+  ctx.save(); ctx.strokeStyle = C.fg; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const nCross = contour(ctx, g, fy, 100); ctx.restore();
+  if (!nCross) notes.unshift({ text: `ŷ = 0 is off the plot: ŷ ${fy(0, 0) >= 0 ? '>' : '<'} 0 everywhere here`, col: C.fg });
+  // points, then labels (line labels first so point labels avoid them)
+  for (let n = 0; n < 4; n++) drawMarker(ctx, st.pts[n][0], st.pts[n][1], Y[n], r, S.hover === n);
+  const lineLabels = placeLineLabels(ctx, g, specs, obst);
+  const noteBoxes = drawOffNotes(ctx, g, notes, obst.concat(lineLabels), [fy,
+    (x1, x2) => p.w11 * x1 + p.w12 * x2 + p.b1, (x1, x2) => p.w21 * x1 + p.w22 * x2 + p.b2]);
+  drawLabels(ctx, g, X.map((x, n) => ({ x: st.pts[n][0], y: st.pts[n][1], lines: [ptLabel(n)], members: [{ x: st.pts[n][0], y: st.pts[n][1] }] })), r, lineLabels.concat(noteBoxes));
+}
+
+/* ---------- Hidden space ---------- */
+const trails = [[], [], [], []];
+let lastPos = [null, null, null, null];
+function clearTrails() { for (const T of trails) T.length = 0; lastPos = [null, null, null, null]; }
+function updateTrails(now) {
+  const still = reduceMotion() && !S.playing;   // reduced motion: trails only during user-started training
+  for (let n = 0; n < 4; n++) {
+    if (still) { trails[n].length = 0; const o = forward(S.p, X[n], S.act); lastPos[n] = [o.h1, o.h2]; continue; }
+    const o = forward(S.p, X[n], S.act), T = trails[n], lp = lastPos[n];
+    if (lp && Math.abs(lp[0] - o.h1) + Math.abs(lp[1] - o.h2) > 1e-4) {
+      if (!T.length) T.push({ h1: lp[0], h2: lp[1], t: now });
+      T.push({ h1: o.h1, h2: o.h2, t: now });
+    }
+    lastPos[n] = [o.h1, o.h2];
+    while (T.length && (now - T[0].t > TRAIL_MS || T.length > 240)) T.shift();
+  }
+}
+const trailsLive = () => trails.some(T => T.length > 0);
+
+function niceRange(m) {
+  const steps = [1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50];
+  for (const s of steps) if (m <= s) return s;
+  return Math.ceil(m / 10) * 10;
+}
+function hiddenRange(hs) {
+  if (S.act === 'tanh') return { R: 1.2, step: 0.5 };
+  let m = 0; for (const o of hs) m = Math.max(m, Math.abs(o.h1), Math.abs(o.h2));
+  const R = niceRange(m * 1.12);
+  const step = R <= 1.5 ? 0.5 : R <= 3 ? 1 : R <= 6 ? 2 : R <= 15 ? 5 : R <= 30 ? 10 : 20;
+  return { R, step };
+}
+
+function drawHidden(now) {
+  const st = HID, { ctx, w, h, dpr } = st;
+  if (!w || !h) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  const p = S.p;
+  const hs = X.map(x => forward(p, x, S.act));
+  const { R, step } = hiddenRange(hs);
+  const g = geom(w, h, -R, R); st.g = g;
+  const ticks = [];
+  const tstep = S.act === 'tanh' ? 1 : step;
+  for (let n = Math.ceil(-R / tstep); n <= Math.floor(R / tstep); n++) { const t = n * tstep; if (Math.abs(t) <= R * 0.9) ticks.push(+t.toFixed(6)); }
+  drawGrid(ctx, g, step, ticks, ['h₁', 'h₂', C.unit1, C.unit2]);
+  heatmap(st, g, (h1, h2) => p.v1 * h1 + p.v2 * h2 + p.c, 0.24);   // half-planes shaded faintly
+  // tanh range square
+  if (S.act === 'tanh') {
+    ctx.save(); ctx.strokeStyle = rgba(toRGB(C.muted), 0.8); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.strokeRect(g.sx(-1), g.sy(1), g.k * 2, g.k * 2); ctx.restore();
+  }
+  // axes h₁ = 0 (vertical) and h₂ = 0 (horizontal): where the two unit lines land in hidden space
+  const ax = g.sx(0), ay = g.sy(0);
+  dashedLine(ctx, [ax, g.y0], [ax, g.y0 + g.size], C.unit1, 1.6, UNIT_DASH);
+  dashedLine(ctx, [g.x0, ay], [g.x0 + g.size, ay], C.unit2, 1.6, UNIT_DASH);
+  // output line v·h + c = 0
+  const seg = clipLine(p.v1, p.v2, p.c, g.lo, g.hi);
+  if (seg) {
+    ctx.save(); ctx.strokeStyle = C.fg; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(g.sx(seg[0][0]), g.sy(seg[0][1])); ctx.lineTo(g.sx(seg[1][0]), g.sy(seg[1][1])); ctx.stroke();
+    ctx.restore();
+  }
+  // trails
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = 2.5;
+  for (let n = 0; n < 4; n++) {
+    const T = trails[n]; if (T.length < 2) continue;
+    const rgb = Y[n] > 0 ? C.posRGB : C.negRGB;
+    for (let i = 1; i < T.length; i++) {
+      const age = (now - T[i].t) / TRAIL_MS;
+      const a = 0.5 * Math.max(0, 1 - age);
+      if (a <= 0.01) continue;
+      ctx.strokeStyle = rgba(rgb, a.toFixed(3));
+      ctx.beginPath(); ctx.moveTo(g.sx(T[i - 1].h1), g.sy(T[i - 1].h2)); ctx.lineTo(g.sx(T[i].h1), g.sy(T[i].h2)); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // points (same markers), clustered labels when points overlap
+  const r = markerRadius(g);
+  st.pts = hs.map(o => [g.sx(o.h1), g.sy(o.h2)]);
+  for (let n = 0; n < 4; n++) drawMarker(ctx, st.pts[n][0], st.pts[n][1], Y[n], r, S.hover === n);
+  const obst = st.pts.map(q => ptBox(q[0], q[1], r));
+  // axis labels + positive-side arrows: pick the end of each axis that is free of points
+  ctx.save(); ctx.font = `italic 14px ${C.fontMath}`;
+  const tw1 = ctx.measureText('h₁ = 0').width, tw2 = ctx.measureText('h₂ = 0').width;
+  ctx.restore();
+  const fr = frameBox(g), AL = 16;
+  const v1 = [g.y0 + 16, g.y0 + g.size - 18, g.y0 + g.size * 0.25, g.y0 + g.size * 0.75]
+    .map(y => ({ l: ax - 2, t: y - 9, r: ax + Math.max(tw1, AL) + 10, b: y + 21, y }));
+  const b1 = pickBox(v1, obst, fr);
+  const h2 = [g.x0 + g.size - tw2 / 2 - 8, g.x0 + tw2 / 2 + 8, g.x0 + g.size * 0.75, g.x0 + g.size * 0.25]
+    .map(x => ({ l: x - tw2 / 2 - 4, t: ay - AL - 4, r: x + tw2 / 2 + 4, b: ay + 22, x }));
+  const b2 = pickBox(h2, obst.concat([b1]), fr);
+  ctx.save(); ctx.font = `italic 14px ${C.fontMath}`; ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left'; haloText(ctx, 'h₁ = 0', ax + 6, b1.y, C.unit1);
+  arrow(ctx, ax, b1.y + 13, 1, 0, AL, C.unit1);
+  ctx.textAlign = 'center'; haloText(ctx, 'h₂ = 0', b2.x, ay + 12, C.unit2);
+  arrow(ctx, b2.x + tw2 / 2 - 2, ay, 0, -1, AL, C.unit2);
+  ctx.restore();
+  const clusters = [];
+  for (let n = 0; n < 4; n++) {
+    const [x, y] = st.pts[n];
+    const c = clusters.find(c => Math.hypot(c.x - x, c.y - y) < r * 1.6);
+    if (c) { c.lines.push(ptLabel(n)); c.members.push({ x, y }); }
+    else clusters.push({ x, y, lines: [ptLabel(n)], members: [{ x, y }] });
+  }
+  const fixed = [{ ...b1, wt: 20 }, { ...b2, wt: 20 }];
+  const noteBoxes = seg ? [] : drawOffNotes(ctx, g, [{ text: offPlotText('ŷ', p.v1, p.v2, p.c, p.c), col: C.fg }], obst.concat(fixed),
+    [(h1, h2) => h1, (h1, h2) => h2]);
+  drawLabels(ctx, g, clusters, r, fixed.concat(noteBoxes));
+}
+
+/* ================= Table / status / controls sync ================= */
+const tbody = $('tbody');
+const rows = X.map((x, n) => {
+  const tr = document.createElement('tr');
+  const mk = Y[n] > 0
+    ? '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5" style="fill:var(--pos)" stroke="currentColor" stroke-width="1"/></svg>'
+    : '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" style="fill:var(--neg)" stroke="currentColor" stroke-width="1"/></svg>';
+  tr.innerHTML = `<td><span class="pt">${mk}<span>${fmt(x[0], 0)}</span></span></td><td>${fmt(x[1], 0)}</td>` +
+    `<td class="gs"></td><td></td><td class="gs"></td>` +
+    `<td class="gs ${Y[n] > 0 ? 'pos' : 'neg'}">${Y[n] > 0 ? '+1' : MINUS + '1'}</td><td class="gs"></td>`;
+  tr.addEventListener('mouseenter', () => { S.hover = n; requestDraw(); });
+  tr.addEventListener('mouseleave', () => { S.hover = -1; requestDraw(); });
+  tbody.appendChild(tr);
+  const td = tr.children;
+  return { tr, h1: td[2], h2: td[3], y: td[4], ok: td[6] };
+});
+
+const PLAY_ICON = '<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><path d="M1 0.8 L10.2 6 L1 11.2 Z"/></svg>';
+const PAUSE_ICON = '<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><rect x="1" y="1" width="3.2" height="10"/><rect x="6.8" y="1" width="3.2" height="10"/></svg>';
+let lastPlayState = null;
+
+const setText = (el, s) => { if (el.textContent !== s) el.textContent = s; };
+const setHidden = (el, hid) => { if (el.hidden !== hid) el.hidden = hid; };
+
+function updateDOM() {
+  const p = S.p, act = S.act;
+  let err = 0;
+  for (let n = 0; n < 4; n++) {
+    const o = forward(p, X[n], act), ok = Math.sign(o.yhat) === Y[n];
+    if (!ok) err++;
+    const R = rows[n];
+    setText(R.h1, fmt(o.h1, 2)); setText(R.h2, fmt(o.h2, 2)); setText(R.y, fmt(o.yhat, 2));
+    setText(R.ok, ok ? '✓' : '✗'); R.ok.className = 'gs ' + (ok ? 'ok' : 'bad');
+    R.tr.classList.toggle('hl', S.hover === n);
+  }
+  const L = loss(p, act);
+  setText($('errTxt'), `${err} of 4`);
+  setText($('lossTxt'), L < 1e-4 && L > 0 ? L.toExponential(1).replace('-', MINUS) : L.toFixed(4));
+  // sliders follow the parameters live
+  for (const k of KEYS) {
+    const s = sl[k];
+    if (document.activeElement !== s.inp || S.playing || tween) { const v = String(Math.round(p[k] * 10) / 10); if (s.inp.value !== v) s.inp.value = v; }
+    setText(s.out, fmt(p[k], 2));
+  }
+  for (const k of BIAS_KEYS) { sl[k].inp.disabled = !S.useBias; sl[k].row.classList.toggle('off', !S.useBias); }
+  setText($('epochTxt'), `Epoch ${S.epoch}`);
+  setText($('seedTxt'), S.source === 'random' ? `seed ${S.seed}${S.edited ? ', edited' : ''}` : S.edited ? 'edited' : '');
+  if (lastPlayState !== S.playing) {
+    lastPlayState = S.playing;
+    const b = $('btnPlay');
+    b.innerHTML = S.playing ? PAUSE_ICON + '<span>Pause</span>' : PLAY_ICON + '<span>Play</span>';
+    b.setAttribute('aria-pressed', S.playing ? 'true' : 'false');
+  }
+  // formula in the header (matches the slides when biases are off)
+  const fx = S.useBias ? '<i>w</i>ᵢ · <i>x</i> + <i>b</i>ᵢ' : '<i>w</i>ᵢ · <i>x</i>';
+  const f1 = act === 'tanh' ? `<i>h</i>ᵢ = tanh(${fx})` : `<i>h</i>ᵢ = ${fx}`;
+  const f2 = S.useBias ? '<i>ŷ</i> = <i>v</i> · <i>h</i> + <i>c</i>' : '<i>ŷ</i> = <i>v</i> · <i>h</i>';
+  const html = `<span class="lyr">Layer-1</span><span>${f1}</span><span class="lyr">Layer-2</span><span>${f2}</span>`;
+  const fe = $('formula'); if (fe.dataset.k !== html) { fe.innerHTML = html; fe.dataset.k = html; }
+  setHidden($('legTanh'), act !== 'tanh');
+  // notes
+  const unit2Off = [p.w21, p.w22, p.b2, p.v2].every(v => Math.abs(v) < 1e-9);
+  setHidden($('noteBias'), S.useBias);
+  setHidden($('noteAct'), act === 'tanh');
+  setHidden($('noteOne'), !unit2Off);
+  const anyNote = !S.useBias || act !== 'tanh' || unit2Off;
+  const hint = $('hint');
+  setHidden(hint, anyNote);
+  if (!anyNote) {
+    let msg;
+    if (err === 0) msg = 'All four correct. In hidden space one straight line splits the classes; back in input space that line becomes the curved boundary.' +
+      (S.solvedAt !== null ? ` Reached at epoch ${S.solvedAt}.` : '');
+    else if (S.epoch >= 1500) msg = `Still ${err} wrong after ${S.epoch} epochs: gradient descent is stuck in a local minimum. Press Random start to try new starting weights.`;
+    else msg = 'Press Play to train. Watch the points move in hidden space until one straight line can split the blue circles (+1) from the red squares (−1).';
+    setText(hint, msg);
+  }
+  const aIn = `Input space: ${4 - err} of 4 points on the correct side of the boundary`;
+  if (IN.ariaLast !== aIn) { IN.cv.setAttribute('aria-label', aIn); IN.ariaLast = aIn; }
+  const aH = 'Hidden space: ' + X.map((x, n) => { const o = forward(p, x, act); return `${ptLabel(n)} maps to (${fmt(o.h1, 2)}, ${fmt(o.h2, 2)})`; }).join('; ');
+  if (HID.ariaLast !== aH && !S.playing) { HID.cv.setAttribute('aria-label', aH); HID.ariaLast = aH; }
+}
+
+/* ================= Animation loop ================= */
+let rafId = 0, lastT = 0, acc = 0, tween = null;
+function requestDraw() { if (!rafId) rafId = requestAnimationFrame(frame); }
+function draw(now) {
+  now = now || performance.now();
+  drawInput(); drawHidden(now); updateDOM();
+}
+function epochStep() {
+  gdStep(S.p, S.eta, S.useBias, S.act);
+  S.epoch++;
+  if (S.solvedAt === null && errors(S.p, S.act) === 0) S.solvedAt = S.epoch;
+}
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+function frame(t) {
+  rafId = 0;
+  if (tween) {
+    const k = Math.min(1, (t - tween.t0) / tween.dur), e = ease(Math.max(0, k));
+    for (const key of KEYS) S.p[key] = tween.from[key] + (tween.to[key] - tween.from[key]) * e;
+    if (k >= 1) tween = null;
+  }
+  if (S.playing) {
+    const dt = lastT ? Math.min(100, t - lastT) : 1000 / 60;
+    acc += dt * EPOCHS_PER_SEC / 1000;
+    let n = Math.floor(acc); acc -= n;
+    while (n-- > 0) epochStep();
+  }
+  lastT = t;
+  updateTrails(t);
+  draw(t);
+  if (S.playing || tween || trailsLive()) requestDraw(); else lastT = 0;
+}
+function cancelTween(snap) { if (tween) { if (snap) S.p = { ...tween.to }; tween = null; } }
+function setParams(target, animate) {
+  const to = withBiasRule(target, S.useBias);
+  if (animate && !reduceMotion()) tween = { from: { ...S.p }, to, t0: performance.now(), dur: 450 };
+  else { tween = null; S.p = { ...to }; }
+  requestDraw();
+}
+function setPlaying(on) {
+  S.playing = on;
+  if (on) { cancelTween(true); acc = 0; lastT = 0; }
+  requestDraw();
+}
+function loadPreset(params, source) {
+  setPlaying(false);
+  S.epoch = 0; S.solvedAt = null; S.source = source; S.edited = false;
+  setParams(params, true);
+}
+
+/* ================= Wiring ================= */
+$('btnSolved').addEventListener('click', () => loadPreset(solvedPreset(), 'solved'));
+$('btnOne').addEventListener('click', () => loadPreset(oneLinePreset(), 'one'));
+$('btnRandom').addEventListener('click', () => { S.seed += 1; loadPreset(randomParams(S.seed), 'random'); });
+$('btnPlay').addEventListener('click', () => setPlaying(!S.playing));
+$('btnStep').addEventListener('click', () => { cancelTween(true); epochStep(); requestDraw(); });
+$('useBias').addEventListener('change', e => {
+  S.useBias = e.target.checked;
+  const base = tween ? tween.to : S.p;
+  setParams(base, true);
+});
+for (const id of ['actTanh', 'actId']) $(id).addEventListener('change', e => {
+  if (!e.target.checked) return;
+  S.act = e.target.value; S.solvedAt = null; clearTrails(); requestDraw();
+});
+// η: log slider 0.01 … 1
+const etaFromSlider = v => 0.01 * Math.pow(100, v / 100);
+const sliderFromEta = e => Math.round(100 * Math.log(e / 0.01) / Math.log(100));
+function showEta() { setText($('etaVal'), S.eta < 0.1 ? S.eta.toFixed(3) : S.eta.toFixed(2)); }
+$('eta').value = String(sliderFromEta(DEFAULT_ETA));
+$('eta').addEventListener('input', e => { S.eta = etaFromSlider(+e.target.value); showEta(); });
+showEta();
+
+// Hover a point in either plot to highlight its table row
+for (const st of [IN, HID]) {
+  st.cv.addEventListener('mousemove', ev => {
+    const rc = st.cv.getBoundingClientRect(), mx = ev.clientX - rc.left, my = ev.clientY - rc.top;
+    let best = -1, bd = 14;
+    st.pts.forEach((q, n) => { const d = Math.hypot(q[0] - mx, q[1] - my); if (d < bd) { bd = d; best = n; } });
+    if (best !== S.hover) { S.hover = best; requestDraw(); }
+  });
+  st.cv.addEventListener('mouseleave', () => { if (S.hover !== -1) { S.hover = -1; requestDraw(); } });
+}
+
+// Theme changes (OS dark mode) re-read the colour tokens
+readColors();
+try {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const onTheme = () => { readColors(); requestDraw(); };
+  if (mq.addEventListener) mq.addEventListener('change', onTheme); else if (mq.addListener) mq.addListener(onTheme);
+} catch (e) { /* ignore */ }
+
+requestDraw();
+
+/* ================= Test hooks ================= */
+window.__demo = {
+  X, Y, KEYS,
+  forward: (params, x, act = 'tanh') => forward(params, x, act),
+  loss: (params, act = 'tanh') => loss(params, act),
+  grad: (params, act = 'tanh') => grad(params, act),
+  errors: (params, act = 'tanh') => errors(params, act),
+  trainFrom: (params, eta, epochs, opts = {}) => trainFrom(params, eta, epochs, opts),
+  solvedPreset, oneLinePreset, randomParams,
+  defaults: { seed: DEFAULT_SEED, eta: DEFAULT_ETA, initScale: INIT_SCALE, epochsPerSecond: EPOCHS_PER_SEC },
+  getState: () => ({ params: { ...S.p }, useBias: S.useBias, act: S.act, eta: S.eta, playing: S.playing, epoch: S.epoch,
+    solvedAt: S.solvedAt, seed: S.seed, errors: errors(S.p, S.act), loss: loss(S.p, S.act) }),
+};
+})();
+</script>
+</body>
+</html>
