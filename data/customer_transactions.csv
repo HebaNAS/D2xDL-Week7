@@ -1,0 +1,11 @@
+Transaction,Music Download?,Music Streaming?,Board Games,Online Games,Output
+T1,No,Yes,No,Yes,Buys
+T2,Yes,No,No,No,Cancels
+T3,Yes,No,No,Yes,Buys
+T4,Yes,No,Yes,No,Cancels
+T5,No,Yes,No,No,Cancels
+T6,No,Yes,Yes,No,Cancels
+T7,No,No,No,Yes,Buys
+T8,No,Yes,Yes,Yes,Cancels
+T9,Yes,Yes,No,No,Cancels
+T10,Yes,Yes,No,Yes,Buys
