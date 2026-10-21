@@ -503,8 +503,15 @@ const Core = (() => {
 // ======================= APP (DOM + drawing) =======================
 (() => {
   const $ = (id) => document.getElementById(id);
-  const qp = new URLSearchParams(location.search).get("theme");
-  if (qp === "light" || qp === "dark") document.documentElement.dataset.theme = qp;
+  // ?theme=light|dark wins. Otherwise, inside a notebook or slide (an iframe), use light to match
+  // the white page; opened on its own, follow the system theme.
+  let qp = new URLSearchParams(location.search).get("theme");
+  if (qp !== "light" && qp !== "dark") {
+    let framed = true;
+    try { framed = window.self !== window.top; } catch (e) { /* cross-origin: treat as framed */ }
+    qp = framed ? "light" : null;
+  }
+  if (qp) document.documentElement.dataset.theme = qp;
 
   const G = 64;                 // decision map grid resolution
   const LIM = Core.LIM;
