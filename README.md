@@ -4,15 +4,36 @@ Lecture 2 - Neural Networks [![Binder](https://mybinder.org/badge_logo.svg)](htt
 
 Perceptron [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FPerceptron.ipynb)
 
+## Lecture slides
+
+The lectures are web slide decks in `slides/` that run in any browser, also offline (everything they need is in this repository). Open `slides/linear-regression.html`, or `index.html` for everything this week.
+
+| Key | What it does |
+|---|---|
+| → / Space / clicker | Next (clickers and arrow keys still work after you click inside a demo) |
+| ← | Previous |
+| Esc or O | Overview of all slides |
+| S | Speaker view with notes |
+| F | Full screen |
+| . | Black screen |
+| C / B | Draw on the slide / whiteboard (Delete clears) |
+| Alt + click | Zoom in |
+| ? | All keys |
+
+To make a PDF: open the deck with `?print-pdf` at the end of the address in Chrome, then print to PDF.
+
 ## Interactive demos
 
-The `demos/` folder has three pages that run in any browser, with no Python needed. They are embedded in the lecture notebooks, and you can also open them directly after downloading the repository.
+The `demos/` folder has pages that run in any browser, with no Python needed. They are embedded in the slides and notebooks, and you can also open them directly after downloading the repository.
 
 In a notebook, if a demo shows as a blank space, run its cell. Jupyter hides saved interactive output until you run the cell or trust the notebook (`jupyter trust *.ipynb`).
 
 | Demo | Lecture | Try this |
 |---|---|---|
 | `demos/gd-loss-bowl.html` | Linear Regression | Change the learning rate with the presets, switch between online and batch updates, and compare with the closed-form solution. |
+| `demos/sigmoid-explorer.html` | Linear Regression | Change the weight and bias and watch the sigmoid's slope and 0.5 crossing move. |
+| `demos/linear-vs-logistic.html` | Linear Regression | Add a very large tumour and watch the linear regression threshold move while the logistic fit holds. |
+| `demos/sigmoid-losses.html` | Linear Regression | Compare squared and log loss gradients when the model is confidently wrong, then race them. |
 | `demos/xor-hidden-layer.html` | Neural Networks | Move the hidden-unit sliders or press Play, and watch the four XOR points become separable in hidden space. Then turn the biases off. |
 | `demos/mlp-playground.html` | Neural Networks | Change the number of hidden units, the activation, zero vs random initialisation, the learning rate, and batch vs online updates. |
 

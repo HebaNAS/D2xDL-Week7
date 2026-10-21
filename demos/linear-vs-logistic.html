@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linear vs Logistic Fit</title>
+<script>
+  // Theme before first paint: ?theme=light|dark wins. Otherwise, inside a notebook or slide
+  // (an iframe), use light to match the white page; opened on its own, follow the system theme.
+  (function () {
+    try {
+      var t = new URLSearchParams(location.search).get('theme');
+      if (t !== 'light' && t !== 'dark') {
+        var framed = true;
+        try { framed = window.self !== window.top; } catch (e) { /* cross-origin: treat as framed */ }
+        t = framed ? 'light' : null;
+      }
+      if (t) document.documentElement.dataset.theme = t;
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
+  --pos: #3274b5;   /* class 1 (malignant): HWU blue used on the slides */
+  --neg: #a62b17;   /* class 0 (benign) and "not a probability" shading: the slides' red */
+  --unit1: #1b8a7a; --unit2: #c7841a;  /* logistic regression (teal) / linear regression (amber) */
+  --ink-btn: #1f2a37; --ink-btn-fg: #ffffff; --focus: #3274b5;
+  --note-bg: #eef2f7;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-math: "Cambria Math", "STIX Two Math", "Times New Roman", Times, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.m { font-family: var(--font-math); font-style: italic; }
+
+.app {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px;
+  height: 100vh; height: 100dvh;
+  padding-block: 10px 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Header */
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 6px 20px; flex-wrap: wrap; }
+h1 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.2; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.sub .m { color: var(--fg); font-size: 15.5px; }
+.formula { display: grid; grid-template-columns: auto auto; column-gap: 8px; row-gap: 0; font-family: var(--font-math); font-size: 16.5px; line-height: 1.3; align-items: baseline; }
+.formula > span { white-space: nowrap; }
+.fk { font-family: var(--font-ui); font-style: normal; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.fk::before { content: ""; width: 14px; height: 3px; border-radius: 2px; background: var(--unit2); transform: translateY(-1px); }
+.fk.log::before { background: var(--unit1); }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 316px; gap: 16px; min-height: 0; }
+.plots { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; min-width: 0; }
+.card { display: flex; flex-direction: column; gap: 3px; margin: 0; background: var(--panel); border-radius: 12px;
+  padding: 7px 10px 6px; min-height: 0; min-width: 0; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 10px; flex-wrap: wrap; }
+.lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.lbl .m { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: var(--fg); }
+.hint { font-size: 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; color: var(--muted); align-items: center; min-height: 17px; }
+.legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend svg { display: block; overflow: visible; flex: none; }
+.legend .m { font-size: 13.5px; color: var(--fg); }
+.cv-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.cv-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#cvPlot { cursor: crosshair; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#cvPlot.grab { cursor: grab; }
+#cvPlot.grabbing { cursor: grabbing; }
+.tip { position: absolute; z-index: 2; pointer-events: none; background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 3px 7px; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12px;
+  white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.12); line-height: 1.45; }
+.tip .wrong { color: var(--neg); font-weight: 700; }
+.foot-note { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1px 2px 2px; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec + .sec { border-top: 1px solid var(--line); padding-top: 9px; }
+.status { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.3; min-height: 55px; font-weight: 550; }
+.status .badge { flex: none; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--bg); background: var(--pos); margin-top: 0; font-family: var(--font-ui); }
+.status[data-kind="bad"] .badge { background: var(--neg); }
+.status[data-kind="idle"] .badge { background: var(--muted); }
+.btn-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+button { font: inherit; font-size: 13px; height: 30px; padding: 0 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); white-space: nowrap; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--ink-btn); color: var(--ink-btn-fg); border-color: var(--ink-btn); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+button.primary svg { stroke: currentColor; }
+button:disabled { opacity: .45; cursor: default; }
+button:disabled:hover { border-color: var(--ink-btn); }
+.checks { display: flex; flex-direction: column; gap: 4px; }
+.check { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; color: var(--fg); min-height: 22px; width: fit-content; }
+.check input { accent-color: var(--pos); width: 15px; height: 15px; margin: 0; flex: none; }
+.check svg { display: block; flex: none; overflow: visible; }
+
+/* Readouts table */
+.rt { border-collapse: collapse; width: 100%; font-size: 13px; }
+.rt th, .rt td { padding: 1px 0 1px 8px; text-align: right; white-space: nowrap; }
+.rt th:first-child, .rt td:first-child { padding-left: 0; text-align: left; }
+.rt thead th { font-weight: 400; font-size: 12px; color: var(--muted); padding-bottom: 2px; }
+.rt thead th .m { color: var(--fg); font-size: 14.5px; }
+.rt tbody th { font-weight: 600; font-size: 12.5px; }
+.rt tbody th span { display: inline-flex; align-items: center; gap: 6px; }
+.rt .sw { width: 13px; height: 3px; border-radius: 2px; background: var(--unit2); display: inline-block; }
+.rt .sw.log { background: var(--unit1); }
+.rt td.v { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.rt td.v.bad { color: var(--neg); font-weight: 700; }
+.rt tr.sub td { padding: 0 0 5px; text-align: left; }
+.rt tr.sub + tr th, .rt tr.sub + tr td { border-top: 1px dashed var(--line); padding-top: 5px; }
+.subline { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.subline .m { color: var(--fg); font-size: 13.5px; }
+.subline .n { font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--fg); font-size: 12px; }
+.subline .n.out { color: var(--neg); font-weight: 700; }
+
+.small-note { font-size: 12.5px; color: var(--muted); margin: 0; line-height: 1.4; border-top: 1px solid var(--line); padding-top: 8px; }
+.small-note .m { color: var(--fg); font-size: 14px; }
+
+footer { font-size: 12px; color: var(--muted); }
+
+/* Phone / narrow */
+@media (max-width: 899px) {
+  .app { display: flex; flex-direction: column; height: auto; min-height: 100vh; gap: 14px; padding-block: 12px 14px; }
+  .main { display: flex; flex-direction: column; gap: 16px; }
+  .plots { display: flex; flex-direction: column; gap: 14px; }
+  #cardPlot .cv-wrap { flex: none; aspect-ratio: 1 / 1; width: 100%; }
+  .controls { overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <h1>Linear vs Logistic Fit</h1>
+      <p class="sub">Both models are fitted to the 0/1 labels and predict malignant when <span class="m">Ŷ</span> ≥ 0.5. Add a far, easy tumour and watch which threshold moves.</p>
+    </div>
+    <div class="formula" aria-label="The two models">
+      <span class="fk">linear</span><span><span class="m">Ŷ</span> = <span class="m">w</span>₀ + <span class="m">w</span>₁<span class="m">x</span></span>
+      <span class="fk log">logistic</span><span><span class="m">Ŷ</span> = σ(<span class="m">w</span>₀ + <span class="m">w</span>₁<span class="m">x</span>),&nbsp; σ(<span class="m">z</span>) = 1 / (1 + <span class="m">e</span><sup>−<span class="m">z</span></sup>)</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="plots" aria-label="Plot">
+      <figure class="card" id="cardPlot">
+        <figcaption class="card-head">
+          <span class="lbl">Tumour size and model output</span>
+          <span class="hint" id="editHint">Drag a point to move it · click above or below 0.5 to add malignant or benign · Shift+click or right-click removes</span>
+        </figcaption>
+        <div class="legend" aria-hidden="true">
+          <span><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" style="fill:var(--neg);stroke:var(--fg)" stroke-width="1"/></svg><span>benign (<span class="m">Y</span> = 0)</span></span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.8" style="fill:var(--pos);stroke:var(--fg)" stroke-width="1"/></svg><span>malignant (<span class="m">Y</span> = 1)</span></span>
+          <span id="legLin"><svg width="20" height="8" viewBox="0 0 20 8"><line x1="0" y1="7" x2="20" y2="1" style="stroke:var(--unit2)" stroke-width="2.5" stroke-linecap="round"/></svg><span>linear regression <span class="m">ŷ</span> = <span class="m">w</span>₀ + <span class="m">w</span>₁<span class="m">x</span></span></span>
+          <span id="legLog"><svg width="20" height="10" viewBox="0 0 20 10"><path d="M0 9 C 8 9, 12 1, 20 1" style="fill:none;stroke:var(--unit1)" stroke-width="2.5" stroke-linecap="round"/></svg><span>logistic regression σ(<span class="m">w</span>₀ + <span class="m">w</span>₁<span class="m">x</span>)</span></span>
+          <span><svg width="14" height="12" viewBox="0 0 14 12"><line x1="3.5" y1="0" x2="3.5" y2="12" style="stroke:var(--unit2)" stroke-width="1.5" stroke-dasharray="3 2"/><line x1="10.5" y1="0" x2="10.5" y2="12" style="stroke:var(--unit1)" stroke-width="1.5" stroke-dasharray="3 2"/></svg><span>threshold <span class="m">x</span>* where <span class="m">Ŷ</span> = 0.5</span></span>
+          <span><svg width="8" height="12" viewBox="0 0 8 12"><line x1="4" y1="0" x2="4" y2="12" style="stroke:var(--muted)" stroke-width="1.5" stroke-dasharray="1.5 2.5"/></svg><span><span class="m">x</span>* on the starting data</span></span>
+          <span><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" style="fill:none;stroke:var(--unit2)" stroke-width="2"/></svg><span>misclassified</span></span>
+        </div>
+        <div class="cv-wrap"><canvas id="cvPlot" role="img" aria-label="Tumour size against class, with the linear regression line, the logistic regression S-curve, and each model's 0.5 threshold"></canvas><div class="tip" id="tip" hidden></div></div>
+        <p class="foot-note">Logistic fit: log loss with a small L2 penalty so the weights stay finite on separable data.</p>
+      </figure>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="sec">
+        <div class="status" id="status" data-kind="ok" aria-live="polite"><span class="badge" id="statusBadge" aria-hidden="true">✓</span><span id="statusTxt">Both models classify every point correctly</span></div>
+        <div class="btn-col">
+          <button type="button" class="primary" id="btnFar"><svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><path d="M5.5 1 V10 M1 5.5 H10" stroke-width="2" stroke-linecap="round"/></svg><span id="btnFarTxt">Add a very large tumour (12 cm)</span></button>
+          <button type="button" id="btnReset">Reset data</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Show</span>
+        <div class="checks">
+          <label class="check" for="showLin"><input type="checkbox" id="showLin" checked><svg width="18" height="8" viewBox="0 0 18 8" aria-hidden="true"><line x1="0" y1="7" x2="18" y2="1" style="stroke:var(--unit2)" stroke-width="2.5" stroke-linecap="round"/></svg>Show linear regression</label>
+          <label class="check" for="showLog"><input type="checkbox" id="showLog" checked><svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><path d="M0 9 C 7 9, 11 1, 18 1" style="fill:none;stroke:var(--unit1)" stroke-width="2.5" stroke-linecap="round"/></svg>Show logistic regression</label>
+          <label class="check" for="shadeOut"><input type="checkbox" id="shadeOut" checked><svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><rect x="0.5" y="0.5" width="17" height="9" rx="1.5" style="fill:var(--neg);fill-opacity:.2;stroke:var(--neg);stroke-opacity:.5"/></svg>Shade outputs outside [0, 1]</label>
+        </div>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Fitted models</span>
+        <table class="rt" aria-label="Fitted weights, thresholds and errors">
+          <thead>
+            <tr><th scope="col"><span class="sr">model</span></th><th scope="col"><span class="m">w</span>₀</th><th scope="col"><span class="m">w</span>₁</th><th scope="col"><span class="m">x</span>* (cm)</th><th scope="col">errors</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row"><span><i class="sw" aria-hidden="true"></i>Linear</span></th>
+              <td class="v" id="rLinW0">0.00</td><td class="v" id="rLinW1">0.00</td><td class="v" id="rLinT">0.00</td><td class="v" id="rLinE">0 of 0</td>
+            </tr>
+            <tr class="sub"><td colspan="5"><div class="subline"><span><span class="m">Ŷ</span> on the data <span class="n" id="rLinRange">0 to 1</span></span><span><span class="m">x</span>* moved <span class="n" id="rLinMoved">0.00</span></span></div></td></tr>
+            <tr>
+              <th scope="row"><span><i class="sw log" aria-hidden="true"></i>Logistic</span></th>
+              <td class="v" id="rLogW0">0.00</td><td class="v" id="rLogW1">0.00</td><td class="v" id="rLogT">0.00</td><td class="v" id="rLogE">0 of 0</td>
+            </tr>
+            <tr class="sub"><td colspan="5"><div class="subline"><span><span class="m">Ŷ</span> on the data <span class="n" id="rLogRange">0 to 1</span></span><span><span class="m">x</span>* moved <span class="n" id="rLogMoved">0.00</span></span></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="small-note">Far-away easy points pull the least-squares line (squared error grows with distance), so its 0.5 crossing moves. The sigmoid saturates: far points are already near 1 and barely pull.</p>
+    </aside>
+  </main>
+
+  <footer>F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= Data and models (pure functions) ================= */
+// x = tumour size in cm; Y = 1 malignant, Y = 0 benign.
+// Two malignant points sit at 3.3 and 3.7 cm (not 3.5 and 3.9) so that each "very large tumour"
+// costs linear regression one more malignant point: 0 errors, then 1 (at 12 cm), then 2 (at 13.5 cm).
+const DEFAULT_BENIGN = [0.6, 1.0, 1.3, 1.7, 2.0, 2.4];
+const DEFAULT_MALIGNANT = [3.1, 3.3, 3.7, 4.4, 5.0, 5.6];
+const FAR = [12, 13.5];               // "Add a very large tumour": first press 12 cm, second press 13.5 cm
+const XMAX = 14, YLO = -0.4, YHI = 1.4;
+const LAMBDA = 0.01;                  // L2 penalty (λ/2)·w₁² on the slope only
+const MIN_PER_CLASS = 2, MAX_POINTS = 40, SNAP = 0.05;
+
+// Closed-form least squares on the 0/1 labels: ŷ = w₀ + w₁x.
+function fitLinear(xs, ys) {
+  const n = xs.length;
+  let mx = 0, my = 0;
+  for (let i = 0; i < n; i++) { mx += xs[i]; my += ys[i]; }
+  mx /= n; my /= n;
+  let sxx = 0, sxy = 0;
+  for (let i = 0; i < n; i++) { const dx = xs[i] - mx; sxx += dx * dx; sxy += dx * (ys[i] - my); }
+  const w1 = sxx > 1e-12 ? sxy / sxx : 0;
+  const w0 = my - w1 * mx;
+  const threshold = Math.abs(w1) > 1e-12 ? (0.5 - w0) / w1 : null;
+  return { kind: 'linear', w0, w1, threshold };
+}
+
+const sigma = z => (z >= 0 ? 1 / (1 + Math.exp(-z)) : Math.exp(z) / (1 + Math.exp(z)));
+const softplus = z => Math.max(z, 0) + Math.log1p(Math.exp(-Math.abs(z)));
+// Penalised log loss: Σₙ l^(log)(Yₙ, σ(w₀ + w₁xₙ)) + (λ/2)·w₁², with l^(log) = −[Y log Ŷ + (1 − Y) log(1 − Ŷ)].
+function logObjective(w0, w1, xs, ys, lam) {
+  let f = 0;
+  for (let i = 0; i < xs.length; i++) { const z = w0 + w1 * xs[i]; f += softplus(z) - ys[i] * z; }
+  return f + 0.5 * lam * w1 * w1;
+}
+// Newton's method (IRLS) with backtracking, run to convergence. Two parameters, so each step is a 2 × 2 solve.
+function fitLogistic(xs, ys, opts) {
+  const lam = opts && opts.lambda != null ? opts.lambda : LAMBDA;
+  const n = xs.length;
+  let pbar = 0; for (let i = 0; i < n; i++) pbar += ys[i]; pbar = Math.min(0.99, Math.max(0.01, pbar / n));
+  let w0 = Math.log(pbar / (1 - pbar)), w1 = 0, iters = 0;
+  if (opts && opts.start && Number.isFinite(opts.start[0]) && Number.isFinite(opts.start[1])) { w0 = opts.start[0]; w1 = opts.start[1]; }
+  let f = logObjective(w0, w1, xs, ys, lam);
+  for (iters = 0; iters < 100; iters++) {
+    let g0 = 0, g1 = lam * w1, h00 = 0, h01 = 0, h11 = lam;
+    for (let i = 0; i < n; i++) {
+      const x = xs[i], p = sigma(w0 + w1 * x), r = p - ys[i], s = p * (1 - p);
+      g0 += r; g1 += r * x; h00 += s; h01 += s * x; h11 += s * x * x;
+    }
+    h00 += 1e-12;
+    const det = h00 * h11 - h01 * h01;
+    if (!(Math.abs(det) > 1e-300)) break;
+    const d0 = (h11 * g0 - h01 * g1) / det, d1 = (-h01 * g0 + h00 * g1) / det;
+    let t = 1, nw0 = w0 - d0, nw1 = w1 - d1, nf = logObjective(nw0, nw1, xs, ys, lam);
+    while (!(nf <= f + 1e-12) && t > 1e-6) { t *= 0.5; nw0 = w0 - t * d0; nw1 = w1 - t * d1; nf = logObjective(nw0, nw1, xs, ys, lam); }
+    const step = Math.max(Math.abs(t * d0), Math.abs(t * d1));
+    w0 = nw0; w1 = nw1; f = nf;
+    if (step < 1e-10) { iters++; break; }
+  }
+  const threshold = Math.abs(w1) > 1e-12 ? -w0 / w1 : null;
+  return { kind: 'logistic', w0, w1, threshold, iters, loss: f };
+}
+
+function output(model, x) { const z = model.w0 + model.w1 * x; return model.kind === 'logistic' ? sigma(z) : z; }
+// Both models predict class 1 when Ŷ ≥ 0.5 (for logistic regression that is w₀ + w₁x ≥ 0).
+function predictClass(model, x) {
+  const z = model.w0 + model.w1 * x;
+  return (model.kind === 'logistic' ? z >= 0 : z >= 0.5) ? 1 : 0;
+}
+function errorsDetail(model, xs, ys) {
+  let fn = 0, fp = 0; const wrong = [];
+  for (let i = 0; i < xs.length; i++) {
+    const c = predictClass(model, xs[i]), bad = c !== ys[i];
+    wrong.push(bad);
+    if (bad) { if (ys[i] === 1) fn++; else fp++; }
+  }
+  return { total: fn + fp, fn, fp, wrong };
+}
+function errors(model, xs, ys) {
+  if (typeof model === 'string') model = model === 'logistic' ? fitLogistic(xs, ys) : fitLinear(xs, ys);
+  return errorsDetail(model, xs, ys).total;
+}
+function outRange(model, xs) {
+  let lo = Infinity, hi = -Infinity;
+  for (const x of xs) { const v = output(model, x); if (v < lo) lo = v; if (v > hi) hi = v; }
+  return [lo, hi];
+}
+function separable(xs, ys) {
+  let max0 = -Infinity, min0 = Infinity, max1 = -Infinity, min1 = Infinity;
+  for (let i = 0; i < xs.length; i++) {
+    if (ys[i] === 1) { max1 = Math.max(max1, xs[i]); min1 = Math.min(min1, xs[i]); }
+    else { max0 = Math.max(max0, xs[i]); min0 = Math.min(min0, xs[i]); }
+  }
+  return max0 < min1 || max1 < min0;
+}
+
+const DEF_XS = DEFAULT_BENIGN.concat(DEFAULT_MALIGNANT);
+const DEF_YS = DEFAULT_BENIGN.map(() => 0).concat(DEFAULT_MALIGNANT.map(() => 1));
+const START = { lin: fitLinear(DEF_XS, DEF_YS), log: fitLogistic(DEF_XS, DEF_YS) };
+
+/* ================= State ================= */
+let nextId = 1;
+const S = {
+  pts: [],
+  showLin: true, showLog: true, shade: true,
+  fit: { lin: null, log: null },
+  disp: null, tween: null,
+  hover: null, drag: null, pending: null, flash: null
+};
+const xsOf = () => S.pts.map(p => p.x);
+const ysOf = () => S.pts.map(p => p.y);
+
+const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+function refit(animate) {
+  const xs = xsOf(), ys = ysOf();
+  const lin = fitLinear(xs, ys);
+  const log = fitLogistic(xs, ys);
+  S.fit = { lin, log };
+  const target = { lin: { kind: 'linear', w0: lin.w0, w1: lin.w1 }, log: { kind: 'logistic', w0: log.w0, w1: log.w1 } };
+  if (animate && S.disp && !reduceMotion.matches) {
+    S.tween = { t0: performance.now(), from: { lin: Object.assign({}, S.disp.lin), log: Object.assign({}, S.disp.log) }, to: target };
+  } else {
+    S.tween = null; S.disp = target;
+  }
+  updatePanel(); markDirty();
+}
+function setData(xs, ys) {
+  S.pts = xs.map((x, i) => ({ id: nextId++, x, y: ys[i] }));
+}
+function resetData(animate) {
+  setData(DEF_XS, DEF_YS);
+  S.hover = null; S.drag = null; S.pending = null; S.flash = null;
+  refit(animate); syncFarBtn();
+}
+function flash(text) { S.flash = { text, until: performance.now() + 2600 }; updatePanel(); }
+function addPoint(x, y, animate) {
+  if (S.pts.length >= MAX_POINTS) { flash(`That is ${MAX_POINTS} points already; remove some or reset the data`); return false; }
+  x = Math.max(0, Math.min(XMAX, +x)); y = +y === 1 ? 1 : 0;
+  S.pts.push({ id: nextId++, x, y });
+  refit(animate); syncFarBtn();
+  return true;
+}
+function removePoint(id) {
+  const pt = S.pts.find(p => p.id === id);
+  if (!pt) return false;
+  if (S.pts.filter(p => p.y === pt.y).length <= MIN_PER_CLASS) {
+    flash(`Keep at least ${MIN_PER_CLASS} ${pt.y === 1 ? 'malignant' : 'benign'} points`);
+    return false;
+  }
+  S.pts = S.pts.filter(p => p !== pt);
+  if (S.hover && S.hover.id === id) S.hover = null;
+  refit(true); syncFarBtn();
+  return true;
+}
+const nextFar = () => FAR.find(f => !S.pts.some(p => p.y === 1 && Math.abs(p.x - f) < 1e-9));
+
+/* ================= Formatting ================= */
+const minus = s => s.replace(/-/g, '−');
+const f2 = v => (Number.isFinite(v) ? minus((Math.abs(v) < 0.005 ? 0 : v).toFixed(2)) : '–');
+const signed = v => (Math.abs(v) < 0.005 ? '0.00' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(2));
+const cm = v => String(+v.toFixed(2));
+function describe(E) {
+  const parts = [];
+  if (E.fn) parts.push(`${E.fn} malignant tumour${E.fn > 1 ? 's' : ''}`);
+  if (E.fp) parts.push(`${E.fp} benign tumour${E.fp > 1 ? 's' : ''}`);
+  return parts.join(' and ');
+}
+
+/* ================= Status line ================= */
+function statusInfo() {
+  if (S.flash && performance.now() < S.flash.until) return ['idle', S.flash.text];
+  const xs = xsOf(), ys = ysOf();
+  const L = errorsDetail(S.fit.lin, xs, ys), G = errorsDetail(S.fit.log, xs, ys);
+  if (!L.total && !G.total) return ['ok', 'Both models classify every point correctly'];
+  if (L.total && !G.total) return ['bad', `Linear regression now misclassifies ${describe(L)}; logistic regression still gets ${L.total === 1 ? 'it' : 'them'} right`];
+  if (!L.total && G.total) return ['bad', `Logistic regression misclassifies ${describe(G)}; linear regression gets every point right`];
+  if (!separable(xs, ys)) return ['bad', `The classes overlap, so no single threshold gets every point right: linear misclassifies ${L.total}, logistic ${G.total}`];
+  return ['bad', `Both models misclassify points: linear ${L.total}, logistic ${G.total}`];
+}
+const BADGE = { ok: '✓', bad: '!', idle: '•' };
+
+/* ================= Theme ================= */
+let C = {};
+function parseColor(str) {
+  str = (str || '').trim();
+  if (str[0] === '#') {
+    let h = str.slice(1);
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h.slice(0, 6), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const m = str.match(/[\d.]+/g);
+  return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n);
+  C = {
+    bg: parseColor(g('--bg')), panel: parseColor(g('--panel')), fg: parseColor(g('--fg')), muted: parseColor(g('--muted')),
+    line: parseColor(g('--line')), pos: parseColor(g('--pos')), neg: parseColor(g('--neg')),
+    lin: parseColor(g('--unit2')), log: parseColor(g('--unit1')),
+    fontUi: g('--font-ui').trim() || 'sans-serif', fontNum: g('--font-num').trim() || 'monospace', fontMath: g('--font-math').trim() || 'serif'
+  };
+  C.dark = (C.bg[0] + C.bg[1] + C.bg[2]) < 300;
+}
+
+/* ================= Canvas ================= */
+const cv = document.getElementById('cvPlot');
+const P = { cv, ctx: cv.getContext('2d'), m: { l: 44, r: 12, t: 24, b: 36 }, w: 1, h: 1, dpr: 1, pr: { x: 0, y: 0, w: 1, h: 1 } };
+function sizePlot() {
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  P.w = Math.max(1, r.width); P.h = Math.max(1, r.height); P.dpr = dpr;
+  const W = Math.max(1, Math.round(P.w * dpr)), H = Math.max(1, Math.round(P.h * dpr));
+  if (cv.width !== W) cv.width = W;
+  if (cv.height !== H) cv.height = H;
+  P.m.l = P.w < 500 ? 36 : 44;
+  P.m.t = P.w < 600 ? 40 : 24;   // narrow plots: room for the two threshold labels on separate rows
+  P.pr = { x: P.m.l, y: P.m.t, w: Math.max(10, P.w - P.m.l - P.m.r), h: Math.max(10, P.h - P.m.t - P.m.b) };
+}
+const X = x => P.pr.x + x / XMAX * P.pr.w;
+const Y = y => P.pr.y + (YHI - y) / (YHI - YLO) * P.pr.h;
+const invX = px => (px - P.pr.x) / P.pr.w * XMAX;
+const invY = py => YHI - (py - P.pr.y) / P.pr.h * (YHI - YLO);
+const ptR = () => Math.max(4, Math.min(6.5, P.pr.w / XMAX * 0.16));
+function font(px, kind = 'ui', style = '') { return `${style} ${px}px ${kind === 'num' ? C.fontNum : kind === 'math' ? C.fontMath : C.fontUi}`.trim(); }
+// Draw a label made of plain and maths (italic serif) pieces; returns its width.
+function richWidth(ctx, parts, size = 12) {
+  let total = 0;
+  for (const p of parts) { ctx.font = p.math ? font(size + 2, 'math', 'italic') : font(size, 'ui', p.bold ? '600' : ''); total += ctx.measureText(p.t).width; }
+  return total;
+}
+function richText(ctx, parts, x, y, align = 'center', size = 12, halo = null) {
+  const total = richWidth(ctx, parts, size);
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  ctx.textAlign = 'left';
+  for (const p of parts) {
+    ctx.font = p.math ? font(size + 2, 'math', 'italic') : font(size, 'ui', p.bold ? '600' : '');
+    if (halo) { ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = halo; ctx.strokeText(p.t, cx, y); }
+    ctx.fillText(p.t, cx, y);
+    cx += ctx.measureText(p.t).width;
+  }
+  return total;
+}
+// Clip y = a + b x to the box xr × yr; returns [x1, y1, x2, y2] or null.
+function clipLine(a, b, xr, yr) {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  let x1 = xr[0], x2 = xr[1];
+  if (Math.abs(b) > 1e-12) {
+    const xa = (yr[0] - a) / b, xb = (yr[1] - a) / b;
+    x1 = Math.max(x1, Math.min(xa, xb)); x2 = Math.min(x2, Math.max(xa, xb));
+    if (x1 > x2) return null;
+  } else if (a < yr[0] || a > yr[1]) return null;
+  return [x1, a + b * x1, x2, a + b * x2];
+}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// Polygons between the linear output and the [0, 1] band, exact (breakpoints where ŷ hits 0, 1 and the plot edges).
+function shadePolys(m) {
+  const f = x => m.w0 + m.w1 * x;
+  const xs = [0, XMAX];
+  if (Math.abs(m.w1) > 1e-12) for (const v of [YLO, 0, 1, YHI]) { const x = (v - m.w0) / m.w1; if (x > 0 && x < XMAX) xs.push(x); }
+  xs.sort((a, b) => a - b);
+  const up = xs.map(x => [x, clamp(f(x), 1, YHI)]), lo = xs.map(x => [x, clamp(f(x), YLO, 0)]);
+  return { up, lo };
+}
+
+function draw() {
+  const ctx = P.ctx, pr = P.pr, d = S.disp;
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.clearRect(0, 0, P.w, P.h);
+  const R = ptR();
+  const lin = d.lin, log = d.log;
+
+  // (1) shading where the linear output leaves [0, 1]
+  let shadeLabel = null;
+  if (S.showLin && S.shade) {
+    const sp = shadePolys(lin);
+    ctx.save(); ctx.beginPath(); ctx.rect(pr.x, pr.y, pr.w, pr.h); ctx.clip();
+    ctx.fillStyle = rgba(C.neg, C.dark ? 0.2 : 0.15);
+    for (const [poly, base] of [[sp.up, 1], [sp.lo, 0]]) {
+      ctx.beginPath();
+      poly.forEach((p, i) => (i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1]))));
+      for (let i = poly.length - 1; i >= 0; i--) ctx.lineTo(X(poly[i][0]), Y(base));
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    // place the one label in the deepest part of the shading (always at a plot edge, since ŷ is a straight line)
+    let best = null;
+    for (const xe of [0, XMAX]) {
+      const v = lin.w0 + lin.w1 * xe;
+      const hu = clamp(v, 1, YHI) - 1, hl = -clamp(v, YLO, 0);
+      if (hu > 0 && (!best || hu > best.h)) best = { xe, h: hu, up: true, v };
+      if (hl > 0 && (!best || hl > best.h)) best = { xe, h: hl, up: false, v };
+    }
+    if (best && Y(0) - Y(best.h) > 3) shadeLabel = best;
+  }
+
+  // (2) grid and axes
+  const pxcm = pr.w / XMAX, step = pxcm < 34 ? 2 : 1;
+  ctx.lineWidth = 1; ctx.font = font(12); ctx.textBaseline = 'middle';
+  for (let x = 0; x <= XMAX; x++) {
+    const px = Math.round(X(x)) + 0.5;
+    ctx.strokeStyle = rgba(C.line, x % step === 0 ? 1 : 0.55);
+    ctx.beginPath(); ctx.moveTo(px, pr.y); ctx.lineTo(px, pr.y + pr.h); ctx.stroke();
+    if (x % step === 0) { ctx.fillStyle = rgba(C.muted, 1); ctx.textAlign = 'center'; ctx.fillText(String(x), px, pr.y + pr.h + 10); }
+  }
+  ctx.strokeStyle = rgba(C.line, 1); ctx.strokeRect(pr.x + 0.5, pr.y + 0.5, pr.w - 1, pr.h - 1);
+  for (const v of [0, 1]) {
+    const py = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = rgba(C.muted, C.dark ? 0.55 : 0.45); ctx.lineWidth = 1.25;
+    ctx.beginPath(); ctx.moveTo(pr.x, py); ctx.lineTo(pr.x + pr.w, py); ctx.stroke();
+  }
+  const y5 = Math.round(Y(0.5)) + 0.5;
+  ctx.setLineDash([6, 4]); ctx.strokeStyle = rgba(C.muted, 0.95); ctx.lineWidth = 1.25;
+  ctx.beginPath(); ctx.moveTo(pr.x, y5); ctx.lineTo(pr.x + pr.w, y5); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = rgba(C.muted, 1); ctx.textAlign = 'right'; ctx.font = font(12);
+  for (const v of [0, 0.5, 1]) ctx.fillText(String(v), pr.x - 6, Y(v));
+  ctx.textBaseline = 'alphabetic';
+  richText(ctx, [{ t: 'x', math: true }, { t: '  tumour size (cm)' }], pr.x + pr.w / 2, P.h - 4);
+  ctx.save(); ctx.translate(12, pr.y + pr.h / 2); ctx.rotate(-Math.PI / 2);
+  richText(ctx, [{ t: 'Ŷ', math: true }, { t: ' output   ·   ' }, { t: 'Y', math: true }, { t: ' class' }], 0, 2);
+  ctx.restore();
+  ctx.fillStyle = rgba(C.muted, 1);
+  richText(ctx, [{ t: 'predict 1 if ' }, { t: 'Ŷ', math: true }, { t: ' ≥ 0.5' }], pr.x + pr.w - 8, y5 - 6, 'right', 12, rgba(C.panel, 0.9));
+
+  // (3) thresholds: where each model was on the starting data (dotted), and now (dashed)
+  const models = [];
+  if (S.showLin) models.push({ key: 'lin', name: 'linear', col: C.lin, t: thresholdOf(lin), t0: START.lin.threshold });
+  if (S.showLog) models.push({ key: 'log', name: 'logistic', col: C.log, t: thresholdOf(log), t0: START.log.threshold });
+  const labels = layoutThresholdLabels(ctx, models);
+  for (const mo of models) {
+    if (mo.t0 != null && (mo.t == null || Math.abs(mo.t - mo.t0) > 0.01)) {
+      const px = Math.round(X(mo.t0)) + 0.5;
+      ctx.setLineDash([1.5, 3]); ctx.strokeStyle = rgba(mo.col, 0.95); ctx.lineWidth = 1.75;
+      ctx.beginPath(); ctx.moveTo(px, pr.y); ctx.lineTo(px, pr.y + pr.h); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (mo.t != null && mo.t >= 0 && mo.t <= XMAX) {
+      const px = Math.round(X(mo.t)) + 0.5, lab = labels.find(it => it.m === mo);
+      const top = lab ? Math.min(pr.y, lab.y - 11) : pr.y;
+      ctx.setLineDash([6, 4]); ctx.strokeStyle = rgba(mo.col, 1); ctx.lineWidth = 1.75;
+      ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, pr.y + pr.h); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  for (const it of labels) { ctx.fillStyle = rgba(C.fg, 1); richText(ctx, it.parts, it.x0, it.y, 'left', 12, rgba(C.panel, 0.9)); }
+
+  // (4) the two fits
+  ctx.save(); ctx.beginPath(); ctx.rect(pr.x, pr.y, pr.w, pr.h); ctx.clip();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (S.showLin) {
+    const seg = clipLine(lin.w0, lin.w1, [0, XMAX], [YLO - 0.2, YHI + 0.2]);
+    if (seg) {
+      ctx.strokeStyle = rgba(C.panel, 0.9); ctx.lineWidth = 5.5;
+      ctx.beginPath(); ctx.moveTo(X(seg[0]), Y(seg[1])); ctx.lineTo(X(seg[2]), Y(seg[3])); ctx.stroke();
+      ctx.strokeStyle = rgba(C.lin, 1); ctx.lineWidth = 2.75;
+      ctx.beginPath(); ctx.moveTo(X(seg[0]), Y(seg[1])); ctx.lineTo(X(seg[2]), Y(seg[3])); ctx.stroke();
+    }
+  }
+  if (S.showLog) {
+    const n = Math.max(80, Math.ceil(pr.w / 1.5));
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const x = i / n * XMAX, px = X(x), py = Y(sigma(log.w0 + log.w1 * x));
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.strokeStyle = rgba(C.panel, 0.9); ctx.lineWidth = 5.5; ctx.stroke();
+    ctx.strokeStyle = rgba(C.log, 1); ctx.lineWidth = 2.75; ctx.stroke();
+  }
+  ctx.restore();
+
+  // (5) points, with a ring in each model's colour when that model gets the point wrong
+  const hoverId = S.drag ? S.drag.id : (S.hover && S.hover.kind === 'pt' ? S.hover.id : null);
+  for (const p of S.pts) {
+    const px = X(p.x), py = Y(p.y);
+    const wl = S.showLin && predictClass(lin, p.x) !== p.y, wg = S.showLog && predictClass(log, p.x) !== p.y;
+    const rings = [];
+    if (wl) rings.push(C.lin);
+    if (wg) rings.push(C.log);
+    rings.forEach((col, k) => {
+      const rr = R + 5 + k * 4.5;
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, 2 * Math.PI); ctx.strokeStyle = rgba(C.panel, 1); ctx.lineWidth = 4.5; ctx.stroke();
+    });
+    rings.forEach((col, k) => {
+      const rr = R + 5 + k * 4.5;
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, 2 * Math.PI); ctx.strokeStyle = rgba(col, 1); ctx.lineWidth = 2.25; ctx.stroke();
+    });
+  }
+  for (const p of S.pts) drawPoint(ctx, X(p.x), Y(p.y), p.y, R, p.id === hoverId, 1);
+
+  // (6) the one "not a probability" label
+  if (shadeLabel) {
+    // Centre the text in the gap between the points on the 0/1 line and the fitted line, measured where the
+    // wedge is thinnest under the text (its inner end), so it stays inside the shading and clear of the points.
+    const b = shadeLabel, right = b.xe === XMAX, parts = [{ t: 'not a probability', bold: true }];
+    const tw = richWidth(ctx, parts, 12), ax = right ? pr.x + pr.w - 8 : pr.x + 8;
+    const xin = invX(right ? ax - tw : ax + tw), vin = lin.w0 + lin.w1 * clamp(xin, 0, XMAX), clear = R + 6;
+    let ty;
+    if (b.up) {
+      const top = Y(clamp(vin, 1, YHI)) + 3, bot = Y(1) - clear;
+      ty = bot - top >= 14 ? (top + bot) / 2 + 4.5 : bot;
+      ty = clamp(ty, pr.y + 14, Y(1) - 4);
+    } else {
+      const top = Y(0) + clear, bot = Y(clamp(vin, YLO, 0)) - 3;
+      ty = bot - top >= 14 ? (top + bot) / 2 + 4.5 : top + 11;
+      ty = clamp(ty, Y(0) + 14, pr.y + pr.h - 5);
+    }
+    ctx.fillStyle = rgba(C.neg, 1);
+    richText(ctx, parts, ax, ty, right ? 'right' : 'left', 12, rgba(C.panel, 0.85));
+  }
+
+  // (7) hover: preview of a new point, or the point's values
+  const tip = document.getElementById('tip');
+  if (S.hover && S.hover.kind === 'add' && !S.drag) {
+    const h = S.hover;
+    drawPoint(ctx, X(h.x), Y(h.cls), h.cls, R, false, 0.45);
+    tip.innerHTML = `click to add a ${h.cls ? 'malignant' : 'benign'} tumour at ${cm(h.x)} cm`;
+    placeTip(tip, X(h.x), Y(h.cls));
+  } else if (hoverId != null) {
+    const p = S.pts.find(q => q.id === hoverId);
+    if (p) {
+      const rows = [`${p.y ? 'malignant' : 'benign'} (Y = ${p.y}), x = ${p.x.toFixed(2)} cm`];
+      const mk = (name, sym, m) => {
+        const v = output(m, p.x), c = predictClass(m, p.x), bad = c !== p.y;
+        return `${name} ${sym} = ${f2(v)} → ${c}${bad ? ' <span class="wrong">wrong</span>' : ''}`;
+      };
+      if (S.showLin) rows.push(mk('linear  ', 'ŷ', lin));
+      if (S.showLog) rows.push(mk('logistic', 'Ŷ', log));
+      tip.innerHTML = rows.join('<br>');
+      placeTip(tip, X(p.x), Y(p.y));
+    } else tip.hidden = true;
+  } else tip.hidden = true;
+}
+function thresholdOf(m) { return Math.abs(m.w1) > 1e-12 ? (m.kind === 'logistic' ? -m.w0 / m.w1 : (0.5 - m.w0) / m.w1) : null; }
+function drawPoint(ctx, px, py, cls, R, hot, alpha) {
+  ctx.save(); ctx.globalAlpha = alpha;
+  const col = cls ? C.pos : C.neg, rr = hot ? R + 1.5 : R;
+  if (cls) {
+    ctx.beginPath(); ctx.arc(px, py, rr + 1.5, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.bg, 1); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, rr, 0, 2 * Math.PI); ctx.fillStyle = rgba(col, 1); ctx.fill();
+  } else {
+    const s = rr * 0.9;
+    ctx.fillStyle = rgba(C.bg, 1); ctx.fillRect(px - s - 1.5, py - s - 1.5, 2 * s + 3, 2 * s + 3);
+    ctx.beginPath(); ctx.rect(px - s, py - s, 2 * s, 2 * s); ctx.fillStyle = rgba(col, 1); ctx.fill();
+  }
+  ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = hot ? 2 : 1; ctx.stroke();
+  ctx.restore();
+}
+// "linear x* = 3.21 cm" beside each dashed line, in the strip above the plot; the left-most threshold's label sits to its left.
+// When the two labels would overlap they go on two rows (above the plot on narrow screens, which get a taller strip).
+function layoutThresholdLabels(ctx, models) {
+  const pr = P.pr, y = pr.y - 7;
+  const items = models.filter(m => m.t != null).map(m => {
+    const parts = [{ t: m.name + ' ' }, { t: 'x', math: true }, { t: '* = ' + f2(m.t) + ' cm', bold: true }];
+    if (m.t < 0) parts.unshift({ t: '← ' });
+    if (m.t > XMAX) parts.push({ t: ' →' });
+    return { m, parts, w: richWidth(ctx, parts, 12), px: X(clamp(m.t, 0, XMAX)), y };
+  }).sort((a, b) => a.px - b.px);
+  const place = (it, side) => {
+    let x0 = side === 'right' ? it.px + 5 : it.px - 5 - it.w;
+    if (x0 + it.w > P.w - 2) x0 = it.px - 5 - it.w;
+    if (x0 < 2) x0 = it.px + 5;
+    it.x0 = clamp(x0, 2, P.w - it.w - 2);
+  };
+  items.forEach((it, i) => place(it, items.length === 2 && i === 0 ? 'left' : 'right'));
+  if (items.length === 2 && items[0].x0 + items[0].w + 6 > items[1].x0) {
+    items.forEach(it => place(it, 'right'));
+    if (P.m.t >= 40) { items[0].y = pr.y - 22; items[1].y = pr.y - 6; }
+    else { items[1].y = pr.y + 14; }
+  }
+  return items;
+}
+function placeTip(tip, x, y) {
+  tip.hidden = false;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = x + 14, top = y - th - 12;
+  if (left + tw > P.w - 2) left = x - tw - 14;
+  if (top < 2) top = y + 14;
+  tip.style.left = Math.max(2, left) + 'px'; tip.style.top = Math.max(2, Math.min(P.h - th - 2, top)) + 'px';
+}
+
+/* ================= Controls & readouts ================= */
+const $ = id => document.getElementById(id);
+const els = {
+  far: $('btnFar'), farTxt: $('btnFarTxt'), reset: $('btnReset'),
+  showLin: $('showLin'), showLog: $('showLog'), shade: $('shadeOut'),
+  status: $('status'), statusTxt: $('statusTxt'), badge: $('statusBadge')
+};
+function syncFarBtn() {
+  const f = nextFar();
+  els.far.disabled = f == null;
+  els.farTxt.textContent = f != null ? `Add a very large tumour (${cm(f)} cm)` : 'Very large tumours added';
+  els.far.title = f != null ? `Adds a malignant tumour at ${cm(f)} cm` : 'Both far tumours are in the data. Reset the data to start again.';
+}
+function rangeHTML(lo, hi) {
+  const n = v => `<span class="n${v < -0.005 || v > 1.005 ? ' out' : ''}">${f2(v)}</span>`;
+  return `${n(lo)} to ${n(hi)}`;
+}
+let lastStatus = '';
+function updatePanel() {
+  if (!S.fit.lin) return;
+  const xs = xsOf(), ys = ysOf(), N = xs.length;
+  for (const [key, m, st] of [['Lin', S.fit.lin, START.lin], ['Log', S.fit.log, START.log]]) {
+    const E = errorsDetail(m, xs, ys), rg = outRange(m, xs);
+    $(`r${key}W0`).textContent = f2(m.w0);
+    $(`r${key}W1`).textContent = f2(m.w1);
+    $(`r${key}T`).textContent = m.threshold == null ? 'none' : f2(m.threshold);
+    const e = $(`r${key}E`); e.textContent = `${E.total} of ${N}`; e.classList.toggle('bad', E.total > 0);
+    $(`r${key}Range`).innerHTML = rangeHTML(rg[0], rg[1]);
+    $(`r${key}Moved`).textContent = m.threshold == null || st.threshold == null ? '–' : signed(m.threshold - st.threshold) + ' cm';
+  }
+  const [kind, txt] = statusInfo();
+  if (txt !== lastStatus) {
+    els.statusTxt.textContent = txt; els.status.dataset.kind = kind; els.badge.textContent = BADGE[kind] || '•';
+    lastStatus = txt;
+  }
+}
+
+/* ================= Loop ================= */
+let dirty = true;
+function markDirty() { dirty = true; }
+function tick(t) {
+  if (S.tween) {
+    const tw = S.tween, u = Math.min(1, (t - tw.t0) / 550);
+    const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+    const lerp = (a, b) => ({ kind: a.kind, w0: a.w0 + (b.w0 - a.w0) * e, w1: a.w1 + (b.w1 - a.w1) * e });
+    S.disp = { lin: lerp(tw.from.lin, tw.to.lin), log: lerp(tw.from.log, tw.to.log) };
+    if (u >= 1) { S.disp = tw.to; S.tween = null; }
+    dirty = true;
+  }
+  if (S.flash && t > S.flash.until) { S.flash = null; updatePanel(); }
+  if (dirty) { draw(); dirty = false; }
+  requestAnimationFrame(tick);
+}
+
+/* ================= Events ================= */
+els.far.addEventListener('click', () => { const f = nextFar(); if (f != null) addPoint(f, 1, true); });
+els.reset.addEventListener('click', () => resetData(true));
+els.showLin.addEventListener('change', () => { S.showLin = els.showLin.checked; $('legLin').style.opacity = S.showLin ? '' : '.4'; markDirty(); });
+els.showLog.addEventListener('change', () => { S.showLog = els.showLog.checked; $('legLog').style.opacity = S.showLog ? '' : '.4'; markDirty(); });
+els.shade.addEventListener('change', () => { S.shade = els.shade.checked; markDirty(); });
+
+// Plot: drag a point left/right, click empty space to add, Shift+click / right-click / long-press to remove.
+function evPos(ev) {
+  const r = cv.getBoundingClientRect(), pr = P.pr;
+  const px = ev.clientX - r.left, py = ev.clientY - r.top;
+  return { px, py, x: invX(px), y: invY(py),
+    inside: px >= pr.x - 2 && px <= pr.x + pr.w + 2 && py >= pr.y - 2 && py <= pr.y + pr.h + 2 };
+}
+function hitPoint(px, py) {
+  const lim = Math.max(12, ptR() + 6);
+  let best = null, bd = lim;
+  for (const p of S.pts) { const d = Math.hypot(X(p.x) - px, Y(p.y) - py); if (d <= bd) { bd = d; best = p; } }
+  return best;
+}
+const snapX = x => clamp(Math.round(x / SNAP) * SNAP, 0, XMAX);
+function setCursor(c) { cv.classList.toggle('grab', c === 'grab'); cv.classList.toggle('grabbing', c === 'grabbing'); }
+function endDrag() {
+  if (S.drag && S.drag.lp) clearTimeout(S.drag.lp);
+  S.drag = null; setCursor(''); markDirty();
+}
+cv.addEventListener('pointerdown', ev => {
+  if (ev.button !== 0) return;
+  const p = evPos(ev), hit = hitPoint(p.px, p.py);
+  if (hit) {
+    ev.preventDefault();
+    if (ev.shiftKey) { removePoint(hit.id); return; }
+    S.drag = { id: hit.id, pointerId: ev.pointerId, moved: false, sx: p.px, sy: p.py };
+    try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    if (ev.pointerType === 'touch') {
+      const id = hit.id;
+      S.drag.lp = setTimeout(() => { if (S.drag && S.drag.id === id && !S.drag.moved) { endDrag(); removePoint(id); } }, 650);
+    }
+    S.hover = { kind: 'pt', id: hit.id }; setCursor('grabbing'); markDirty();
+    return;
+  }
+  if (p.inside && !ev.shiftKey) S.pending = { pointerId: ev.pointerId, px: p.px, py: p.py, x: p.x, y: p.y };
+});
+cv.addEventListener('pointermove', ev => {
+  const p = evPos(ev);
+  if (S.drag && ev.pointerId === S.drag.pointerId) {
+    if (!S.drag.moved && Math.hypot(p.px - S.drag.sx, p.py - S.drag.sy) < 3) return;
+    if (!S.drag.moved) { S.drag.moved = true; if (S.drag.lp) clearTimeout(S.drag.lp); }
+    const pt = S.pts.find(q => q.id === S.drag.id), nx = snapX(p.x);
+    if (pt && nx !== pt.x) { pt.x = nx; refit(false); syncFarBtn(); }
+    markDirty();
+    return;
+  }
+  if (S.pending && ev.pointerId === S.pending.pointerId && Math.hypot(p.px - S.pending.px, p.py - S.pending.py) > 6) S.pending = null;
+  if (ev.pointerType === 'touch') return;
+  const hit = hitPoint(p.px, p.py);
+  let h = null;
+  if (hit) h = { kind: 'pt', id: hit.id };
+  else if (p.inside) h = { kind: 'add', x: snapX(p.x), cls: p.y >= 0.5 ? 1 : 0 };
+  setCursor(hit ? 'grab' : '');
+  const same = (a, b) => (a === b) || (a && b && a.kind === b.kind && a.id === b.id && a.x === b.x && a.cls === b.cls);
+  if (!same(h, S.hover)) { S.hover = h; markDirty(); }
+});
+cv.addEventListener('pointerup', ev => {
+  if (S.drag && ev.pointerId === S.drag.pointerId) { endDrag(); return; }
+  if (S.pending && ev.pointerId === S.pending.pointerId) {
+    const q = S.pending; S.pending = null;
+    const p = evPos(ev);
+    if (Math.hypot(p.px - q.px, p.py - q.py) <= 6 && !hitPoint(q.px, q.py)) {
+      addPoint(snapX(q.x), q.y >= 0.5 ? 1 : 0, true);
+      if (ev.pointerType !== 'touch') { const hit = hitPoint(p.px, p.py); S.hover = hit ? { kind: 'pt', id: hit.id } : null; setCursor(hit ? 'grab' : ''); }
+    }
+  }
+});
+cv.addEventListener('pointercancel', () => { S.pending = null; if (S.drag) endDrag(); });
+cv.addEventListener('pointerleave', () => { if (!S.drag) { S.hover = null; setCursor(''); markDirty(); } });
+cv.addEventListener('contextmenu', ev => {
+  const p = evPos(ev), hit = hitPoint(p.px, p.py);
+  if (!hit) return;
+  ev.preventDefault();
+  if (S.drag) endDrag();
+  removePoint(hit.id);
+});
+
+// Resize & theme
+const ro = new ResizeObserver(() => { sizePlot(); markDirty(); });
+ro.observe(cv.parentElement);
+function onTheme() { readTheme(); markDirty(); }
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', onTheme); else if (mq.addListener) mq.addListener(onTheme);
+}
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (window.matchMedia && !window.matchMedia('(hover: hover)').matches) {
+  $('editHint').textContent = 'Drag a point to move it · tap above or below 0.5 to add malignant or benign · long-press removes';
+}
+
+/* ================= Init ================= */
+readTheme();
+resetData(false);
+sizePlot();
+requestAnimationFrame(tick);
+
+/* ================= Test hooks ================= */
+const pick = m => ({ w0: m.w0, w1: m.w1, threshold: m.threshold });
+window.__demo = {
+  fitLinear: (xs, ys) => pick(fitLinear(xs, ys)),
+  fitLogistic: (xs, ys) => { const m = fitLogistic(xs, ys); return Object.assign(pick(m), { iters: m.iters }); },
+  // model: 'linear' | 'logistic' (fitted to xs, ys), or { kind, w0, w1 }
+  errors: (model, xs, ys) => {
+    if (model && typeof model === 'object' && !model.kind) model = Object.assign({ kind: 'linear' }, model);
+    return errors(model, xs, ys);
+  },
+  data: () => ({ xs: xsOf(), ys: ysOf() }),
+  addPoint: (x, y) => addPoint(x, y, false),
+  reset: () => resetData(false),
+  start: { linear: pick(START.lin), logistic: pick(START.log) },
+  state: () => {
+    const xs = xsOf(), ys = ysOf();
+    const one = m => { const E = errorsDetail(m, xs, ys); return Object.assign(pick(m), { errors: E.total, fn: E.fn, fp: E.fp, range: outRange(m, xs) }); };
+    return { n: xs.length, linear: one(S.fit.lin), logistic: one(S.fit.log), status: els.statusTxt.textContent,
+      farNext: nextFar() == null ? null : nextFar(), tweening: !!S.tween };
+  }
+};
+})();
+</script>
+<script>
+  // Inside a slide deck: send presenter-remote keys (PageDown/PageUp) and arrow keys to the deck,
+  // except while a slider, menu or text box has focus (arrows adjust those).
+  (function () {
+    if (window.parent === window) return;
+    window.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var t = e.target, tag = t && t.tagName ? t.tagName.toUpperCase() : '';
+      var inControl = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+      var dir = null;
+      if (e.key === 'PageDown') dir = 'next';
+      else if (e.key === 'PageUp') dir = 'prev';
+      else if (!inControl && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) dir = 'next';
+      else if (!inControl && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) dir = 'prev';
+      if (!dir) return;
+      e.preventDefault();
+      try { window.parent.postMessage({ type: 'deck-nav', dir: dir }, '*'); } catch (err) { /* ignore */ }
+    }, true);
+  })();
+</script>
+</body>
+</html>

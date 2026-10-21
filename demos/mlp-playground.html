@@ -1055,5 +1055,25 @@ const Core = (() => {
   };
 })();
 </script>
+<script>
+  // Inside a slide deck: send presenter-remote keys (PageDown/PageUp) and arrow keys to the deck,
+  // except while a slider, menu or text box has focus (arrows adjust those).
+  (function () {
+    if (window.parent === window) return;
+    window.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var t = e.target, tag = t && t.tagName ? t.tagName.toUpperCase() : '';
+      var inControl = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+      var dir = null;
+      if (e.key === 'PageDown') dir = 'next';
+      else if (e.key === 'PageUp') dir = 'prev';
+      else if (!inControl && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) dir = 'next';
+      else if (!inControl && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) dir = 'prev';
+      if (!dir) return;
+      e.preventDefault();
+      try { window.parent.postMessage({ type: 'deck-nav', dir: dir }, '*'); } catch (err) { /* ignore */ }
+    }, true);
+  })();
+</script>
 </body>
 </html>

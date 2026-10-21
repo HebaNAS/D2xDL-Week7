@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear Regression Lecture</title>
+<link rel="stylesheet" href="vendor/reveal/reset.css">
+<link rel="stylesheet" href="vendor/reveal/reveal.css">
+<link rel="stylesheet" href="vendor/chalkboard/style.css">
+<link rel="stylesheet" href="assets/deck.css">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ================================================================ 1. Title -->
+<section class="title-slide" data-title="Title">
+  <img class="logo" src="../images/logo.png" alt="Heriot-Watt University">
+  <div class="title-block">
+    <h1>Linear Regression</h1>
+    <div class="course">F20DL/F21DL</div>
+    <div class="course">Data Mining &amp; Machine Learning</div>
+    <div class="author">Dr. Heba El-Shimy</div>
+    <div class="basis">Based on F20/21DL Slides on Canvas</div>
+    <div class="assist">Code development was assisted by Claude.ai</div>
+  </div>
+  <div class="copyright">
+    © 2026 Heriot-Watt University. All rights reserved.<br>
+    This material has been created by staff of Heriot-Watt University and is protected by copyright.
+  </div>
+  <aside class="notes">
+    Keys: → / Space / clicker = next, ← = back, Esc or O = overview, S = this speaker view, F = full screen,
+    . = black screen, C = draw on the slide, B = whiteboard, Alt+click = zoom, ? = all keys.
+    After clicking inside a demo, the clicker and arrow keys still change slides.
+  </aside>
+</section>
+
+<!-- ================================================================ 2. Linear function -->
+<section>
+  <h2>Linear Function</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 30px; margin-top: 40px;">
+    <li>A <span class="b">linear function</span> of features \(x_1, x_2, \ldots, x_D\) is a function that takes the form:
+      \[ f_{\mathbf{w}}(x_1, x_2, \ldots, x_D) = w_0 + w_1x_1 + \ldots + w_Dx_D = \sum_{d=0}^{D} w_d x_d = \mathbf{w}^T \cdot \mathbf{x} \]
+      where \(x_0 = 1\)
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 3. Linear regression -->
+<section>
+  <h2>Linear Regression</h2>
+  <div class="rule"></div>
+  <div class="cols">
+    <ul class="bul">
+      <li><em>“Linear regression is the problem of fitting a <span class="b">linear function</span> to a set of \(n\) examples, in which <span class="b">usually</span> the input and output features are <span class="b">numeric</span>.”</em></li>
+      <li>Aim: <span class="r">predict</span> the <span class="b">output feature</span> \(\hat{Y}\) from input features \(x_1, x_2, \ldots, x_D\)</li>
+      <li>Notation:
+        <ul>
+          <li>A <span class="b">feature</span> is a <span class="r">function</span> of an example \(\rightarrow\) often a <span class="b">human interpretation</span></li>
+          <li>The <span class="b">weights</span> denote the “<span class="r">importance</span>” of features</li>
+          <li>The <span class="b">sum of squared errors (SSE)</span> on examples \(X\) for output feature \(Y\) is:
+            \[ SSE(\mathbf{X}, \mathbf{w}) = \sum_{\mathbf{x}_n \in X} \big(Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\big)^2 \]
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <figure><img class="fig" src="../images/linear-regression.png" alt="A straight line fitted through scattered points" style="max-height: 520px;"></figure>
+  </div>
+</section>
+
+<!-- ================================================================ 4. Optimisation problem -->
+<section>
+  <h2>Linear Regression: the Optimisation Problem</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 28px;">
+    <li>Goal: find <span class="b">weights \(\mathbf{w}\)</span> that <span class="r">minimise \(SSE(X, \mathbf{w})\)</span></li>
+    <li>Identical to optimising a <span class="b">linear model</span> w.r.t. the <span class="b">squared objective function</span> \(l^{(sqr)}\) over \(n\) examples <span class="b">without regularisation</span>:
+      \[ \min_{\mathbf{w}, b} \sum_n \big(y_n - (\mathbf{w}^T \cdot \mathbf{x}_n + b)\big)^2, \quad \text{where } w_0 = b \text{ (bias term) and } x_0 = 1 \]
+    </li>
+    <li>For one example the gradient is \(\nabla_{\mathbf{w}} = -2\,(y_n - \mathbf{w}^T \cdot \mathbf{x}_n)\,\mathbf{x}_n\), so gradient descent moves \(\mathbf{w}\) along \((y_n - \mathbf{w}^T \cdot \mathbf{x}_n)\,\mathbf{x}_n\)
+      <div class="small muted" style="margin-top: 6px;">The 2 is absorbed into the learning rate \(\eta\).</div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 5. GD snapshots -->
+<section>
+  <h2>Gradient Descent in Action</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/gd-snapshots.png" alt="Six panels: the fitted line after 0, 5, 10, 20, 30 and 49 epochs, with SSE falling from 748 to 7.76" style="max-height: 540px;">
+    <figcaption>House prices: \(x\) = size (1,000 sq ft), \(y\) = price (100,000s). Online updates with \(\eta = 0.01\), starting from \(\mathbf{w} = [0, 0]\). Each panel is the line after that many epochs; dashed lines are the errors.</figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================ 6. GD algorithm -->
+<section>
+  <h2>Linear Regression: Gradient Descent Algorithm</h2>
+  <div class="rule"></div>
+  <div class="algo" style="margin-top: 30px;">
+    <div class="head"><b>Algorithm:</b> LINEAR REGRESSION GRADIENT DESCENT(data, \(maxIter\), \(\eta\))</div>
+    <ol>
+      <li><span>\(\mathbf{w} \leftarrow \langle 0, 0, \ldots, 0 \rangle\) or randomly initialise</span><span class="cmt">// initialise weights</span></li>
+      <li><span><b>for</b> \(k = 1 \ldots maxIter\) <b>do</b></span></li>
+      <li><span class="i1"><b>for all</b> \((\mathbf{x}_n, Y(\mathbf{x}_n)) \in\) data <b>do</b></span></li>
+      <li class="hl"><span class="i2">\(\hat{Y}(\mathbf{x}_n) = \mathbf{w}^T \cdot \mathbf{x}_n\)</span><span class="cmt">// compute predicted output</span></li>
+      <li class="hl"><span class="i2">\(\delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\)</span><span class="cmt">// compute scalar \(\delta\)</span></li>
+      <li class="hl"><span class="i2">\(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\)</span><span class="cmt">// update weights</span></li>
+      <li><span class="i1"><b>end for</b></span></li>
+      <li><span><b>end for</b></span></li>
+      <li><span><b>return</b> \(\mathbf{w}\)</span></li>
+    </ol>
+  </div>
+  <p class="small muted" style="margin-top: 18px;">Lines 4–6 are one update. The next slide runs them live, one example at a time.</p>
+</section>
+
+<!-- ================================================================ 7. DEMO gradient descent bowl -->
+<section class="demo" data-demo="../demos/gd-loss-bowl.html" data-title="Gradient Descent Bowl">
+  <aside class="notes">
+    A sequence that works:
+    1) Step three times: each click runs lines 4–6 on one house; read the numbers.
+    2) Play.
+    3) Presets: "Too small" crawls; "Diverges" blows up and pauses itself.
+    4) Switch to Batch and pick "Oscillates": the zig-zag across the narrow valley.
+    5) Drag on the loss surface to start somewhere else.
+    Come back here at the closed-form slides (Esc for the overview) and press "Closed form".
+  </aside>
+</section>
+
+<!-- ================================================================ 8. Section -->
+<section class="section-slide">
+  <div class="section-title"><h1>Worked-out Example</h1><h1>Customer Transactions</h1></div>
+</section>
+
+<!-- ================================================================ 9. Example data -->
+<section>
+  <h2>Example: Customer Transactions</h2>
+  <div class="rule"></div>
+  <div class="cols wide-right">
+    <table class="data">
+      <thead><tr><th>Transaction</th><th>Music DL?</th><th>Music Stream?</th><th>Online Games</th><th class="out">Output</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>No</td><td>Yes</td><td>Yes</td><td class="out">Buys</td></tr>
+        <tr><td class="name">T2</td><td>Yes</td><td>No</td><td>No</td><td class="out">Cancels</td></tr>
+        <tr><td class="name">T3</td><td>Yes</td><td>No</td><td>Yes</td><td class="out">Buys</td></tr>
+        <tr><td class="name">T4</td><td>Yes</td><td>No</td><td>No</td><td class="out">Cancels</td></tr>
+        <tr><td class="name">T5</td><td>No</td><td>Yes</td><td>No</td><td class="out">Cancels</td></tr>
+        <tr><td class="name">T6</td><td>No</td><td>Yes</td><td>No</td><td class="out">Cancels</td></tr>
+        <tr><td class="name">T7</td><td>No</td><td>No</td><td>Yes</td><td class="out">Buys</td></tr>
+        <tr><td class="name">T8</td><td>No</td><td>Yes</td><td>Yes</td><td class="out">Cancels</td></tr>
+        <tr><td class="name">T9</td><td>Yes</td><td>Yes</td><td>No</td><td class="out">Cancels</td></tr>
+        <tr><td class="name">T10</td><td>Yes</td><td>Yes</td><td>Yes</td><td class="out">Buys</td></tr>
+      </tbody>
+    </table>
+    <div class="stack-v" style="padding-top: 20px;">
+      <p>Each transaction records which services a customer already uses, and whether they <span class="b">bought</span> or <span class="r">cancelled</span>.</p>
+      <p>Two ways to model the output:</p>
+      <ul class="bul">
+        <li>as a <span class="b">class</span> (classification)</li>
+        <li>as a <span class="b">number</span> (regression)</li>
+      </ul>
+      <p class="tiny muted">Data: <span class="mono">data/customer_transactions.csv</span> (this example uses three of its four features).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 10. Classification option -->
+<section>
+  <h2>The Classification Option: Vectorise</h2>
+  <div class="rule"></div>
+  <div class="cols wide-right">
+    <table class="data">
+      <thead><tr><th>Transaction</th><th>Music DL?</th><th>Music Stream?</th><th>Online Games</th><th class="out">Output</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>0</td><td>1</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T2</td><td>1</td><td>0</td><td>0</td><td class="out">−1</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T4</td><td>1</td><td>0</td><td>0</td><td class="out">−1</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td>1</td><td>0</td><td class="out">−1</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td>1</td><td>0</td><td class="out">−1</td></tr>
+        <tr><td class="name">T7</td><td>0</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T8</td><td>0</td><td>1</td><td>1</td><td class="out">−1</td></tr>
+        <tr><td class="name">T9</td><td>1</td><td>1</td><td>0</td><td class="out">−1</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td>1</td><td>1</td><td class="out">1</td></tr>
+      </tbody>
+    </table>
+    <ul class="bul small">
+      <li class="fragment">Features:<ul><li>Yes \(\rightarrow\) 1, No \(\rightarrow\) 0</li></ul></li>
+      <li class="fragment">Class (output):<ul><li>Buys \(\rightarrow\) 1, Cancels \(\rightarrow\) −1</li></ul></li>
+      <li class="fragment"><span class="r">Minimise</span> any <span class="b">objective function</span> \(l\), e.g. \(l^{(exp.)}\)</li>
+      <li class="fragment">How to predict the <span class="r">class</span>?
+        <ul><li>\(\hat{y} = \mathit{sign}(\mathbf{w}^T \mathbf{x} + b)\), aka the sign of the activation</li><li>Similar to the <span class="b">Perceptron</span></li></ul>
+      </li>
+      <li class="fragment">How to <span class="r">evaluate</span>?<ul><li>Accuracy, Precision, Recall, F1</li></ul></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 11. Regression option -->
+<section>
+  <h2>The Regression Option: Turn to Numbers</h2>
+  <div class="rule"></div>
+  <div class="cols wide-right">
+    <table class="data">
+      <thead><tr><th>Transaction</th><th>Music DL?</th><th>Music Stream?</th><th>Online Games</th><th class="out">Output</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>0</td><td>1</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T2</td><td>1</td><td>0</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T4</td><td>1</td><td>0</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td>1</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td>1</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T7</td><td>0</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T8</td><td>0</td><td>1</td><td>1</td><td class="out">0</td></tr>
+        <tr><td class="name">T9</td><td>1</td><td>1</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td>1</td><td>1</td><td class="out">1</td></tr>
+      </tbody>
+    </table>
+    <ul class="bul small">
+      <li class="fragment">Features: Yes \(\rightarrow\) 1, No \(\rightarrow\) 0</li>
+      <li class="fragment">We learn the function
+        \[ \begin{aligned} f(\text{musicDown}, &amp;\ \text{musicStream}, \text{onlineGames}) = w_0 \\ &amp;+ w_1 \cdot \text{musicDown} + w_2 \cdot \text{musicStream} \\ &amp;+ w_3 \cdot \text{onlineGames} \end{aligned} \]
+      </li>
+      <li class="fragment"><span class="r">Minimise</span> SSE, aka \(l^{(sqr)}\)</li>
+      <li class="fragment">How to predict the <span class="r">output</span>?
+        <ul>
+          <li>Use the value of the <span class="b">output</span> directly: \(\hat{Y}(\mathbf{x}_n) = \sum_{d=0}^{D} w_d x_d = \mathbf{w}^T \cdot \mathbf{x}_n\)</li>
+          <li>Hopefully, the model will <span class="r">learn to map</span> \(\hat{Y}(\mathbf{x}_n)\) to something close to 0s and 1s</li>
+        </ul>
+      </li>
+      <li class="fragment">How to <span class="r">evaluate</span>? SSE, or Mean Squared Error (MSE)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 12. Set-up for the hand calculation -->
+<section>
+  <h2>Gradient Descent by Hand: Set-up</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);">
+    <ul class="bul">
+      <li>Add the bias input \(x_0 = 1\) to every example:
+        <div style="margin: 10px 0 4px; font-size: 23px;">\(\mathbf{x}_n = [\,1,\ \text{musicDown},\ \text{musicStream},\ \text{onlineGames}\,]\)</div>
+        <ul>
+          <li>T1: \(\mathbf{x} = [1, 0, 1, 1]\), \(Y = 1\)</li>
+          <li>T2: \(\mathbf{x} = [1, 1, 0, 0]\), \(Y = 0\)</li>
+        </ul>
+      </li>
+      <li>Start from \(\mathbf{w}^{(0)} = [1, 2, 3, 1]\) and learning rate \(\eta = 1\)</li>
+      <li>Run lines 4–6 of the algorithm on T1, then on T2</li>
+    </ul>
+    <div class="algo" style="font-size: 23px; margin-top: 8px;">
+      <div class="head"><b>One update</b> (lines 4–6)</div>
+      <div class="calc" style="row-gap: 10px;">
+        <span class="ln l4">4</span><div class="ex">\(\hat{Y}(\mathbf{x}_n) = \mathbf{w}^T \cdot \mathbf{x}_n\)</div>
+        <span class="ln l5">5</span><div class="ex">\(\delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\)</div>
+        <span class="ln l6">6</span><div class="ex">\(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 13. Iteration 1, T1 -->
+<section>
+  <h2>Iteration 1: Example T1</h2>
+  <div class="rule"></div>
+  <p class="muted">\(\mathbf{x}_{T1} = [1, 0, 1, 1]\), \(\ Y(\mathbf{x}_{T1}) = 1\), \(\ \mathbf{w}^{(0)} = [1, 2, 3, 1]\), \(\ \eta = 1\)</p>
+  <div class="calc" style="font-size: 28px; row-gap: 16px; margin-top: 18px;">
+    <span class="ln l4 fragment" data-fragment-index="1">4</span>
+    <div class="ex fragment" data-fragment-index="1">\(\hat{Y}(\mathbf{x}_{T1}) = \mathbf{w}^T \cdot \mathbf{x}_{T1} = 1 \cdot 1 + 2 \cdot 0 + 3 \cdot 1 + 1 \cdot 1 = 5\)</div>
+    <span class="ln l5 fragment" data-fragment-index="2">5</span>
+    <div class="ex fragment" data-fragment-index="2">\(\delta = Y(\mathbf{x}_{T1}) - \hat{Y}(\mathbf{x}_{T1}) = 1 - 5 = -4\)</div>
+    <span class="ln l6 fragment" data-fragment-index="3">6</span>
+    <div class="ex fragment" data-fragment-index="3">\(\mathbf{w}^{(1)} = \mathbf{w}^{(0)} + \eta \cdot \delta \cdot \mathbf{x}_{T1} = [1, 2, 3, 1] + 1 \cdot (-4) \cdot [1, 0, 1, 1] = [-3, 2, -1, -3]\)</div>
+  </div>
+  <div class="callout fragment" data-fragment-index="4" style="margin-top: 30px;">The prediction 5 was far too high, so every weight whose feature is on (\(x_d = 1\)) moved down by 4. The weight for Music DL (\(x_1 = 0\)) did not change.</div>
+</section>
+
+<!-- ================================================================ 14. Iteration 1, T2 -->
+<section>
+  <h2>Iteration 1: Example T2</h2>
+  <div class="rule"></div>
+  <p class="muted">\(\mathbf{x}_{T2} = [1, 1, 0, 0]\), \(\ Y(\mathbf{x}_{T2}) = 0\), \(\ \mathbf{w} = [-3, 2, -1, -3]\), \(\ \eta = 1\)</p>
+  <div class="calc" style="font-size: 28px; row-gap: 16px; margin-top: 18px;">
+    <span class="ln l4 fragment" data-fragment-index="1">4</span>
+    <div class="ex fragment" data-fragment-index="1">\(\hat{Y}(\mathbf{x}_{T2}) = (-3) \cdot 1 + 2 \cdot 1 + (-1) \cdot 0 + (-3) \cdot 0 = -1\)</div>
+    <span class="ln l5 fragment" data-fragment-index="2">5</span>
+    <div class="ex fragment" data-fragment-index="2">\(\delta = 0 - (-1) = 1\)</div>
+    <span class="ln l6 fragment" data-fragment-index="3">6</span>
+    <div class="ex fragment" data-fragment-index="3">\(\mathbf{w} \leftarrow [-3, 2, -1, -3] + 1 \cdot 1 \cdot [1, 1, 0, 0] = [-2, 3, -1, -3]\)</div>
+  </div>
+</section>
+
+<!-- ================================================================ 15. Predictions after one pass -->
+<section>
+  <h2>Predictions After One Pass</h2>
+  <div class="rule"></div>
+  <p>With \(\mathbf{w} = [-2, 3, -1, -3]\), predict on the two examples (outside the training loop):</p>
+  <div class="calc" style="font-size: 26px; row-gap: 12px;">
+    <span class="ln">T1</span><div class="ex fragment">\(\hat{Y}(\mathbf{x}_{T1}) = (-2) \cdot 1 + 3 \cdot 0 + (-1) \cdot 1 + (-3) \cdot 1 = -6\), \(\ Y = 1\), error \(= 1 - (-6) = 7\)</div>
+    <span class="ln">T2</span><div class="ex fragment">\(\hat{Y}(\mathbf{x}_{T2}) = (-2) \cdot 1 + 3 \cdot 1 + (-1) \cdot 0 + (-3) \cdot 0 = 1\), \(\ Y = 0\), error \(= 0 - 1 = -1\)</div>
+    <span class="ln">SSE</span><div class="ex fragment">\(SSE(X, \mathbf{w}) = 7^2 + (-1)^2 = 49 + 1 = 50\)</div>
+  </div>
+  <div class="callout warn fragment" style="margin-top: 26px;">The predictions are way off. We have done only <strong>one</strong> pass, and \(\eta = 1\) is too large here: one update took T1 from 5 (too high) to −7 (too low). Training needs many passes (epochs) and a smaller \(\eta\).</div>
+</section>
+
+<!-- ================================================================ 16. Weights over 5 epochs -->
+<section>
+  <h2>Training for 5 Epochs (\(\eta = 0.3\))</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/weights-evolution.png" alt="Four line charts: each weight after every update over 5 epochs, settling towards its final value" style="max-height: 520px;">
+    <figcaption>Each weight after every update (10 updates per epoch). Dashed: the value after 5 epochs, \(\mathbf{w} = [-0.93, 0.81, 0.25, 0.89]\).</figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================ 17. Loss after 5 epochs -->
+<section>
+  <h2>Loss and Predictions After 5 Epochs</h2>
+  <div class="rule"></div>
+  <figure><img class="fig" src="assets/fig/loss-over-epochs.png" alt="SSE falls steeply over the first two epochs and then levels off" style="max-height: 300px;"></figure>
+  <table class="data compact" style="margin: 18px auto 0;">
+    <thead><tr><th></th><th>T1</th><th>T2</th><th>T3</th><th>T4</th><th>T5</th><th>T6</th><th>T7</th><th>T8</th><th>T9</th><th>T10</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Actual</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td></tr>
+      <tr><td class="name">Predicted (\(\hat{Y} \ge 0.5\))</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+      <tr><td class="name">Correct?</td><td class="bad">✗</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td><td class="bad">✗</td><td class="ok">✓</td><td class="ok">✓</td><td class="ok">✓</td></tr>
+    </tbody>
+  </table>
+  <p class="center" style="margin-top: 14px;">Accuracy <strong>80%</strong> · SSE <strong>2.74</strong></p>
+</section>
+
+<!-- ================================================================ 18. 100 epochs -->
+<section>
+  <h2>More Epochs, Smaller Learning Rate</h2>
+  <div class="rule"></div>
+  <div class="cols even">
+    <div class="stack-v">
+      <p>100 epochs with \(\eta = 0.01\) learns:</p>
+      \[ \begin{aligned} \text{Buys} = &amp;-0.574 \\ &amp;+ 0.522 \cdot \text{musicDown} \\ &amp;+ 0.337 \cdot \text{musicStream} \\ &amp;+ 0.922 \cdot \text{onlineGames} \end{aligned} \]
+      <p class="small">Online Games has the largest weight: using it most increases the predicted output.</p>
+      <div class="legend-lines">
+        <span><i style="width:14px;height:14px;background:#d9f2df;display:inline-block;"></i> correct side of 0.5 / error &lt; 0.1</span>
+        <span><i style="width:14px;height:14px;background:#fde3e7;display:inline-block;"></i> error &lt; 0.3</span>
+        <span><i style="width:14px;height:14px;background:#f8c9c9;display:inline-block;"></i> wrong side / error ≥ 0.3</span>
+      </div>
+    </div>
+    <table class="data compact" style="justify-self: center;">
+      <thead><tr><th>Transaction</th><th>Actual</th><th>Predicted</th><th>Error</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>1</td><td class="num good-cell">0.685</td><td class="num bad-cell">0.315</td></tr>
+        <tr><td class="name">T2</td><td>0</td><td class="num good-cell">−0.051</td><td class="num good-cell">0.051</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td class="num good-cell">0.871</td><td class="num mid-cell">0.129</td></tr>
+        <tr><td class="name">T4</td><td>0</td><td class="num good-cell">−0.051</td><td class="num good-cell">0.051</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td class="num good-cell">−0.237</td><td class="num mid-cell">0.237</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td class="num good-cell">−0.237</td><td class="num mid-cell">0.237</td></tr>
+        <tr><td class="name">T7</td><td>1</td><td class="num bad-cell">0.348</td><td class="num bad-cell">0.652</td></tr>
+        <tr><td class="name">T8</td><td>0</td><td class="num bad-cell">0.685</td><td class="num bad-cell">−0.685</td></tr>
+        <tr><td class="name">T9</td><td>0</td><td class="num good-cell">0.286</td><td class="num mid-cell">−0.286</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td class="num good-cell">1.208</td><td class="num mid-cell">−0.208</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================ 19. Why not ideal -->
+<section>
+  <h2>Why Continuous Predictions Aren’t Ideal for Classification</h2>
+  <div class="rule"></div>
+  <div class="cols even">
+    <table class="data compact" style="justify-self: center;">
+      <thead><tr><th>Transaction</th><th>Actual</th><th>Predicted value</th><th>Class (\(\ge 0.5\))</th><th>Correct?</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>1</td><td class="num">0.685</td><td>1</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T2</td><td>0</td><td class="num">−0.051</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td class="num">0.871</td><td>1</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T4</td><td>0</td><td class="num">−0.051</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td class="num">−0.237</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td class="num">−0.237</td><td>0</td><td class="ok">✓</td></tr>
+        <tr class="hl"><td class="name">T7</td><td>1</td><td class="num">0.348</td><td>0</td><td class="bad">✗</td></tr>
+        <tr class="hl"><td class="name">T8</td><td>0</td><td class="num">0.685</td><td>1</td><td class="bad">✗</td></tr>
+        <tr><td class="name">T9</td><td>0</td><td class="num">0.286</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td class="num">1.208</td><td>1</td><td class="ok">✓</td></tr>
+      </tbody>
+    </table>
+    <ul class="bul">
+      <li>Classification accuracy: <strong>80%</strong></li>
+      <li class="fragment">Problem: predictions are real numbers, <span class="r">not probabilities</span>
+        <ul><li>values can be \(&lt; 0\) or \(&gt; 1\) (T2, T10)</li><li>hard to read as the “probability of buying”</li></ul>
+      </li>
+      <li class="fragment">Better approach: <span class="b">logistic regression</span> (later today) or the <span class="b">perceptron</span></li>
+      <li class="fragment small muted">T1 and T8 have identical features but different outputs, so no model can get both right.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 20. Closed form: matrix form -->
+<section>
+  <h2>Linear Regression: Closed Form Solution</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 24px;">
+    <li>Our optimisation problem: minimise \(L(\mathbf{w}) = \sum_n \big(y_n - \mathbf{w}^T \cdot \mathbf{x}_n\big)^2\)</li>
+    <li>Matrix form: stack the examples as the rows of \(X\), so \(X\mathbf{w}\) holds every prediction \(\mathbf{w}^T \cdot \mathbf{x}_n = \mathbf{x}_n^T \cdot \mathbf{w}\), and
+      \[ L(\mathbf{w}) = (Y - X\mathbf{w})^T (Y - X\mathbf{w}) \]
+      <ul>
+        <li>\(Y\): vector of all outputs \((N \times 1)\); \(X\): matrix of all inputs \((N \times D)\); \(\mathbf{w}\): weight vector \((D \times 1)\)</li>
+        <li>\((Y - X\mathbf{w})^T (Y - X\mathbf{w})\) is the dot product of the error vector with itself: the sum of squared errors</li>
+      </ul>
+    </li>
+    <li>Expanding:
+      <div class="fragment">\[ L(\mathbf{w}) = Y^T Y - Y^T X\mathbf{w} - (X\mathbf{w})^T Y + (X\mathbf{w})^T X\mathbf{w} \]</div>
+      <div class="fragment">\[ \phantom{L(\mathbf{w})} = Y^T Y - Y^T X\mathbf{w} - \mathbf{w}^T X^T Y + \mathbf{w}^T X^T X\mathbf{w} \]</div>
+      <div class="fragment">\[ \phantom{L(\mathbf{w})} = Y^T Y - 2\,\mathbf{w}^T X^T Y + \mathbf{w}^T X^T X\mathbf{w} \]
+        <div class="tiny muted" style="margin-left: 30px;">because \(Y^T X\mathbf{w} = (Y^T X\mathbf{w})^T = \mathbf{w}^T X^T Y\): a single number equals its own transpose</div>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 21. Closed form: gradient -->
+<section>
+  <h2>Closed Form Solution: Taking the Gradient</h2>
+  <div class="rule"></div>
+  <p>Differentiate \(L(\mathbf{w}) = Y^T Y - 2\,\mathbf{w}^T X^T Y + \mathbf{w}^T X^T X\mathbf{w}\) term by term:</p>
+  <div class="deriv">
+    <div class="eq fragment">\(\dfrac{\partial}{\partial \mathbf{w}} \big(Y^T Y\big) = 0\)</div>
+    <div class="why fragment">\(Y^T Y\) is a constant</div>
+    <div class="eq fragment">\(\dfrac{\partial}{\partial \mathbf{w}} \big(-2\,\mathbf{w}^T X^T Y\big) = -2\,X^T Y\)</div>
+    <div class="why fragment">as \(\frac{\partial}{\partial \mathbf{w}}(\mathbf{w}^T \mathbf{a}) = \mathbf{a}\), with the constant \(\mathbf{a} = X^T Y\)</div>
+    <div class="eq fragment">\(\dfrac{\partial}{\partial \mathbf{w}} \big(\mathbf{w}^T X^T X \mathbf{w}\big) = 2\,X^T X\mathbf{w}\)</div>
+    <div class="why fragment">as \(\frac{\partial}{\partial \mathbf{w}}(\mathbf{w}^T A \mathbf{w}) = 2A\mathbf{w}\) for symmetric \(A\); here \(A = X^T X\)</div>
+  </div>
+  <div class="fragment" style="margin-top: 22px;">Therefore
+    \[ \nabla_{\mathbf{w}} L(\mathbf{w}) = 0 - 2\,X^T Y + 2\,X^T X\mathbf{w} = 2\,X^T X\mathbf{w} - 2\,X^T Y \]
+  </div>
+</section>
+
+<!-- ================================================================ 22. Closed form: set to zero -->
+<section>
+  <h2>Closed Form Solution: Setting the Gradient to Zero</h2>
+  <div class="rule"></div>
+  <p>By <span class="r">setting the gradient \(\nabla_{\mathbf{w}} L(\mathbf{w}) = 0\)</span>:</p>
+  <div style="font-size: 30px;">
+    <div class="fragment">\[ 2\,X^T X\mathbf{w} - 2\,X^T Y = 0 \]</div>
+    <div class="fragment">\[ X^T X\mathbf{w} = X^T Y \qquad \text{(the normal equations)} \]</div>
+    <div class="fragment small muted center">Multiply both sides by \((X^T X)^{-1}\): we cannot divide by a matrix.</div>
+    <div class="fragment">\[ \color{#3274B5}{\mathbf{w} = (X^T X)^{-1} X^T Y} \]</div>
+  </div>
+  <p class="fragment small">where \(X\) is the dataset \((N \times D)\) and \(Y\) are all the gold output values \((N \times 1)\).
+    <span class="muted">In code, solve the normal equations (<span class="mono">np.linalg.solve(X.T @ X, X.T @ Y)</span>) instead of forming the inverse.</span></p>
+</section>
+
+<!-- ================================================================ 23. Why not always? -->
+<section>
+  <h2>Closed Form Solution: Why Not Always Use It?</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 25px;">
+    <li><span class="r">Complexity</span> of <span class="b">gradient descent</span>: <span class="b">\(\mathcal{O}(KND)\)</span>, where \(K\) is the number of iterations</li>
+    <li><span class="r">Complexity</span> of the <span class="b">closed form solution</span>: <span class="b">\(\mathcal{O}(D^3 + D^2N)\)</span>
+      <ul><li>Usually \(N &gt; D\), so the cost is dominated by <span class="b">\(\mathcal{O}(D^2N)\)</span></li></ul>
+    </li>
+    <li class="fragment">Do we need to run more than \(D\)-many iterations \(K\)?
+      <ul>
+        <li>If we get good results with \(K &lt; D\) (or even \(K \ll D\)), gradient descent can be very efficient, especially for high-dimensional problems where \(D^3\) is prohibitively expensive</li>
+        <li>In practice, far fewer than \(D\) iterations are often enough, which is one reason gradient descent is widely used in machine learning</li>
+      </ul>
+    </li>
+    <li class="fragment">Rule of thumb:
+      <ul><li>\(D \le 100 \rightarrow\) closed form is faster</li><li>\(D \ge 10{,}000 \rightarrow\) gradient descent is probably faster</li></ul>
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 24. Both methods on our data -->
+<section>
+  <h2>Both Methods on Our Data</h2>
+  <div class="rule"></div>
+  <p>Customer transactions: \(N = 10\) examples, \(D = 4\) features (including the bias).</p>
+  <table class="data" style="margin: 20px 0;">
+    <thead><tr><th>Method</th><th>\(w_0\)</th><th>\(w_1\)</th><th>\(w_2\)</th><th>\(w_3\)</th><th>SSE</th><th>Time (one run)</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Gradient descent (100 epochs, \(\eta = 0.01\))</td><td class="num">−0.574</td><td class="num">0.522</td><td class="num">0.337</td><td class="num">0.922</td><td class="num">1.2525</td><td class="num">≈ 10 ms</td></tr>
+      <tr><td class="name">Closed form</td><td class="num">0.000</td><td class="num">0.118</td><td class="num">−0.118</td><td class="num">0.824</td><td class="num"><strong>0.7059</strong></td><td class="num">≈ 0.2 ms</td></tr>
+    </tbody>
+  </table>
+  <ul class="bul">
+    <li>The closed form gives the <span class="b">exact</span> minimum of the SSE</li>
+    <li>Gradient descent <span class="r">approximates</span> it; how close depends on the number of iterations and \(\eta\)</li>
+    <li class="small muted">Timings are from one run on a laptop and will vary. With \(D = 4\) the closed form wins easily.</li>
+  </ul>
+  <aside class="notes">Optional: go back to the Gradient Descent Bowl demo (Esc → overview) and press "Closed form" to jump straight to the minimum.</aside>
+</section>
+
+<!-- ================================================================ 25. Complexity figure -->
+<section>
+  <h2>Which Is Cheaper as \(D\) and \(N\) Grow?</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/complexity.png" alt="Left: closed-form cost grows like D cubed and overtakes gradient descent near D = 100. Right: for fixed D both grow linearly in N." style="max-height: 470px;">
+    <figcaption>Operation counts from the formulas, not timings. Left: \(N = 1000\), varying \(D\). Right: \(D = 50\), varying \(N\); both grow linearly in \(N\), so \(D\) (not \(N\)) decides which method is faster.</figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================ 26. Section: Logistic regression -->
+<section class="section-slide">
+  <div class="section-title"><h1>Logistic Regression</h1></div>
+</section>
+
+<!-- ================================================================ 27. Recall hyperplanes -->
+<section>
+  <h2>Recall: Binary Classification via Hyperplanes</h2>
+  <div class="rule"></div>
+  <div class="cols">
+    <ul class="bul">
+      <li>A <span class="b">linear classifier</span> is a hyperplane \((\mathbf{w}, b)\)
+        <ul><li>At test time, we check on which side of the hyperplane examples fall:
+          \[ \hat{y} = \mathit{sign}(\mathbf{w}^T \cdot \mathbf{x} + b) \]</li></ul>
+      </li>
+      <li>A <span class="b">linear regression</span>
+        <ul>
+          <li>At test time, we use the value of the <span class="b">output</span> directly:
+            \[ \hat{Y}(\mathbf{x}) = \mathbf{w}^T \cdot \mathbf{x} \]</li>
+          <li>…and learn to “<span class="r">map</span>” it to the <span class="b">pre-defined values</span> of the gold <span class="b">classes</span>, for example \(1 \rightarrow \mathit{true}\), \(0 \rightarrow \mathit{false}\)</li>
+        </ul>
+      </li>
+    </ul>
+    <figure><img class="fig" src="../images/hyperplane3.png" alt="A line separating positive and negative examples in two dimensions" style="max-height: 480px;"></figure>
+  </div>
+</section>
+
+<!-- ================================================================ 28. Sigmoid with explorer -->
+<section>
+  <h2>Sigmoid (Logistic) Activation Function</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1fr) 620px;">
+    <ul class="bul small">
+      <li>What if we wanted to <span class="r">estimate the probability of the class \(P(\hat{Y}(\mathbf{x}) \mid \mathbf{x})\)</span> <span class="b">directly from the input features \(\mathbf{x}_n\)</span> with a linear model?
+        <ul><li>\(P(\hat{Y}(\mathbf{x}) \mid \mathbf{x}) = \mathbf{w}^T \cdot \mathbf{x}\) would not work: the output is not bounded to \([0, 1]\)</li></ul>
+      </li>
+      <li>We can use the <span class="b">sigmoid</span> (or logistic) function:
+        <ul>
+          <li>\(\sigma(z) = \dfrac{1}{1 + e^{-z}}\)</li>
+          <li>so that
+            \[ P(\hat{Y}(\mathbf{x}) \mid \mathbf{x}) = \frac{1}{1 + e^{-\mathbf{w}^T \cdot \mathbf{x}}} \]</li>
+        </ul>
+      </li>
+    </ul>
+    <iframe class="demo-inline" data-src="../demos/sigmoid-explorer.html" title="Sigmoid explorer" style="height: 470px;"></iframe>
+  </div>
+  <aside class="notes">Drag w: larger |w| gives a steeper curve and more confident predictions; a negative w flips it. Drag b: the 0.5 crossing moves to x* = −b/w.</aside>
+</section>
+
+<!-- ================================================================ 29. DEMO linear vs logistic -->
+<section class="demo" data-demo="../demos/linear-vs-logistic.html" data-title="Linear vs Logistic Fit">
+  <aside class="notes">
+    Both models start with no errors. Press "Add a very large tumour" once or twice: the least-squares line tilts,
+    its 0.5 crossing moves right and it misclassifies malignant cases; the S-curve barely moves.
+    Point at the shaded areas: linear outputs below 0 or above 1 are not probabilities.
+  </aside>
+</section>
+
+<!-- ================================================================ 30. Gradient for squared loss: question -->
+<section>
+  <h2>Use Case: Gradient Calculation for \(l^{(sqr)}\)</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="margin-top: 30px;">
+    <li>Consider the following <span class="b">learning objective</span>:
+      \[ L(\mathbf{w}) = \sum_n \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big)^2, \quad \text{where } \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
+    </li>
+    <li>What do we need in order to run <span class="b">gradient descent</span>?
+      <ul><li class="fragment">The gradient \(\nabla_{\mathbf{w}} L\): how the loss changes as each weight changes</li></ul>
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 31. Squared loss derivative 1/2 -->
+<section>
+  <h2>\(l^{(sqr)}\): Derivative with Respect to \(\mathbf{w}\) (1/2)</h2>
+  <div class="rule"></div>
+  <div class="deriv wide">
+    <div class="eq">\(\nabla_{\mathbf{w}} L = \nabla_{\mathbf{w}} \sum_n \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big)^2 = \nabla_{\mathbf{w}} \sum_n \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)^2\)</div>
+    <div class="why"></div>
+    <div class="eq fragment">\(= \sum_n 2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \nabla_{\mathbf{w}} \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)\)</div>
+    <div class="why fragment">power rule (brings down the 2) + chain rule (multiply by the derivative of the inside)</div>
+    <div class="eq fragment">\(= \sum_n 2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \cdot \big( -\nabla_{\mathbf{w}} \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)\)</div>
+    <div class="why fragment">sum rule: the derivative of a difference is the difference of the derivatives; \(Y(\mathbf{x}_n)\) does not depend on \(\mathbf{w}\)</div>
+  </div>
+</section>
+
+<!-- ================================================================ 32. Squared loss derivative 2/2 -->
+<section>
+  <h2>\(l^{(sqr)}\): Derivative with Respect to \(\mathbf{w}\) (2/2)</h2>
+  <div class="rule"></div>
+  <div class="deriv wide">
+    <div class="eq">\(= \sum_n -2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big( 1 - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \nabla_{\mathbf{w}} \, \mathbf{w}^T \cdot \mathbf{x}_n\)</div>
+    <div class="why">chain rule: the derivative of the sigmoid is \(\sigma(z)(1 - \sigma(z))\)</div>
+    <div class="eq fragment">\(= \sum_n -2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big( 1 - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \mathbf{x}_n\)</div>
+    <div class="why fragment">the derivative of the dot product \(\mathbf{w}^T \cdot \mathbf{x}_n\) with respect to \(\mathbf{w}\) is \(\mathbf{x}_n\)</div>
+    <div class="eq fragment">\(= \sum_n -2 \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big) \, \hat{Y}(\mathbf{x}_n) \big( 1 - \hat{Y}(\mathbf{x}_n) \big) \, \mathbf{x}_n\)</div>
+    <div class="why fragment">since \(\hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n)\)</div>
+    <div class="eq fragment">\(= \sum_n -2 \, \delta \, \hat{Y}(\mathbf{x}_n) \big( 1 - \hat{Y}(\mathbf{x}_n) \big) \, \mathbf{x}_n\)</div>
+    <div class="why fragment">let the error \(\delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\)</div>
+  </div>
+</section>
+
+<!-- ================================================================ 33. Logistic GD algorithm -->
+<section>
+  <h2>Logistic Regression: Gradient Descent Algorithm</h2>
+  <div class="rule"></div>
+  <div class="algo" style="margin-top: 26px;">
+    <div class="head"><b>Algorithm:</b> LOGISTIC REGRESSION GRADIENT DESCENT(data, \(maxIter\), \(\eta\)) <span class="muted">(squared loss)</span></div>
+    <ol>
+      <li><span>\(\mathbf{w} \leftarrow \langle 0, 0, \ldots, 0 \rangle\) or randomly initialise</span><span class="cmt">// initialise weights</span></li>
+      <li><span><b>for</b> \(k = 1 \ldots maxIter\) <b>do</b></span></li>
+      <li><span class="i1"><b>for all</b> \((\mathbf{x}_n, Y(\mathbf{x}_n)) \in\) data <b>do</b></span></li>
+      <li class="hl"><span class="i2">\(\hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n)\)</span><span class="cmt">// compute predicted output</span></li>
+      <li><span class="i2">\(\delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\)</span><span class="cmt">// compute scalar \(\delta\)</span></li>
+      <li class="hl"><span class="i2">\(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \hat{Y}(\mathbf{x}_n)\big(1 - \hat{Y}(\mathbf{x}_n)\big) \cdot \mathbf{x}_n\)</span><span class="cmt">// update weights</span></li>
+      <li><span class="i1"><b>end for</b></span></li>
+      <li><span><b>end for</b></span></li>
+      <li><span><b>return</b> \(\mathbf{w}\)</span></li>
+    </ol>
+  </div>
+  <p class="small muted" style="margin-top: 16px;">Compared with linear regression, only lines 4 and 6 change: the sigmoid, and its derivative \(\hat{Y}(1 - \hat{Y})\) in the update (the 2 is absorbed into \(\eta\)).</p>
+</section>
+
+<!-- ================================================================ 34. Log loss -->
+<section>
+  <h2>\(l^{(log)}\): Log Loss for Logistic Regression</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="margin-top: 26px;">
+    <li>Quite often, instead of the squared loss \(l^{(sqr)}\), we optimise the <span class="b">log-loss</span> \(l^{(log)}\):
+      \[ LL(\mathbf{w}) = -\sum_n \Big[ Y(\mathbf{x}_n) \cdot \log \hat{Y}(\mathbf{x}_n) + \big(1 - Y(\mathbf{x}_n)\big) \cdot \log\big(1 - \hat{Y}(\mathbf{x}_n)\big) \Big], \quad \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
+    </li>
+    <li>Log-loss is the natural choice for logistic regression: it comes from probability theory (it is the negative log-likelihood of the labels) and has much better optimisation properties: <span class="b">better gradients and faster learning</span></li>
+  </ul>
+</section>
+
+<!-- ================================================================ 35. Log loss derivative part 1 -->
+<section>
+  <h2>Derivative of the Log Loss (1/3)</h2>
+  <div class="rule"></div>
+  <div class="cols even" style="gap: 30px; font-size: 23px; align-items: center;">
+    <div>For a single example \(n\), writing \(Y\) and \(\hat{Y}\) for \(Y(\mathbf{x}_n)\) and \(\hat{Y}(\mathbf{x}_n)\):
+      \[ LL_n = -Y \log \hat{Y} - (1 - Y) \log(1 - \hat{Y}) \]</div>
+    <div>By the chain rule:
+      \[ \frac{\partial LL_n}{\partial \mathbf{w}} = \color{#3274B5}{\frac{\partial LL_n}{\partial \hat{Y}}} \cdot \color{#A62B17}{\frac{\partial \hat{Y}}{\partial \mathbf{w}}} \]</div>
+  </div>
+  <h3 style="margin-top: 14px;"><span class="b">Part 1:</span> \(\dfrac{\partial LL_n}{\partial \hat{Y}}\)</h3>
+  <div class="deriv" style="font-size: 23px; row-gap: 4px;">
+    <div class="eq fragment">\(\displaystyle \frac{\partial}{\partial \hat{Y}} \Big[ -Y \log \hat{Y} - (1 - Y) \log(1 - \hat{Y}) \Big] = -\frac{Y}{\hat{Y}} - (1 - Y) \cdot \frac{1}{1 - \hat{Y}} \cdot (-1)\)</div>
+    <div class="why fragment">derivative of \(\log\); the inner \(1 - \hat{Y}\) contributes \(-1\)</div>
+    <div class="eq fragment">\(\displaystyle = -\frac{Y}{\hat{Y}} + \frac{1 - Y}{1 - \hat{Y}} = \frac{-Y(1 - \hat{Y}) + (1 - Y)\hat{Y}}{\hat{Y}(1 - \hat{Y})}\)</div>
+    <div class="why fragment">common denominator</div>
+    <div class="eq fragment">\(\displaystyle = \frac{-Y + Y\hat{Y} + \hat{Y} - Y\hat{Y}}{\hat{Y}(1 - \hat{Y})} = \color{#3274B5}{\frac{\hat{Y} - Y}{\hat{Y}(1 - \hat{Y})}}\)</div>
+    <div class="why fragment">expand; the \(Y\hat{Y}\) terms cancel</div>
+  </div>
+</section>
+
+<!-- ================================================================ 36. Log loss derivative part 2 -->
+<section>
+  <h2>Derivative of the Log Loss (2/3)</h2>
+  <div class="rule"></div>
+  <h3><span class="r">Part 2:</span> \(\dfrac{\partial \hat{Y}}{\partial \mathbf{w}}\), where \(\hat{Y} = \sigma(\mathbf{w}^T \cdot \mathbf{x})\)</h3>
+  <div style="font-size: 28px;">
+    <p>We need the derivative of the sigmoid:</p>
+    \[ \frac{\partial \sigma(z)}{\partial z} = \sigma(z)\big(1 - \sigma(z)\big) \]
+    <p class="fragment">So, by the chain rule:</p>
+    <div class="fragment">\[ \frac{\partial \hat{Y}}{\partial \mathbf{w}} = \frac{\partial \sigma(\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} = \sigma(\mathbf{w}^T \cdot \mathbf{x})\big(1 - \sigma(\mathbf{w}^T \cdot \mathbf{x})\big) \cdot \frac{\partial (\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} \]</div>
+    <div class="fragment">\[ = \color{#A62B17}{\hat{Y}(1 - \hat{Y}) \cdot \mathbf{x}} \]</div>
+  </div>
+</section>
+
+<!-- ================================================================ 37. Log loss derivative part 3 -->
+<section>
+  <h2>Derivative of the Log Loss (3/3)</h2>
+  <div class="rule"></div>
+  <h3>Part 3: combine them</h3>
+  <div style="font-size: 28px;">
+    \[ \frac{\partial LL_n}{\partial \mathbf{w}} = \color{#3274B5}{\frac{\partial LL_n}{\partial \hat{Y}}} \cdot \color{#A62B17}{\frac{\partial \hat{Y}}{\partial \mathbf{w}}} \]
+    <div class="fragment">\[ = \color{#3274B5}{\frac{\hat{Y} - Y}{\hat{Y}(1 - \hat{Y})}} \cdot \color{#A62B17}{\hat{Y}(1 - \hat{Y}) \cdot \mathbf{x}} \]</div>
+    <div class="fragment">\[ = (\hat{Y} - Y) \cdot \mathbf{x} = -(Y - \hat{Y}) \cdot \mathbf{x} = -\delta \cdot \mathbf{x}, \quad \text{where } \delta = Y - \hat{Y} \]</div>
+  </div>
+  <div class="callout fragment" style="margin-top: 20px;">The sigmoid derivative \(\hat{Y}(1 - \hat{Y})\) cancels the denominator from the log derivative. This is why the log-loss works so well with the sigmoid.</div>
+</section>
+
+<!-- ================================================================ 38. Log loss gradient & update -->
+<section>
+  <h2>\(l^{(log)}\): Back to the Familiar Update</h2>
+  <div class="rule"></div>
+  <ul class="bul">
+    <li>The gradient with respect to \(\mathbf{w}\) is
+      \[ \nabla_{\mathbf{w}} LL(\mathbf{w}) = -\sum_n \delta \cdot \mathbf{x}_n, \quad \text{where } \delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \]
+      which brings us back to the familiar weight update:
+      \[ \mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n \]
+    </li>
+  </ul>
+  <table class="data fragment" style="margin: 16px auto 0; font-size: 22px;">
+    <thead><tr><th>Loss with the sigmoid</th><th>Update for one example</th><th>When the model is confidently wrong (\(\hat{Y} \approx 0\), \(Y = 1\))</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Squared loss \(l^{(sqr)}\)</td><td>\(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \hat{Y}(1 - \hat{Y}) \cdot \mathbf{x}_n\)</td><td class="bad">\(\hat{Y}(1 - \hat{Y}) \approx 0\): the update almost vanishes</td></tr>
+      <tr><td class="name">Log loss \(l^{(log)}\)</td><td>\(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\)</td><td class="ok">\(\delta \approx 1\): a full-size update</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================ 39. DEMO squared vs log loss -->
+<section class="demo" data-demo="../demos/sigmoid-losses.html" data-title="Squared vs Log Loss">
+  <aside class="notes">
+    Start at z = −6 with Y = 1: the model is confidently wrong. Read the two gradients aloud.
+    Press "Run gradient descent from z = −6" and compare how many steps each loss needs to reach the correct side.
+  </aside>
+</section>
+
+<!-- ================================================================ 40. Section: Read emails -->
+<section class="section-slide">
+  <div class="section-title"><h1>Worked-out Example</h1><h1>Read Emails</h1></div>
+</section>
+
+<!-- ================================================================ 41. Emails data -->
+<section>
+  <h2>Example: Read Emails</h2>
+  <div class="rule"></div>
+  <div class="cols even" style="margin-top: 20px;">
+    <div class="stack-v">
+      <h3>The data</h3>
+      <table class="data">
+        <thead><tr><th>Ex</th><th>Thread</th><th>Length</th><th>Where</th><th class="out">Action</th></tr></thead>
+        <tbody>
+          <tr><td class="name">E1</td><td>old</td><td>long</td><td>work</td><td class="out">skip</td></tr>
+          <tr><td class="name">E2</td><td>new</td><td>short</td><td>work</td><td class="out">skip</td></tr>
+          <tr><td class="name">E3</td><td>new</td><td>long</td><td>home</td><td class="out">read</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack-v fragment">
+      <h3>Vectorised</h3>
+      <table class="data">
+        <thead><tr><th>Ex</th><th>Thread</th><th>Length</th><th>Where</th><th class="out">Output</th></tr></thead>
+        <tbody>
+          <tr><td class="name">E1</td><td>0</td><td>0</td><td>0</td><td class="out">0</td></tr>
+          <tr><td class="name">E2</td><td>1</td><td>1</td><td>0</td><td class="out">0</td></tr>
+          <tr><td class="name">E3</td><td>1</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted">new → 1, short → 1, home → 1, read → 1</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 42. Emails model -->
+<section>
+  <h2>Read Emails: the Model</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="margin-top: 20px;">
+    <li>We want to learn
+      \[ f(\text{thread}, \text{length}, \text{where}) = \sigma(w_0 + w_1 \cdot \text{thread} + w_2 \cdot \text{length} + w_3 \cdot \text{where}) \]
+      by minimising the SSE (squared loss) or the log-loss
+    </li>
+    <li class="fragment">Initial weights: \(\mathbf{w} = [w_0, w_1, w_2, w_3] = [0.4, -0.7, -0.9, 1.2]\)</li>
+    <li class="fragment">How to predict the class from the output:
+      <ul><li>\(\sigma(\mathbf{w}^T \cdot \mathbf{x}) \ge 0.5 \rightarrow\) predict 1 (read)</li><li>\(\sigma(\mathbf{w}^T \cdot \mathbf{x}) &lt; 0.5 \rightarrow\) predict 0 (skip)</li></ul>
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 43. Emails detailed calculations -->
+<section>
+  <h2>Read Emails: Making Predictions</h2>
+  <div class="rule"></div>
+  <p class="muted">\(\mathbf{w} = [0.4, -0.7, -0.9, 1.2]\); each \(\mathbf{x}\) starts with the bias input 1. Predict 1 (read) when \(\sigma(\mathbf{w}^T \cdot \mathbf{x}) \ge 0.5\).</p>
+  <table class="data emails" style="margin: 18px 0 0; font-size: 22px;">
+    <thead><tr><th>Ex</th><th>\(\mathbf{x}\)</th><th>\(\mathbf{w}^T \cdot \mathbf{x}\)</th><th>\(\sigma(\mathbf{w}^T \cdot \mathbf{x})\)</th><th>Predicted</th><th>Gold</th><th>\(\delta = Y - \hat{Y}\)</th><th>\(\delta^2\)</th></tr></thead>
+    <tbody>
+      <tr class="fragment"><td class="name">E1</td><td class="num">[1, 0, 0, 0]</td><td class="num">0.4 = 0.40</td><td class="num">0.599</td><td>1 (read)</td><td class="bad">0 (skip) ✗</td><td class="num">−0.599</td><td class="num">0.358</td></tr>
+      <tr class="fragment"><td class="name">E2</td><td class="num">[1, 1, 1, 0]</td><td class="num">0.4 − 0.7 − 0.9 = −1.20</td><td class="num">0.231</td><td>0 (skip)</td><td class="ok">0 (skip) ✓</td><td class="num">−0.231</td><td class="num">0.054</td></tr>
+      <tr class="fragment"><td class="name">E3</td><td class="num">[1, 1, 0, 1]</td><td class="num">0.4 − 0.7 + 1.2 = 0.90</td><td class="num">0.711</td><td>1 (read)</td><td class="ok">1 (read) ✓</td><td class="num">0.289</td><td class="num">0.084</td></tr>
+      <tr class="fragment"><td class="name" colspan="7" style="text-align: right;">Total SSE</td><td class="num"><strong>0.4956</strong></td></tr>
+    </tbody>
+  </table>
+  <aside class="notes">Question for the room: after one gradient step, which weight should change most, and in which direction? (E1 is wrong with only the bias on, so w₀ should go down.)</aside>
+</section>
+
+<!-- ================================================================ 44. Section: customer transactions again -->
+<section class="section-slide">
+  <div class="section-title"><h1>Worked-out Example</h1><h1>Customer Transactions</h1></div>
+</section>
+
+<!-- ================================================================ 45. Linear regression (sklearn) -->
+<section>
+  <h2>Method 1: Linear Regression</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);">
+    <div class="stack-v">
+      <p>Fitted with scikit-learn (<span class="mono">LinearRegression</span>, the closed form):</p>
+      \[ \begin{aligned} \text{Buys} = &amp;\ 0.000 \\ &amp;+ 0.118 \cdot \text{musicDown} \\ &amp;- 0.118 \cdot \text{musicStream} \\ &amp;+ 0.824 \cdot \text{onlineGames} \end{aligned} \]
+      <ul class="bul small">
+        <li>Online Games: <span class="b">+0.824</span>, strong positive effect</li>
+        <li>Music Download / Streaming: ±0.118, tiny effects</li>
+        <li class="fragment"><span class="r">Problem:</span> predictions range from −0.118 to 0.941; they are <span class="r">not probabilities</span> (not bounded to \([0, 1]\))</li>
+      </ul>
+    </div>
+    <table class="data compact" style="justify-self: center;">
+      <thead><tr><th>Transaction</th><th>Actual</th><th>Predicted</th><th>Error</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>1</td><td class="num">0.706</td><td class="num">0.294</td></tr>
+        <tr><td class="name">T2</td><td>0</td><td class="num">0.118</td><td class="num">−0.118</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td class="num">0.941</td><td class="num">0.059</td></tr>
+        <tr><td class="name">T4</td><td>0</td><td class="num">0.118</td><td class="num">−0.118</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td class="num">−0.118</td><td class="num">0.118</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td class="num">−0.118</td><td class="num">0.118</td></tr>
+        <tr><td class="name">T7</td><td>1</td><td class="num">0.824</td><td class="num">0.176</td></tr>
+        <tr><td class="name">T8</td><td>0</td><td class="num">0.706</td><td class="num">−0.706</td></tr>
+        <tr><td class="name">T9</td><td>0</td><td class="num">0.000</td><td class="num">0.000</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td class="num">0.824</td><td class="num">0.176</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================ 46. Logistic regression (sklearn) -->
+<section>
+  <h2>Method 2: Logistic Regression</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);">
+    <div class="stack-v">
+      <p>Fitted with scikit-learn (<span class="mono">LogisticRegression</span>, no regularisation):</p>
+      \[ \begin{aligned} \text{Buys} = \sigma\big( &amp;-20.94 \\ &amp;+ 10.75 \cdot \text{musicDown} \\ &amp;- 7.25 \cdot \text{musicStream} \\ &amp;+ 28.19 \cdot \text{onlineGames} \big) \end{aligned} \]
+      <ul class="bul small">
+        <li>All predictions are <span class="b">probabilities</span> between 0 and 1: the probability of buying</li>
+        <li>Training accuracy <strong>90%</strong>: T1 and T8 are identical, so both get \(P = 0.5\)</li>
+        <li class="fragment">The weights are much larger than for linear regression. Why?</li>
+      </ul>
+    </div>
+    <table class="data compact" style="justify-self: center;">
+      <thead><tr><th>Transaction</th><th>Actual</th><th>Probability</th><th>Class</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>1</td><td class="num">0.500</td><td>1</td></tr>
+        <tr><td class="name">T2</td><td>0</td><td class="num">0.000</td><td>0</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td class="num">1.000</td><td>1</td></tr>
+        <tr><td class="name">T4</td><td>0</td><td class="num">0.000</td><td>0</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td class="num">0.000</td><td>0</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td class="num">0.000</td><td>0</td></tr>
+        <tr><td class="name">T7</td><td>1</td><td class="num">0.999</td><td>1</td></tr>
+        <tr class="hl"><td class="name">T8</td><td>0</td><td class="num">0.500</td><td class="bad">1</td></tr>
+        <tr><td class="name">T9</td><td>0</td><td class="num">0.000</td><td>0</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td class="num">1.000</td><td>1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================================================================ 47. Why weights differ -->
+<section>
+  <h2>Why Are the Weights So Different?</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);">
+    <ul class="bul small">
+      <li><span class="b">Linear regression</span> weights are small: \(\mathbf{w}^T \cdot \mathbf{x}\) is fitted directly to the 0/1 targets, so they stay on the scale of the targets</li>
+      <li><span class="r">Logistic regression</span> weights are large:
+        <ul>
+          <li>larger weights → steeper sigmoid → more confident predictions</li>
+          <li>with no regularisation, the log-loss keeps falling as the weights grow, while the training points stay on the correct side. Our data is almost separable, so the weights grow until the solver stops</li>
+          <li>so their size reflects when the solver stopped, not how “important” a feature is</li>
+        </ul>
+      </li>
+      <li class="fragment"><span class="b">Regularisation</span> keeps them finite (scikit-learn’s default is \(C = 1\))</li>
+    </ul>
+    <div class="fragment">
+      <table class="data compact">
+        <thead><tr><th>Setting</th><th>\(\lVert\mathbf{w}\rVert\)</th><th>\(\mathbf{w}\)</th><th>Train acc.</th></tr></thead>
+        <tbody>
+          <tr><td class="name">none, tol = 1e−4</td><td class="num">31.03</td><td class="num">[10.75, −7.25, 28.19]</td><td class="num">0.9</td></tr>
+          <tr><td class="name">none, tol = 1e−6</td><td class="num">68.95</td><td class="num">[23.57, −16.67, 62.61]</td><td class="num">0.9</td></tr>
+          <tr><td class="name">none, tol = 1e−8</td><td class="num">93.70</td><td class="num">[31.88, −22.83, 85.09]</td><td class="num">0.9</td></tr>
+          <tr><td class="name">\(C = 100\)</td><td class="num">8.37</td><td class="num">[2.14, −2.18, 7.80]</td><td class="num">0.9</td></tr>
+          <tr><td class="name">\(C = 10\)</td><td class="num">3.98</td><td class="num">[0.64, −0.85, 3.83]</td><td class="num">0.9</td></tr>
+          <tr><td class="name">\(C = 1\)</td><td class="num">1.30</td><td class="num">[0.06, −0.25, 1.27]</td><td class="num">0.9</td></tr>
+          <tr><td class="name">\(C = 0.1\)</td><td class="num">0.19</td><td class="num">[0.00, −0.04, 0.19]</td><td class="num">0.6</td></tr>
+        </tbody>
+      </table>
+      <p class="tiny muted" style="margin-top: 8px;">Smaller \(C\) = stronger regularisation = smaller weights, and eventually underfitting.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 48. Weight scale figure -->
+<section>
+  <h2>Larger Weights → Steeper Sigmoid</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/sigmoid-weight-scale.png" alt="Sigmoid curves for weight scales 0.5, 1, 2 and 5: the larger the scale, the steeper the curve" style="max-height: 480px;">
+    <figcaption>\(\sigma(s \cdot z)\) for weight scales \(s = 0.5, 1, 2, 5\). Try it live with “Compare weight scales” in the sigmoid explorer.</figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================ 49. Decision boundaries -->
+<section>
+  <h2>Linear vs Logistic Decision Boundaries</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: center;">
+    <figure><img class="fig" src="assets/fig/decision-boundaries.png" alt="Four panels: decision regions of linear (top) and logistic (bottom) regression for Online Games = 0 and 1" style="max-height: 575px;"></figure>
+    <ul class="bul small">
+      <li>How each model splits the feature space into “Buy” and “No Buy” regions, for Online Games = 0 (left) and 1 (right)</li>
+      <li>Both are <span class="b">linear</span> boundaries: logistic regression is still a linear classifier, the sigmoid only turns the score into a probability</li>
+      <li>Logistic regression’s dashed lines show \(P = 0.1, 0.3, 0.7, 0.9\): confidence changes quickly near the boundary because the weights are large</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 50. Video -->
+<section>
+  <h2>Video</h2>
+  <div class="rule"></div>
+  <a class="link-card" href="https://www.youtube.com/watch?v=SmZmBKc7Lrs&amp;t=130s" target="_blank" rel="noopener" style="margin-top: 60px;">
+    <span class="play"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg></span>
+    <span><span class="lc-title">Watch on YouTube</span><br><span class="lc-sub">The clip from the end of the notebook, starting at 2:10. Opens in a new tab.</span></span>
+  </a>
+</section>
+
+<!-- ================================================================ 51. Summary -->
+<section>
+  <h2>Summary</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 25px;">
+    <li><span class="b">Linear regression</span> fits \(\hat{Y} = \mathbf{w}^T \cdot \mathbf{x}\) by minimising the SSE
+      <ul>
+        <li>gradient descent: \(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\); too small an \(\eta\) is slow, too large oscillates or diverges</li>
+        <li>closed form: \(\mathbf{w} = (X^T X)^{-1} X^T Y\), exact but \(\mathcal{O}(D^3 + D^2N)\); gradient descent \(\mathcal{O}(KND)\) wins for large \(D\)</li>
+      </ul>
+    </li>
+    <li>Regression outputs are not probabilities. For classes, use <span class="b">logistic regression</span>: \(\hat{Y} = \sigma(\mathbf{w}^T \cdot \mathbf{x})\)
+      <ul>
+        <li>with the sigmoid, the <span class="b">log-loss</span> gives the simple gradient \(-\delta \cdot \mathbf{x}\); the squared loss adds \(\hat{Y}(1 - \hat{Y})\), which vanishes when the model is confidently wrong</li>
+        <li>without regularisation, the weights on (almost) separable data keep growing</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<!-- ================================================================ 52. Revise and experiment -->
+<section>
+  <h2>Revise and Experiment</h2>
+  <div class="rule"></div>
+  <div class="cols even">
+    <div class="stack-v">
+      <h3>Interactive demos</h3>
+      <ul class="bul">
+        <li><a href="../demos/gd-loss-bowl.html" target="_blank" rel="noopener">Gradient Descent Bowl</a>: learning rate, online vs batch, closed form</li>
+        <li><a href="../demos/sigmoid-explorer.html" target="_blank" rel="noopener">Sigmoid Explorer</a>: how \(w\) and \(b\) shape \(\sigma(wx + b)\)</li>
+        <li><a href="../demos/linear-vs-logistic.html" target="_blank" rel="noopener">Linear vs Logistic Fit</a>: why regression makes a poor classifier</li>
+        <li><a href="../demos/sigmoid-losses.html" target="_blank" rel="noopener">Squared vs Log Loss</a>: why the log-loss learns faster</li>
+      </ul>
+    </div>
+    <div class="stack-v">
+      <h3>The code</h3>
+      <ul class="bul">
+        <li><a href="https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FLinearRegression.ipynb" target="_blank" rel="noopener">LinearRegression.ipynb on Binder</a>: run every example in your browser</li>
+        <li>Change \(\eta\), the number of epochs or the starting weights and re-run the cells to see the effect</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script src="vendor/reveal/reveal.js"></script>
+<script src="vendor/reveal/plugin/notes.js"></script>
+<script src="vendor/reveal/plugin/zoom.js"></script>
+<script src="vendor/chalkboard/plugin.js"></script>
+<script src="assets/deck.js"></script>
+</body>
+</html>
