@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Linear Regression Lecture</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="vendor/reveal/reset.css">
 <link rel="stylesheet" href="vendor/reveal/reveal.css">
 <link rel="stylesheet" href="vendor/chalkboard/style.css">
@@ -631,7 +632,8 @@
   <div class="rule"></div>
   <ul class="bul" style="margin-top: 26px;">
     <li>Quite often, instead of the squared loss \(l^{(sqr)}\), we optimise the <span class="b">log-loss</span> \(l^{(log)}\):
-      \[ LL(\mathbf{w}) = -\sum_n \Big[ Y(\mathbf{x}_n) \cdot \log \hat{Y}(\mathbf{x}_n) + \big(1 - Y(\mathbf{x}_n)\big) \cdot \log\big(1 - \hat{Y}(\mathbf{x}_n)\big) \Big], \quad \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
+      \[ LL(\mathbf{w}) = -\sum_n \Big[ Y(\mathbf{x}_n) \cdot \log \hat{Y}(\mathbf{x}_n) + \big(1 - Y(\mathbf{x}_n)\big) \cdot \log\big(1 - \hat{Y}(\mathbf{x}_n)\big) \Big] \]
+      \[ \text{where } \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
     </li>
     <li>Log-loss is the natural choice for logistic regression: it comes from probability theory (it is the negative log-likelihood of the labels) and has much better optimisation properties: <span class="b">better gradients and faster learning</span></li>
   </ul>

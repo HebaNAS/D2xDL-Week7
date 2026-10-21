@@ -213,7 +213,7 @@ html, body { background: #ffffff; }
 /* ---------- presenter tools: drawing buttons (bottom left, outside the slide) ---------- */
 .deck-tools {
   position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px));
-  display: flex; gap: 6px; z-index: 40; opacity: .35; transition: opacity .2s;
+  display: flex; flex-direction: column; gap: 6px; z-index: 40; opacity: .35; transition: opacity .2s;
 }
 .deck-tools:hover, .deck-tools:focus-within { opacity: 1; }
 .deck-tools button {
@@ -231,12 +231,18 @@ html, body { background: #ffffff; }
 .fa-chevron-down::before { content: "▼"; }
 
 /* ---------- print / PDF export (?print-pdf) ---------- */
+/* reveal.js sizes printed slides to their content; keep the full slide so the footer stays at the bottom */
+html.reveal-print .reveal .slides .pdf-page > section { height: 768px !important; min-height: 768px !important; top: 0 !important; }
+html.reveal-print .deck-tools { display: none !important; }
+html.reveal-print .reveal section.demo .demo-frame,
+html.reveal-print .reveal section.demo .demo-open { display: none; }
+html.reveal-print .reveal section.demo::after {
+  content: "Interactive demo: " attr(data-title) ". Open the slides in a browser to use it, or open it from the demos folder.";
+  position: absolute; left: 64px; right: 64px; top: 320px; font-size: 30px; color: var(--muted); text-align: center;
+}
+html.reveal-print .reveal .demo-inline { display: none; }
 @media print {
   .deck-tools { display: none !important; }
-  .reveal section.demo .demo-frame { display: none; }
-  .reveal section.demo::after {
-    content: "Interactive demo: open the link below in a browser."; position: absolute; left: 64px; top: 300px; font-size: 30px; color: var(--muted);
-  }
 }
 
 /* ---------- step-by-step derivations: equation with a short reason ---------- */
