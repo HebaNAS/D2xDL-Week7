@@ -147,6 +147,7 @@ footer { font-size: 12px; color: var(--muted); }
   .plots { display: flex; flex-direction: column; gap: 14px; }
   #cardPlot .cv-wrap { flex: none; aspect-ratio: 1 / 1; width: 100%; }
   .controls { overflow: visible; }
+  .status { min-height: 0; }
 }
 </style>
 </head>
@@ -449,7 +450,6 @@ function sizePlot() {
   const W = Math.max(1, Math.round(P.w * dpr)), H = Math.max(1, Math.round(P.h * dpr));
   if (cv.width !== W) cv.width = W;
   if (cv.height !== H) cv.height = H;
-  P.m.l = P.w < 500 ? 36 : 44;
   P.m.t = P.w < 600 ? 40 : 24;   // narrow plots: room for the two threshold labels on separate rows
   P.pr = { x: P.m.l, y: P.m.t, w: Math.max(10, P.w - P.m.l - P.m.r), h: Math.max(10, P.h - P.m.t - P.m.b) };
 }
