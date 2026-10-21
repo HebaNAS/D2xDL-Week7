@@ -1,0 +1,9 @@
+# Packages for mybinder.org (repo2docker does not read pyproject.toml / uv.lock).
+# Versions match uv.lock, which is what the notebooks were last run with.
+# Jupyter itself (JupyterLab, Notebook, ipywidgets) comes from Binder's base image.
+numpy==2.3.3
+pandas==2.3.2
+matplotlib==3.10.6
+scipy==1.16.2
+scikit-learn==1.7.2
+scikit-image==0.25.2

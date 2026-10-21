@@ -8,6 +8,8 @@ Perceptron [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org
 
 The `demos/` folder has three pages that run in any browser, with no Python needed. They are embedded in the lecture notebooks, and you can also open them directly after downloading the repository.
 
+In a notebook, if a demo shows as a blank space, run its cell. Jupyter hides saved interactive output until you run the cell or trust the notebook (`jupyter trust *.ipynb`).
+
 | Demo | Lecture | Try this |
 |---|---|---|
 | `demos/gd-loss-bowl.html` | Linear Regression | Change the learning rate with the presets, switch between online and batch updates, and compare with the closed-form solution. |
@@ -45,3 +47,7 @@ uv sync
 ```
 uv run jupyter notebook
 ```
+
+## Keeping Binder in sync
+
+Binder does not read `pyproject.toml` or `uv.lock`. It builds from `binder/requirements.txt` (packages) and `binder/runtime.txt` (Python version). When you add a package with `uv add`, add the same package and version to `binder/requirements.txt`.

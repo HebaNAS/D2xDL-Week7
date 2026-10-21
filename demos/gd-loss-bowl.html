@@ -5,11 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gradient Descent Bowl</title>
 <script>
-  // Apply ?theme=light|dark before first paint (the RISE embed forces light).
+  // Theme before first paint: ?theme=light|dark wins. Otherwise, inside a notebook or slide
+  // (an iframe), use light to match the white page; opened on its own, follow the system theme.
   (function () {
     try {
       var t = new URLSearchParams(location.search).get('theme');
-      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      if (t !== 'light' && t !== 'dark') {
+        var framed = true;
+        try { framed = window.self !== window.top; } catch (e) { /* cross-origin: treat as framed */ }
+        t = framed ? 'light' : null;
+      }
+      if (t) document.documentElement.dataset.theme = t;
     } catch (e) { /* ignore */ }
   })();
 </script>
