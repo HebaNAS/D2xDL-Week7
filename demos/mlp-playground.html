@@ -1,0 +1,1052 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MLP Playground</title>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
+  --pos: #3274b5;   /* positive class (+1) and positive weights */
+  --neg: #a62b17;   /* negative class (-1) and negative weights */
+  --unit1: #1b8a7a; --unit2: #c7841a;
+  --ink-btn: #1f2a37; --ink-btn-fg: #ffffff; --focus: #3274b5;
+  --warn: #a62b17; --shade: 0.34;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-math: "Cambria Math", "STIX Two Math", "Times New Roman", Times, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --warn: #e07a62; --shade: 0.28; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --warn: #e07a62; --shade: 0.28; color-scheme: dark }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.35; }
+.m { font-family: var(--font-math); font-style: italic; font-size: 1.12em; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.wrap {
+  display: flex; flex-direction: column; gap: 10px;
+  padding-block: 10px 6px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header h1 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.2; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+footer { font-size: 12px; color: var(--muted); }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.viz { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.panel { background: var(--panel); border-radius: 12px; padding: 8px 10px 10px; min-width: 0; }
+.ph { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-height: 18px; margin-bottom: 4px; flex-wrap: wrap; }
+.lab { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.legend { font-size: 12px; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.sw { display: inline-block; width: 10px; height: 10px; border: 1px solid var(--fg); }
+.sw.pos { background: var(--pos); border-radius: 50%; }
+.sw.neg { background: var(--neg); }
+.sw.hollow { background: transparent; border: 2px solid var(--muted); border-radius: 50%; }
+.ln { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--fg); }
+.ln.test { border-top: 2px dashed var(--unit2); }
+canvas { display: block; }
+#map { touch-action: manipulation; }
+.side { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+.net-panel { display: flex; flex-direction: column; }
+.net-box { position: relative; height: 270px; }
+.net-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.formula { font-family: var(--font-math); font-size: 14px; color: var(--fg); white-space: nowrap; }
+.loss-box { position: relative; height: 150px; }
+.loss-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.readouts { display: grid; grid-template-columns: auto 1fr 1fr; gap: 2px 14px; align-items: baseline; padding: 0 2px; }
+.readouts .lab { font-weight: 600; }
+.readouts .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 14px; text-align: right; }
+.readouts .h { text-align: right; }
+.hint { margin: 0; min-height: 2.7em; font-size: 14px; color: var(--fg); border-left: 3px solid var(--line); padding: 2px 0 2px 10px; }
+.hint.on { border-left-color: var(--unit2); }
+.hint:empty { border-left-color: transparent; }
+.hint.bad { border-left-color: var(--warn); color: var(--warn); font-weight: 600; }
+
+/* controls */
+.controls { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.group { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+.group:first-child { border-top: 0; padding-top: 0; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.row label, .row .rl { font-size: 13px; color: var(--fg); }
+.row output { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; min-width: 4.5em; }
+.slider { display: flex; flex-direction: column; gap: 1px; }
+input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 20px; }
+.btns { display: flex; gap: 6px; }
+button, select {
+  font: inherit; font-size: 13px; color: var(--fg); background: transparent; border: 1px solid var(--line);
+  border-radius: 8px; padding: 5px 10px; min-height: 30px; cursor: pointer;
+}
+select { background: var(--bg); padding-right: 6px; flex: 1 1 auto; min-width: 0; }
+button.primary { background: var(--ink-btn); color: var(--ink-btn-fg); border-color: var(--ink-btn); font-weight: 600; min-width: 84px; }
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled, input:disabled, select:disabled { opacity: .45; cursor: default; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.seg label { flex: 1 1 0; text-align: center; font-size: 13px; padding: 5px 4px; cursor: pointer; border-left: 1px solid var(--line); user-select: none; white-space: nowrap; }
+.seg label:first-of-type { border-left: 0; }
+.seg input:checked + label { background: var(--ink-btn); color: var(--ink-btn-fg); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: -2px; }
+.seg input:disabled + label { opacity: .45; cursor: default; }
+.chk { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.chk input { accent-color: var(--pos); width: 16px; height: 16px; margin: 0; }
+.note { margin: 0; font-size: 12px; color: var(--muted); }
+.sub { font-size: 12px; color: var(--muted); }
+
+/* desktop: everything in one 1280 x 760 screen */
+@media (min-width: 900px) {
+  .wrap { height: 100vh; min-height: 680px; }
+  .app { flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(0, 1fr) 300px; }
+  .viz { grid-template-columns: auto minmax(260px, 1fr); min-height: 0; }
+  .map-panel { align-self: start; }
+  .side { min-height: 0; }
+  .net-panel { flex: 1 1 auto; min-height: 0; }
+  .net-box { flex: 1 1 auto; height: auto; min-height: 150px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>MLP Playground</h1>
+    <p>Train a two-layer network with backprop and watch each hidden unit and the decision boundary change.</p>
+  </header>
+
+  <main class="app">
+    <section class="viz" aria-label="Plots">
+      <div class="panel map-panel" id="mapPanel">
+        <div class="ph">
+          <span class="lab">Decision map <span class="m" style="text-transform:none">ŷ</span></span>
+          <span class="legend">
+            <span><i class="sw pos"></i>+1</span>
+            <span><i class="sw neg"></i>−1</span>
+            <span><i class="sw hollow"></i>test</span>
+            <span><span class="ln"></span><span class="m">ŷ</span> = 0</span>
+          </span>
+        </div>
+        <canvas id="map" role="img" aria-label="Decision map: shading shows the network output over the input square, the line is the decision boundary, filled points are training data and hollow points are test data."></canvas>
+      </div>
+
+      <div class="side">
+        <div class="panel net-panel">
+          <div class="ph">
+            <span class="lab">Network</span>
+            <span class="formula" id="formula"><i>h</i><sub>i</sub> = <i>f</i>(<b>w</b><sub>i</sub>·<b>x</b> + <i>b</i><sub>i</sub>), &nbsp;<i>ŷ</i> = <i>v</i>·<i>h</i> + <i>c</i></span>
+          </div>
+          <div class="net-box"><canvas id="net" role="img" aria-label="Network diagram: inputs, hidden units shown as small maps of their activation, and the output. Edge thickness shows weight size, blue positive, red negative."></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="ph">
+            <span class="lab">Loss, mean ½<span class="m" style="text-transform:none">e</span>² (log scale)</span>
+            <span class="legend"><span><span class="ln"></span>train</span><span id="testLegend"><span class="ln test"></span>test</span></span>
+          </div>
+          <div class="loss-box"><canvas id="loss" role="img" aria-label="Training and test loss per epoch on a log scale, last 500 epochs."></canvas></div>
+        </div>
+        <div class="readouts" aria-live="off">
+          <span class="lab">Epoch</span><span class="v" id="roEpoch">0</span><span></span>
+          <span></span><span class="lab h">Train</span><span class="lab h">Test</span>
+          <span class="lab">Loss</span><span class="v" id="roTrainLoss">–</span><span class="v" id="roTestLoss">–</span>
+          <span class="lab">Accuracy</span><span class="v" id="roTrainAcc">–</span><span class="v" id="roTestAcc">–</span>
+        </div>
+        <p class="hint" id="hint" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="group">
+        <div class="btns">
+          <button type="button" class="primary" id="playBtn" aria-pressed="false">Play</button>
+          <button type="button" id="stepBtn" title="Train for one epoch">Step</button>
+          <button type="button" id="resetBtn" title="Draw new random starting weights">Reset weights</button>
+        </div>
+        <div class="slider">
+          <div class="row"><label for="speed">Speed, epochs per frame</label><output id="speedVal" for="speed">2</output></div>
+          <input type="range" id="speed" min="1" max="50" step="1" value="2">
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="lab">Data</span>
+        <div class="row">
+          <label for="dataset">Dataset</label>
+          <select id="dataset">
+            <option value="xorCorners">XOR corners</option>
+            <option value="xorClusters">XOR clusters</option>
+            <option value="circles" selected>Circles</option>
+            <option value="moons">Moons</option>
+            <option value="spiral">Spiral</option>
+            <option value="linear">Linear</option>
+          </select>
+          <button type="button" id="newSample">New sample</button>
+        </div>
+        <div class="slider">
+          <div class="row"><label for="noise">Noise</label><output id="noiseVal" for="noise">0.15</output></div>
+          <input type="range" id="noise" min="0" max="0.5" step="0.01" value="0.15">
+        </div>
+        <div class="slider">
+          <div class="row"><label for="testSplit">Test split</label><output id="testSplitVal" for="testSplit">20%</output></div>
+          <input type="range" id="testSplit" min="0" max="50" step="5" value="20">
+        </div>
+        <p class="note" id="dataNote"></p>
+      </div>
+
+      <div class="group">
+        <span class="lab">Network</span>
+        <div class="slider">
+          <div class="row"><label for="hidden">Hidden units <span class="m">K</span></label><output id="hiddenVal" for="hidden">3</output></div>
+          <input type="range" id="hidden" min="1" max="8" step="1" value="3">
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Activation function f">
+          <input type="radio" name="act" id="act-tanh" value="tanh" checked><label for="act-tanh">tanh</label>
+          <input type="radio" name="act" id="act-sigmoid" value="sigmoid"><label for="act-sigmoid">sigmoid</label>
+          <input type="radio" name="act" id="act-relu" value="relu"><label for="act-relu">ReLU</label>
+          <input type="radio" name="act" id="act-identity" value="identity"><label for="act-identity">identity</label>
+        </div>
+        <label class="chk" for="useBias"><input type="checkbox" id="useBias" checked><span>Use biases <span class="m">b</span>, <span class="m">c</span></span></label>
+      </div>
+
+      <div class="group">
+        <span class="lab">Initialisation</span>
+        <div class="seg" role="radiogroup" aria-label="Initialisation">
+          <input type="radio" name="init" id="init-random" value="random" checked><label for="init-random">Small random</label>
+          <input type="radio" name="init" id="init-zeros" value="zeros"><label for="init-zeros">Zeros</label>
+        </div>
+        <div class="slider">
+          <div class="row"><label for="initScale">Init scale, uniform ±</label><output id="initScaleVal" for="initScale">0.50</output></div>
+          <input type="range" id="initScale" min="0.05" max="2" step="0.05" value="0.5">
+        </div>
+      </div>
+
+      <div class="group">
+        <span class="lab">Gradient descent</span>
+        <div class="seg" role="radiogroup" aria-label="Update mode">
+          <input type="radio" name="mode" id="mode-batch" value="batch" checked><label for="mode-batch">Batch</label>
+          <input type="radio" name="mode" id="mode-online" value="online"><label for="mode-online">Online</label>
+        </div>
+        <div class="slider">
+          <div class="row"><label for="eta">Learning rate <span class="m">η</span></label><output id="etaVal" for="eta">0.003</output></div>
+          <input type="range" id="eta" min="-3.30103" max="0" step="0.01" value="-2.52288">
+        </div>
+        <p class="note" id="etaNote"></p>
+      </div>
+    </aside>
+  </main>
+
+  <footer>F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</footer>
+</div>
+
+<script>
+"use strict";
+// ======================= CORE (pure maths, no DOM) =======================
+const Core = (() => {
+  const LIM = 1.6;      // the plotted input square is [-LIM, LIM]^2
+  const KEEP = 1.55;    // samples outside this are redrawn
+
+  function mulberry32(a) {
+    a = a >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(rng) { let u = 0; while (u === 0) u = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng()); }
+
+  const DATASETS = {
+    xorCorners: { label: "XOR corners", n: 4 }, xorClusters: { label: "XOR clusters", n: 200 },
+    circles: { label: "Circles", n: 200 }, moons: { label: "Moons", n: 200 },
+    spiral: { label: "Spiral", n: 300 }, linear: { label: "Linear", n: 200 }
+  };
+  function canonName(name) {
+    if (DATASETS[name]) return name;
+    const key = String(name).toLowerCase().replace(/[^a-z]/g, "");
+    for (const k in DATASETS) if (k.toLowerCase() === key) return k;
+    throw new Error("Unknown dataset " + name);
+  }
+
+  // One clean sample and its label (before Gaussian jitter).
+  function rawSample(name, rng, idx) {
+    switch (name) {
+      case "xorClusters": {
+        const q = idx % 4, cx = q & 1 ? 1 : -1, cy = q & 2 ? 1 : -1;
+        return { x: [cx + 0.2 * gauss(rng), cy + 0.2 * gauss(rng)], y: cx * cy > 0 ? -1 : 1 };
+      }
+      case "circles": {
+        const inner = idx % 2 === 0, t = 2 * Math.PI * rng();
+        const r = inner ? 0.5 * Math.sqrt(rng()) : 1.0 + 0.35 * rng();
+        return { x: [r * Math.cos(t), r * Math.sin(t)], y: inner ? 1 : -1 };
+      }
+      case "moons": {
+        const first = idx % 2 === 0, t = Math.PI * rng();
+        const px = first ? Math.cos(t) : 1 - Math.cos(t), py = first ? Math.sin(t) : 0.5 - Math.sin(t);
+        return { x: [(px - 0.5) * 1.05, (py - 0.25) * 1.05], y: first ? 1 : -1 };
+      }
+      case "spiral": {
+        const arm = idx % 2, t = rng(), r = 0.12 + 1.3 * t, th = 1.75 * Math.PI * t + arm * Math.PI;
+        return { x: [r * Math.cos(th), r * Math.sin(th)], y: arm === 0 ? 1 : -1 };
+      }
+      case "linear": {
+        for (;;) {   // line 0.8 x1 - 0.6 x2 + 0.15 = 0, empty margin 0.12 either side
+          const x = [(2 * rng() - 1) * 1.5, (2 * rng() - 1) * 1.5], s = 0.8 * x[0] - 0.6 * x[1] + 0.15;
+          if (Math.abs(s) >= 0.12) return { x, y: s > 0 ? 1 : -1 };
+        }
+      }
+    }
+    throw new Error("bad dataset " + name);
+  }
+
+  // noise = std of the Gaussian jitter added to each point (half of it for the spiral, whose arms are closer).
+  function makeDataset(name, n, noise, seed) {
+    name = canonName(name);
+    if (name === "xorCorners") return { X: [[1, 1], [-1, -1], [1, -1], [-1, 1]], Y: [-1, -1, 1, 1], name };
+    if (n == null) n = DATASETS[name].n;
+    if (noise == null) noise = 0.15;
+    if (seed == null) seed = 1;
+    const rng = mulberry32((seed >>> 0) * 2654435761 + 12345);
+    const jit = name === "spiral" ? 0.5 * noise : noise;
+    const X = [], Y = [];
+    for (let i = 0; i < n; i++) {
+      let p, tries = 0;
+      do {
+        const s = rawSample(name, rng, i);
+        p = { x: [s.x[0] + jit * gauss(rng), s.x[1] + jit * gauss(rng)], y: s.y };
+      } while ((Math.abs(p.x[0]) > KEEP || Math.abs(p.x[1]) > KEEP) && ++tries < 50);
+      p.x[0] = Math.max(-KEEP, Math.min(KEEP, p.x[0])); p.x[1] = Math.max(-KEEP, Math.min(KEEP, p.x[1]));
+      X.push(p.x); Y.push(p.y);
+    }
+    return { X, Y, name };
+  }
+
+  // Seeded shuffle; the first round(testFrac * n) points become the test set. XOR corners has no test set.
+  function split(data, testFrac, seed) {
+    if (data.name === "xorCorners" || !(testFrac > 0)) return { Xtr: data.X.slice(), Ytr: data.Y.slice(), Xte: [], Yte: [] };
+    const n = data.X.length, rng = mulberry32((seed >>> 0) * 7919 + 99), idx = Array.from({ length: n }, (_, i) => i);
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+    const nTe = Math.round(testFrac * n), out = { Xtr: [], Ytr: [], Xte: [], Yte: [] };
+    idx.forEach((k, r) => { if (r < nTe) { out.Xte.push(data.X[k]); out.Yte.push(data.Y[k]); } else { out.Xtr.push(data.X[k]); out.Ytr.push(data.Y[k]); } });
+    return out;
+  }
+
+  // f and f'. d(a, h) receives both the pre-activation a and h = f(a).
+  const ACT = {
+    tanh: { f: (a) => Math.tanh(a), d: (a, h) => 1 - h * h },
+    sigmoid: { f: (a) => 1 / (1 + Math.exp(-a)), d: (a, h) => h * (1 - h) },
+    relu: { f: (a) => (a > 0 ? a : 0), d: (a) => (a > 0 ? 1 : 0) },
+    identity: { f: (a) => a, d: () => 1 }
+  };
+
+  // Parameters: W is D x K (W[d][i] = weight from input d into hidden unit i), b (K), v (K), c (scalar).
+  function init(opts) {
+    const o = Object.assign({ K: 3, init: "random", scale: 0.5, seed: 1, useBias: true }, opts || {});
+    const K = o.K, rng = mulberry32((o.seed >>> 0) * 40503 + 7);
+    const r = () => (o.init === "zeros" ? 0 : o.scale * (2 * rng() - 1));
+    const W = [[], []], b = [], v = [];
+    for (let i = 0; i < K; i++) { W[0].push(r()); W[1].push(r()); }
+    for (let i = 0; i < K; i++) b.push(o.useBias ? r() : 0);
+    for (let i = 0; i < K; i++) v.push(r());
+    return { K, W, b, v, c: 0 };
+  }
+  function clone(p) { return { K: p.K, W: [p.W[0].slice(), p.W[1].slice()], b: p.b.slice(), v: p.v.slice(), c: p.c }; }
+
+  function forward(p, x, act) {
+    const A = ACT[act || "tanh"], a = [], h = [];
+    let yhat = p.c;
+    for (let i = 0; i < p.K; i++) { a[i] = p.W[0][i] * x[0] + p.W[1][i] * x[1] + p.b[i]; h[i] = A.f(a[i]); yhat += p.v[i] * h[i]; }
+    return { a, h, yhat };
+  }
+  function predict(p, x0, x1, A) {
+    let y = p.c;
+    for (let i = 0; i < p.K; i++) y += p.v[i] * A.f(p.W[0][i] * x0 + p.W[1][i] * x1 + p.b[i]);
+    return y;
+  }
+
+  // L = 1/2 sum_n e_n^2 with e = y - yhat. Gradients as on the slides, plus the biases:
+  // dL/dv = -sum e h, dL/dc = -sum e, dL/dw_i = -sum e v_i f'(a_i) x, dL/db_i = -sum e v_i f'(a_i).
+  function lossAndGrad(p, X, Y, act, useBias) {
+    if (useBias == null) useBias = true;
+    const A = ACT[act || "tanh"], K = p.K;
+    const gW = [new Array(K).fill(0), new Array(K).fill(0)], gb = new Array(K).fill(0), gv = new Array(K).fill(0);
+    const a = new Array(K), h = new Array(K);
+    let gc = 0, loss = 0;
+    for (let n = 0; n < X.length; n++) {
+      const x = X[n];
+      let yhat = p.c;
+      for (let i = 0; i < K; i++) { a[i] = p.W[0][i] * x[0] + p.W[1][i] * x[1] + p.b[i]; h[i] = A.f(a[i]); yhat += p.v[i] * h[i]; }
+      const e = Y[n] - yhat;
+      loss += 0.5 * e * e;
+      gc -= e;
+      for (let i = 0; i < K; i++) {
+        gv[i] -= e * h[i];
+        const d = -e * p.v[i] * A.d(a[i], h[i]);
+        gW[0][i] += d * x[0]; gW[1][i] += d * x[1]; gb[i] += d;
+      }
+    }
+    if (!useBias) { gb.fill(0); gc = 0; }
+    return { loss, grads: { W: gW, b: gb, v: gv, c: gc } };
+  }
+
+  // One epoch. Batch = Algorithm 25: sum the gradient over the whole training set, then one update.
+  // Online: shuffle, then update after every example (same maths with a single example, no allocation).
+  function epoch(p, Xtr, Ytr, cfg, rng) {
+    const K = p.K, eta = cfg.eta, ub = cfg.useBias;
+    if (cfg.mode === "online") {
+      const A = ACT[cfg.act], n = Xtr.length, order = new Int32Array(n);
+      for (let i = 0; i < n; i++) order[i] = i;
+      for (let i = n - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = order[i]; order[i] = order[j]; order[j] = t; }
+      const a = new Float64Array(K), h = new Float64Array(K), W0 = p.W[0], W1 = p.W[1], b = p.b, v = p.v;
+      for (let s = 0; s < n; s++) {
+        const k = order[s], x0 = Xtr[k][0], x1 = Xtr[k][1];
+        let yhat = p.c;
+        for (let i = 0; i < K; i++) { a[i] = W0[i] * x0 + W1[i] * x1 + b[i]; h[i] = A.f(a[i]); yhat += v[i] * h[i]; }
+        const e = Ytr[k] - yhat;
+        for (let i = 0; i < K; i++) {
+          const d = -e * v[i] * A.d(a[i], h[i]);   // uses v before its update
+          W0[i] -= eta * d * x0; W1[i] -= eta * d * x1;
+          if (ub) b[i] -= eta * d;
+          v[i] -= eta * (-e * h[i]);
+        }
+        if (ub) p.c -= eta * (-e);
+      }
+    } else {
+      const g = lossAndGrad(p, Xtr, Ytr, cfg.act, ub).grads;
+      for (let i = 0; i < K; i++) {
+        p.W[0][i] -= eta * g.W[0][i]; p.W[1][i] -= eta * g.W[1][i]; p.v[i] -= eta * g.v[i];
+        if (ub) p.b[i] -= eta * g.b[i];
+      }
+      if (ub) p.c -= eta * g.c;
+    }
+  }
+
+  function evaluate(p, X, Y, act) {
+    if (!X.length) return { loss: NaN, acc: NaN };
+    const A = ACT[act];
+    let L = 0, ok = 0;
+    for (let n = 0; n < X.length; n++) {
+      const yh = predict(p, X[n][0], X[n][1], A), e = Y[n] - yh;
+      L += 0.5 * e * e;
+      if ((yh >= 0 ? 1 : -1) === Y[n]) ok++;
+    }
+    return { loss: L / X.length, acc: ok / X.length };
+  }
+
+  // Default eta. Batch sums the gradient over ~160 points, so it needs a much smaller eta than online.
+  function defaultEta(mode, name) {
+    if (canonName(name) === "xorCorners") return 0.05;
+    return mode === "online" ? 0.02 : 0.003;
+  }
+  const DEFAULTS = { K: 3, act: "tanh", useBias: true, init: "random", scale: 0.5, mode: "batch", noise: 0.15, testFrac: 0.2, dataSeed: 1, initSeed: 1 };
+  const isBad = (L) => !isFinite(L) || L > 1e6;
+
+  function train(datasetName, opts, epochs) {
+    const name = canonName(datasetName), o = Object.assign({}, DEFAULTS, opts || {});
+    if (o.eta == null) o.eta = defaultEta(o.mode, name);
+    if (epochs == null) epochs = 500;
+    const data = makeDataset(name, o.n, o.noise, o.dataSeed), s = split(data, o.testFrac, o.dataSeed);
+    const p = init({ K: o.K, init: o.init, scale: o.scale, seed: o.initSeed, useBias: o.useBias });
+    const rng = mulberry32((o.initSeed >>> 0) * 31 + 5);
+    let ep = 0, diverged = false, firstEpoch95 = null;
+    while (ep < epochs) {
+      epoch(p, s.Xtr, s.Ytr, o, rng); ep++;
+      const tr = evaluate(p, s.Xtr, s.Ytr, o.act);
+      if (isBad(tr.loss)) { diverged = true; break; }
+      if (firstEpoch95 == null && tr.acc > 0.95) firstEpoch95 = ep;
+    }
+    const tr = evaluate(p, s.Xtr, s.Ytr, o.act), te = evaluate(p, s.Xte, s.Yte, o.act);
+    return { trainAcc: tr.acc, testAcc: te.acc, trainLoss: tr.loss, testLoss: te.loss, epochs: ep, diverged, firstEpoch95, eta: o.eta, params: clone(p) };
+  }
+
+  // Central differences on a small random problem; returns the max relative error over all parameters.
+  function gradCheck(act) {
+    act = act || "tanh";
+    const rng = mulberry32(2024), K = 4, X = [], Y = [];
+    for (let n = 0; n < 12; n++) { X.push([3 * rng() - 1.5, 3 * rng() - 1.5]); Y.push(rng() < 0.5 ? -1 : 1); }
+    let p;
+    for (let t = 0; t < 500; t++) {   // for ReLU, pick weights that keep every a_i away from the kink at 0
+      p = init({ K, init: "random", scale: 1, seed: 100 + t, useBias: true }); p.c = 0.3;
+      let minAbs = Infinity;
+      for (const x of X) for (const a of forward(p, x, act).a) minAbs = Math.min(minAbs, Math.abs(a));
+      if (act !== "relu" || minAbs > 0.05) break;
+    }
+    const g = lossAndGrad(p, X, Y, act, true).grads, L = (q) => lossAndGrad(q, X, Y, act, true).loss, h = 1e-5;
+    let worst = 0;
+    const check = (get, set, an) => {
+      const q1 = clone(p), q2 = clone(p);
+      set(q1, get(p) + h); set(q2, get(p) - h);
+      const num = (L(q1) - L(q2)) / (2 * h);
+      worst = Math.max(worst, Math.abs(an - num) / Math.max(1e-8, Math.abs(an) + Math.abs(num)));
+    };
+    for (let i = 0; i < K; i++) {
+      for (let d = 0; d < 2; d++) check((q) => q.W[d][i], (q, val) => { q.W[d][i] = val; }, g.W[d][i]);
+      check((q) => q.b[i], (q, val) => { q.b[i] = val; }, g.b[i]);
+      check((q) => q.v[i], (q, val) => { q.v[i] = val; }, g.v[i]);
+    }
+    check((q) => q.c, (q, val) => { q.c = val; }, g.c);
+    return worst;
+  }
+
+  return { LIM, DATASETS, canonName, mulberry32, makeDataset, split, ACT, init, clone, forward, predict, lossAndGrad, epoch, evaluate, train, gradCheck, defaultEta, DEFAULTS, isBad };
+})();
+
+// ======================= APP (DOM + drawing) =======================
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const qp = new URLSearchParams(location.search).get("theme");
+  if (qp === "light" || qp === "dark") document.documentElement.dataset.theme = qp;
+
+  const G = 64;                 // decision map grid resolution
+  const LIM = Core.LIM;
+  const HIST_KEEP = 500;        // epochs shown in the loss chart
+
+  const S = {
+    dataset: "circles", noise: 0.15, testFrac: 0.2, dataSeed: 1,
+    K: 3, act: "tanh", useBias: true, init: "random", scale: 0.5, initSeed: 1,
+    mode: "batch", eta: Core.defaultEta("batch", "circles"), speed: 2,
+    playing: false, diverged: false,
+    data: null, sp: null, p: null, rng: null, epoch: 0,
+    hist: { tr: [], te: [], start: 1 },       // losses for epochs start .. start+len-1
+    cur: { trL: NaN, teL: NaN, trA: NaN, teA: NaN },
+    gridY: new Float64Array(G * G), gridH: [], hint: ""
+  };
+
+  // ---------- colours ----------
+  let C = {};
+  function hexToRgb(s) {
+    s = s.trim();
+    if (/^#[0-9a-f]{3}$/i.test(s)) s = "#" + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(s);
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [128, 128, 128];
+  }
+  function readColours() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["bg", "panel", "fg", "muted", "line", "pos", "neg", "unit2"]) C[k] = cs.getPropertyValue("--" + k).trim();
+    C.shade = parseFloat(cs.getPropertyValue("--shade")) || 0.3;
+    C.posRgb = hexToRgb(C.pos); C.negRgb = hexToRgb(C.neg);
+    C.fontNum = cs.getPropertyValue("--font-num").trim();
+    C.fontUi = cs.getPropertyValue("--font-ui").trim();
+    C.fontMath = cs.getPropertyValue("--font-math").trim();
+  }
+
+  // ---------- canvases ----------
+  function fitCanvas(cv, w, h) {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    cv.style.width = w + "px"; cv.style.height = h + "px";
+    const W = Math.round(w * dpr), H = Math.round(h * dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return ctx;
+  }
+  const mapCv = $("map"), netCv = $("net"), lossCv = $("loss");
+  const offMap = document.createElement("canvas"); offMap.width = G; offMap.height = G;
+  const offCtx = offMap.getContext("2d");
+  const offImg = offCtx.createImageData(G, G);
+  let mapSide = 400, netW = 300, netH = 260, lossW = 300, lossH = 150;
+
+  function layout() {
+    const desktop = window.matchMedia("(min-width: 900px)").matches;
+    const panel = $("mapPanel");
+    if (desktop) {
+      const viz = panel.parentElement;
+      const vr = viz.getBoundingClientRect();
+      const head = panel.querySelector(".ph").getBoundingClientRect().height + 4;
+      const padV = 18, padH = 20;
+      const byH = vr.height - head - padV;
+      const byW = vr.width - 12 - 270 - padH;
+      mapSide = Math.max(220, Math.floor(Math.min(byH, byW)));
+    } else {
+      mapSide = Math.max(200, Math.floor(panel.parentElement.getBoundingClientRect().width - 20));
+    }
+    fitCanvas(mapCv, mapSide, mapSide);
+    const nb = netCv.parentElement.getBoundingClientRect();
+    netW = Math.max(200, Math.floor(nb.width)); netH = Math.max(140, Math.floor(nb.height));
+    const lb = lossCv.parentElement.getBoundingClientRect();
+    lossW = Math.max(200, Math.floor(lb.width)); lossH = Math.max(100, Math.floor(lb.height));
+    drawAll();
+  }
+
+  // ---------- model state ----------
+  function rebuildData() {
+    S.data = Core.makeDataset(S.dataset, null, S.noise, S.dataSeed);
+    S.sp = Core.split(S.data, S.testFrac, S.dataSeed);
+  }
+  function resetWeights() {
+    S.p = Core.init({ K: S.K, init: S.init, scale: S.scale, seed: S.initSeed, useBias: S.useBias });
+    S.rng = Core.mulberry32((S.initSeed >>> 0) * 31 + 5);
+    S.epoch = 0; S.diverged = false;
+    S.hist = { tr: [], te: [], start: 1 };
+    measure();
+    computeGrid();
+    drawAll();
+  }
+  function measure() {
+    const tr = Core.evaluate(S.p, S.sp.Xtr, S.sp.Ytr, S.act), te = Core.evaluate(S.p, S.sp.Xte, S.sp.Yte, S.act);
+    S.cur = { trL: tr.loss, teL: te.loss, trA: tr.acc, teA: te.acc };
+  }
+  function cfg() { return { mode: S.mode, eta: S.eta, act: S.act, useBias: S.useBias }; }
+
+  function runEpochs(n) {
+    const c = cfg();
+    for (let k = 0; k < n; k++) {
+      const backup = Core.clone(S.p);
+      Core.epoch(S.p, S.sp.Xtr, S.sp.Ytr, c, S.rng);
+      const tr = Core.evaluate(S.p, S.sp.Xtr, S.sp.Ytr, S.act);
+      if (Core.isBad(tr.loss)) {      // keep the last finite weights on screen and stop
+        S.p = backup; S.diverged = true; setPlaying(false);
+        break;
+      }
+      const te = Core.evaluate(S.p, S.sp.Xte, S.sp.Yte, S.act);
+      S.epoch++;
+      S.cur = { trL: tr.loss, teL: te.loss, trA: tr.acc, teA: te.acc };
+      S.hist.tr.push(tr.loss); S.hist.te.push(te.loss);
+      if (S.hist.tr.length > 4000) { const cut = S.hist.tr.length - 1000; S.hist.tr.splice(0, cut); S.hist.te.splice(0, cut); S.hist.start += cut; }
+    }
+  }
+
+  function computeGrid() {
+    const p = S.p, K = p.K, A = Core.ACT[S.act], step = (2 * LIM) / G;
+    if (S.gridH.length !== K) S.gridH = Array.from({ length: K }, () => new Float64Array(G * G));
+    for (let gy = 0; gy < G; gy++) {
+      const x1 = LIM - (gy + 0.5) * step;
+      for (let gx = 0; gx < G; gx++) {
+        const x0 = -LIM + (gx + 0.5) * step, idx = gy * G + gx;
+        let y = p.c;
+        for (let i = 0; i < K; i++) {
+          const h = A.f(p.W[0][i] * x0 + p.W[1][i] * x1 + p.b[i]);
+          S.gridH[i][idx] = h; y += p.v[i] * h;
+        }
+        S.gridY[idx] = y;
+      }
+    }
+  }
+
+  // ---------- hint ----------
+  const HINTS = {
+    diverged: "Training diverged: lower η.",
+    frozen: "Starting from all zeros, the hidden layer never moves.",
+    same: "All hidden units get the same gradient when they start equal, so they stay identical.",
+    identity: "With identity activation the network is a linear model, however many hidden units you add.",
+    overfit: "Test loss is rising while training loss falls: the network is overfitting."
+  };
+  function unitsIdentical(p) {
+    if (p.K < 2) return false;
+    for (let i = 1; i < p.K; i++) {
+      if (p.W[0][i] !== p.W[0][0] || p.W[1][i] !== p.W[1][0] || p.b[i] !== p.b[0] || p.v[i] !== p.v[0]) return false;
+    }
+    return true;
+  }
+  function hiddenFrozenAtZero(p) {
+    for (let i = 0; i < p.K; i++) if (p.W[0][i] !== 0 || p.W[1][i] !== 0 || p.b[i] !== 0 || p.v[i] !== 0) return false;
+    return true;
+  }
+  function overfitting() {
+    if (S.K < 5 || !S.sp.Xte.length) return false;
+    const tr = S.hist.tr, te = S.hist.te, n = tr.length, w = 20, lag = 150;
+    if (n < lag + w) return false;
+    const mean = (a, i0, i1) => { let s = 0; for (let i = i0; i < i1; i++) s += a[i]; return s / (i1 - i0); };
+    const teNow = mean(te, n - w, n), teThen = mean(te, n - lag - w, n - lag);
+    const trNow = mean(tr, n - w, n), trThen = mean(tr, n - lag - w, n - lag);
+    return teNow > teThen * 1.02 && trNow < trThen * 0.99;
+  }
+  function updateHint() {
+    let key = "";
+    if (S.diverged) key = "diverged";
+    else if (S.epoch > 0 && hiddenFrozenAtZero(S.p)) key = "frozen";
+    else if (S.epoch > 0 && unitsIdentical(S.p)) key = "same";
+    else if (S.act === "identity") key = "identity";
+    else if (overfitting()) key = "overfit";
+    if (key !== S.hint) {
+      S.hint = key;
+      const el = $("hint");
+      el.textContent = key ? HINTS[key] : "";
+      el.className = "hint" + (key === "diverged" ? " bad" : key ? " on" : "");
+    }
+  }
+
+  // ---------- drawing: decision map ----------
+  function shadeInto(img, vals, alphaMax) {
+    const d = img.data, pr = C.posRgb, nr = C.negRgb;
+    for (let k = 0; k < G * G; k++) {
+      const v = vals[k], c = v >= 0 ? pr : nr, m = Math.min(Math.abs(v), 1);
+      d[4 * k] = c[0]; d[4 * k + 1] = c[1]; d[4 * k + 2] = c[2];
+      d[4 * k + 3] = isFinite(m) ? Math.round(255 * alphaMax * m) : 0;
+    }
+  }
+  // Marching squares on cell-centre samples: segments of the zero level set, in grid coordinates.
+  function zeroContour(vals) {
+    const segs = [];
+    const P = (ax, ay, bx, by, va, vb) => { const t = va / (va - vb); return [ax + t * (bx - ax), ay + t * (by - ay)]; };
+    for (let gy = 0; gy < G - 1; gy++) for (let gx = 0; gx < G - 1; gx++) {
+      const a = vals[gy * G + gx], b = vals[gy * G + gx + 1], c = vals[(gy + 1) * G + gx + 1], d = vals[(gy + 1) * G + gx];
+      const code = (a > 0 ? 8 : 0) | (b > 0 ? 4 : 0) | (c > 0 ? 2 : 0) | (d > 0 ? 1 : 0);
+      if (code === 0 || code === 15) continue;
+      const top = () => P(gx, gy, gx + 1, gy, a, b), right = () => P(gx + 1, gy, gx + 1, gy + 1, b, c);
+      const bottom = () => P(gx, gy + 1, gx + 1, gy + 1, d, c), left = () => P(gx, gy, gx, gy + 1, a, d);
+      switch (code) {
+        case 1: case 14: segs.push([left(), bottom()]); break;
+        case 2: case 13: segs.push([bottom(), right()]); break;
+        case 3: case 12: segs.push([left(), right()]); break;
+        case 4: case 11: segs.push([top(), right()]); break;
+        case 6: case 9: segs.push([top(), bottom()]); break;
+        case 7: case 8: segs.push([left(), top()]); break;
+        case 5: case 10: {
+          const mid = (a + b + c + d) / 4;
+          if ((mid > 0) === (code === 5)) { segs.push([left(), top()]); segs.push([bottom(), right()]); }
+          else { segs.push([left(), bottom()]); segs.push([top(), right()]); }
+        }
+      }
+    }
+    return segs;
+  }
+  function pointPath(ctx, x, y, r, pos) {
+    ctx.beginPath();
+    if (pos) ctx.arc(x, y, r, 0, 2 * Math.PI);
+    else { const s = r * 0.9; ctx.rect(x - s, y - s, 2 * s, 2 * s); }
+  }
+  function drawMap() {
+    const ctx = fitCanvas(mapCv, mapSide, mapSide);
+    const mL = 26, mB = 24, mT = 6, mR = 6;
+    const pw = mapSide - mL - mR, ph = mapSide - mT - mB, side = Math.min(pw, ph);
+    const ox = mL + (pw - side) / 2, oy = mT;
+    const sx = (x) => ox + ((x + LIM) / (2 * LIM)) * side, sy = (y) => oy + ((LIM - y) / (2 * LIM)) * side;
+    ctx.clearRect(0, 0, mapSide, mapSide);
+    ctx.fillStyle = C.bg; ctx.fillRect(ox, oy, side, side);
+    shadeInto(offImg, S.gridY, C.shade);
+    offCtx.putImageData(offImg, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(offMap, ox, oy, side, side);
+    // grid and ticks
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+    ctx.fillStyle = C.muted; ctx.font = "12px " + C.fontUi; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (const t of [-1, 0, 1]) {
+      ctx.globalAlpha = t === 0 ? 0.9 : 0.6;
+      ctx.beginPath(); ctx.moveTo(sx(t), oy); ctx.lineTo(sx(t), oy + side); ctx.moveTo(ox, sy(t)); ctx.lineTo(ox + side, sy(t)); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillText(String(t).replace("-", "−"), sx(t), oy + side + 4);
+    }
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (const t of [-1, 0, 1]) ctx.fillText(String(t).replace("-", "−"), ox - 5, sy(t));
+    ctx.font = "italic 14px " + C.fontMath; ctx.textAlign = "right"; ctx.textBaseline = "top";
+    ctx.fillText("x₁", ox + side - 2, oy + side + 3);
+    ctx.save(); ctx.translate(ox - 18, oy + 2); ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("x₂", -6, 0); ctx.restore();
+    ctx.strokeStyle = C.line; ctx.strokeRect(ox + 0.5, oy + 0.5, side - 1, side - 1);
+    // boundary yhat = 0
+    const segs = zeroContour(S.gridY), cell = side / G;
+    ctx.save(); ctx.beginPath(); ctx.rect(ox, oy, side, side); ctx.clip();
+    ctx.strokeStyle = C.fg; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.beginPath();
+    for (const [p, q] of segs) { ctx.moveTo(ox + (p[0] + 0.5) * cell, oy + (p[1] + 0.5) * cell); ctx.lineTo(ox + (q[0] + 0.5) * cell, oy + (q[1] + 0.5) * cell); }
+    ctx.stroke(); ctx.restore();
+    // points: training filled, test hollow
+    const r = S.dataset === "xorCorners" ? Math.max(7, side / 50) : Math.max(3.5, Math.min(5.5, side / 110));
+    const sp = S.sp;
+    for (let n = 0; n < sp.Xtr.length; n++) {
+      const x = sx(sp.Xtr[n][0]), y = sy(sp.Xtr[n][1]), pos = sp.Ytr[n] > 0;
+      pointPath(ctx, x, y, r, pos);
+      ctx.lineWidth = 4; ctx.strokeStyle = C.bg; ctx.stroke();
+      ctx.fillStyle = pos ? C.pos : C.neg; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = C.fg; ctx.stroke();
+    }
+    for (let n = 0; n < sp.Xte.length; n++) {
+      const x = sx(sp.Xte[n][0]), y = sy(sp.Xte[n][1]), pos = sp.Yte[n] > 0;
+      pointPath(ctx, x, y, r - 0.5, pos);
+      ctx.lineWidth = 4.5; ctx.strokeStyle = C.bg; ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = pos ? C.pos : C.neg; ctx.stroke();
+    }
+  }
+
+  // ---------- drawing: network ----------
+  const thumbCv = document.createElement("canvas"); thumbCv.width = G; thumbCv.height = G;
+  const thumbCtx = thumbCv.getContext("2d"), thumbImg = thumbCtx.createImageData(G, G);
+  function drawThumb(ctx, vals, x, y, s, line) {
+    ctx.fillStyle = C.bg; ctx.fillRect(x, y, s, s);
+    shadeInto(thumbImg, vals, 0.85);
+    thumbCtx.putImageData(thumbImg, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(thumbCv, x, y, s, s);
+    if (line) {   // where a_i = w_i . x + b_i = 0 inside the square
+      const [w0, w1, b] = line, pts = [];
+      const toPx = (u, w) => [x + ((u + LIM) / (2 * LIM)) * s, y + ((LIM - w) / (2 * LIM)) * s];
+      if (Math.abs(w1) > 1e-9) for (const u of [-LIM, LIM]) { const w = -(w0 * u + b) / w1; if (Math.abs(w) <= LIM) pts.push(toPx(u, w)); }
+      if (Math.abs(w0) > 1e-9) for (const w of [-LIM, LIM]) { const u = -(w1 * w + b) / w0; if (Math.abs(u) <= LIM) pts.push(toPx(u, w)); }
+      if (pts.length >= 2) {
+        ctx.save(); ctx.beginPath(); ctx.rect(x, y, s, s); ctx.clip();
+        ctx.setLineDash([3, 2]); ctx.strokeStyle = C.fg; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+  }
+  function edge(ctx, x0, y0, x1, y1, w) {
+    const aw = Math.abs(w);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    if (!isFinite(aw) || aw < 0.02) { ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]); return; }
+    ctx.strokeStyle = w > 0 ? C.pos : C.neg;
+    ctx.lineWidth = Math.min(9, Math.max(0.75, 2.2 * aw));
+    ctx.globalAlpha = 0.85; ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  function node(ctx, x, y, r, label, italic) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = C.bg; ctx.fill(); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.25; ctx.stroke();
+    ctx.fillStyle = C.fg; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = (italic ? "italic " : "") + "15px " + C.fontMath;
+    ctx.fillText(label, x, y + 1);
+  }
+  function drawNet() {
+    const ctx = fitCanvas(netCv, netW, netH), p = S.p, K = p.K, W = netW, H = netH;
+    ctx.clearRect(0, 0, W, H);
+    const top = 18, bot = 6, avail = H - top - bot;
+    const gap = K > 5 ? 5 : 8;
+    const s = Math.max(16, Math.min(56, Math.floor((avail - (K - 1) * gap) / K)));
+    const colH = K * s + (K - 1) * gap, y0 = top + (avail - colH) / 2;
+    const xIn = 22, xH = Math.round(W * 0.47 - s / 2), xOutC = W - 34, so = Math.min(52, Math.max(36, s));
+    const rIn = 14;
+    // input nodes
+    const inputs = [{ y: 0, lab: "x₁", it: true }, { y: 0, lab: "x₂", it: true }];
+    if (S.useBias) inputs.push({ y: 0, lab: "1", it: false });
+    const inGap = Math.min(64, (avail - 2 * rIn) / Math.max(1, inputs.length - 1));
+    const inTop = top + avail / 2 - ((inputs.length - 1) * inGap) / 2;
+    inputs.forEach((n, j) => { n.y = inTop + j * inGap; });
+    // output position
+    const yOut = top + avail / 2, xOut = xOutC - so / 2;
+    // edges first (under nodes)
+    for (let i = 0; i < K; i++) {
+      const hy = y0 + i * (s + gap) + s / 2;
+      edge(ctx, xIn + rIn, inputs[0].y, xH, hy, p.W[0][i]);
+      edge(ctx, xIn + rIn, inputs[1].y, xH, hy, p.W[1][i]);
+      if (S.useBias) edge(ctx, xIn + rIn, inputs[2].y, xH, hy, p.b[i]);
+      edge(ctx, xH + s, hy, xOut, yOut, p.v[i]);
+    }
+    let cNode = null;
+    if (S.useBias) {
+      cNode = { x: Math.round((xH + s + xOut) / 2), y: Math.min(H - bot - 12, Math.max(y0 + colH + 4, yOut + 0.42 * avail)) };
+      if (cNode.y > H - 14) cNode.y = H - 14;
+      edge(ctx, cNode.x, cNode.y, xOut, yOut, p.c);
+    }
+    // nodes
+    inputs.forEach((n) => node(ctx, xIn, n.y, rIn, n.lab, n.it));
+    if (cNode) node(ctx, cNode.x, cNode.y, 11, "1", false);
+    for (let i = 0; i < K; i++) {
+      const hy = y0 + i * (s + gap);
+      drawThumb(ctx, S.gridH[i], xH, hy, s, [p.W[0][i], p.W[1][i], p.b[i]]);
+    }
+    drawThumb(ctx, S.gridY, xOut, yOut - so / 2, so, null);
+    // labels
+    ctx.fillStyle = C.muted; ctx.font = "12px " + C.fontUi; ctx.textBaseline = "top"; ctx.textAlign = "center";
+    ctx.fillText("input", xIn, 1);
+    const sub = "₀₁₂₃₄₅₆₇₈₉";
+    ctx.fillText("hidden " + (K === 1 ? "h₁" : K === 2 ? "h₁, h₂" : "h₁…h" + sub[K]), xH + s / 2, 1);
+    ctx.fillText("output", xOut + so / 2, 1);
+    ctx.font = "italic 15px " + C.fontMath; ctx.fillStyle = C.fg; ctx.textBaseline = "middle";
+    ctx.fillText("ŷ", xOut + so / 2, yOut + so / 2 + 11);
+    // layer labels W and v, placed on a clear spot above the edge bundles
+    ctx.font = "italic bold 17px " + C.fontMath; ctx.fillStyle = C.fg;
+    const lx1 = (xIn + rIn + xH) / 2, lx2 = (xH + s + xOut) / 2;
+    const labelY = Math.max(top + 8, Math.min(y0, inputs[0].y) - 8);
+    ctx.fillText("W", lx1, labelY);
+    ctx.fillText("v", lx2, labelY);
+  }
+
+  // ---------- drawing: loss chart ----------
+  function fmtTick(e) {
+    if (e >= 0) return String(Math.pow(10, e));
+    if (e >= -3) return Math.pow(10, e).toFixed(-e);
+    return "1e" + e;
+  }
+  function drawLoss() {
+    const ctx = fitCanvas(lossCv, lossW, lossH), W = lossW, H = lossH;
+    ctx.clearRect(0, 0, W, H);
+    const mL = 44, mR = 14, mT = 6, mB = 18, pw = W - mL - mR, ph = H - mT - mB;
+    const tr = S.hist.tr, te = S.hist.te, n = tr.length;
+    const lastEp = S.hist.start + n - 1;
+    const x0 = Math.max(1, lastEp - HIST_KEEP + 1), x1 = Math.max(x0 + HIST_KEEP - 1, lastEp);
+    const i0 = Math.max(0, x0 - S.hist.start);
+    let lo = Infinity, hi = -Infinity;
+    for (let i = i0; i < n; i++) for (const v of [tr[i], te[i]]) if (v > 0 && isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    if (!isFinite(lo)) { lo = 0.01; hi = 1; }
+    let eLo = Math.floor(Math.log10(lo)), eHi = Math.ceil(Math.log10(hi));
+    if (eHi - eLo < 1) eHi = eLo + 1;
+    const ly = (v) => mT + ph - ((Math.log10(v) - eLo) / (eHi - eLo)) * ph;
+    const lx = (ep) => mL + ((ep - x0) / Math.max(1, x1 - x0)) * pw;
+    ctx.fillStyle = C.bg; ctx.fillRect(mL, mT, pw, ph);
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+    ctx.font = "11px " + C.fontNum; ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    const stepE = Math.max(1, Math.ceil((eHi - eLo) / 5));
+    for (let e = eLo; e <= eHi; e++) {
+      const y = Math.round(ly(Math.pow(10, e))) + 0.5;
+      ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(mL, y); ctx.lineTo(mL + pw, y); ctx.stroke(); ctx.globalAlpha = 1;
+      if ((e - eLo) % stepE === 0) ctx.fillText(fmtTick(e), mL - 5, y);
+    }
+    // x ticks
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    const span = x1 - x0 + 1, tickStep = span <= 500 ? 100 : 200;
+    for (let t = Math.ceil(x0 / tickStep) * tickStep; t <= x1; t += tickStep) {
+      const x = Math.round(lx(t)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x, mT + ph); ctx.lineTo(x, mT + ph + 3); ctx.stroke();
+      ctx.textAlign = x > mL + pw - 12 ? "right" : "center";
+      ctx.fillText(String(t), x > mL + pw - 12 ? mL + pw + mR - 1 : x, mT + ph + 4);
+    }
+    ctx.textAlign = "center";
+    if (x0 === 1) ctx.fillText("1", mL, mT + ph + 4);
+    ctx.strokeRect(mL + 0.5, mT + 0.5, pw - 1, ph - 1);
+    // curves
+    ctx.save(); ctx.beginPath(); ctx.rect(mL, mT, pw, ph); ctx.clip();
+    const curve = (arr, colour, dash) => {
+      ctx.beginPath(); let started = false;
+      for (let i = i0; i < n; i++) {
+        const v = arr[i]; if (!(v > 0 && isFinite(v))) { started = false; continue; }
+        const x = lx(S.hist.start + i), y = ly(v);
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      }
+      ctx.setLineDash(dash); ctx.strokeStyle = colour; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke(); ctx.setLineDash([]);
+    };
+    if (S.sp.Xte.length) curve(te, C.unit2, [6, 4]);
+    curve(tr, C.fg, []);
+    ctx.restore();
+    if (!n) {
+      ctx.fillStyle = C.muted; ctx.font = "12px " + C.fontUi; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("Press Play or Step to train", mL + pw / 2, mT + ph / 2);
+    }
+  }
+
+  // ---------- readouts ----------
+  const fmtL = (v) => (isFinite(v) ? (v >= 100 || (v > 0 && v < 1e-3) ? v.toExponential(2).replace("-", "−") : v.toFixed(4)) : "–");
+  const fmtA = (v) => (isFinite(v) ? (100 * v).toFixed(1) + "%" : "–");
+  function drawReadouts() {
+    $("roEpoch").textContent = String(S.epoch);
+    $("roTrainLoss").textContent = fmtL(S.cur.trL);
+    $("roTestLoss").textContent = fmtL(S.cur.teL);
+    $("roTrainAcc").textContent = fmtA(S.cur.trA);
+    $("roTestAcc").textContent = fmtA(S.cur.teA);
+  }
+
+  function drawAll() {
+    if (!S.p) return;
+    drawMap(); drawNet(); drawLoss(); drawReadouts(); updateHint();
+  }
+
+  // ---------- animation ----------
+  let raf = 0;
+  function frame() {
+    raf = 0;
+    if (!S.playing) return;
+    runEpochs(S.speed);
+    computeGrid(); drawAll();
+    if (S.playing) raf = requestAnimationFrame(frame);
+  }
+  function setPlaying(on) {
+    S.playing = on;
+    const b = $("playBtn");
+    b.textContent = on ? "Pause" : "Play";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    if (on && !raf) raf = requestAnimationFrame(frame);
+    if (!on && raf) { cancelAnimationFrame(raf); raf = 0; }
+  }
+
+  // ---------- controls ----------
+  const fmtEta = (e) => String(Number(e.toPrecision(2)));
+  const niceEta = (v) => { const e = Math.pow(10, v); return Number(e.toPrecision(2)); };
+  function syncEta() {
+    $("eta").value = String(Math.log10(S.eta));
+    $("etaVal").textContent = fmtEta(S.eta);
+    const d = Core.defaultEta(S.mode, S.dataset);
+    $("etaNote").textContent = S.mode === "batch"
+      ? "Batch: sum the gradient over all training points, then update once (default η " + fmtEta(d) + ")."
+      : "Online: update after every training point, in a new random order each epoch (default η " + fmtEta(d) + ").";
+  }
+  function syncData() {
+    const corners = S.dataset === "xorCorners";
+    $("noise").disabled = corners; $("testSplit").disabled = corners; $("newSample").disabled = corners;
+    $("noiseVal").textContent = corners ? "–" : S.noise.toFixed(2);
+    $("testSplitVal").textContent = corners ? "–" : Math.round(S.testFrac * 100) + "%";
+    const n = S.data.X.length, nTe = S.sp.Xte.length;
+    $("testLegend").style.visibility = nTe ? "visible" : "hidden";
+    $("dataNote").textContent = corners
+      ? "Just the 4 XOR points, all used for training (no test split)."
+      : n + " points: " + (n - nTe) + " train (filled), " + nTe + " test (hollow).";
+  }
+  function setEtaDefaultIfChanged(oldMode, oldSet) {
+    const before = Core.defaultEta(oldMode, oldSet), after = Core.defaultEta(S.mode, S.dataset);
+    if (before !== after) S.eta = after;
+    syncEta();
+  }
+  function syncFormula() {
+    $("formula").innerHTML = S.useBias
+      ? "<i>h</i><sub>i</sub> = <i>f</i>(<b>w</b><sub>i</sub>·<b>x</b> + <i>b</i><sub>i</sub>), &nbsp;<i>ŷ</i> = <i>v</i>·<i>h</i> + <i>c</i>"
+      : "<i>h</i><sub>i</sub> = <i>f</i>(<b>w</b><sub>i</sub>·<b>x</b>), &nbsp;<i>ŷ</i> = <i>v</i>·<i>h</i>";
+  }
+  function fullReset() { setPlaying(false); rebuildData(); syncData(); resetWeights(); }
+
+  $("playBtn").addEventListener("click", () => {
+    if (S.diverged) { S.diverged = false; updateHint(); }
+    setPlaying(!S.playing);
+  });
+  $("stepBtn").addEventListener("click", () => { setPlaying(false); S.diverged = false; runEpochs(1); computeGrid(); drawAll(); });
+  $("resetBtn").addEventListener("click", () => { setPlaying(false); S.initSeed++; resetWeights(); });
+  $("speed").addEventListener("input", (e) => { S.speed = +e.target.value; $("speedVal").textContent = String(S.speed); });
+  $("dataset").addEventListener("change", (e) => {
+    const old = S.dataset; S.dataset = e.target.value;
+    setEtaDefaultIfChanged(S.mode, old); fullReset();
+  });
+  $("newSample").addEventListener("click", () => { S.dataSeed++; fullReset(); });
+  $("noise").addEventListener("input", (e) => { S.noise = +e.target.value; fullReset(); });
+  $("testSplit").addEventListener("input", (e) => { S.testFrac = +e.target.value / 100; fullReset(); });
+  $("hidden").addEventListener("input", (e) => { S.K = +e.target.value; $("hiddenVal").textContent = String(S.K); setPlaying(false); resetWeights(); });
+  document.querySelectorAll('input[name="act"]').forEach((r) => r.addEventListener("change", (e) => { S.act = e.target.value; setPlaying(false); resetWeights(); }));
+  $("useBias").addEventListener("change", (e) => { S.useBias = e.target.checked; syncFormula(); setPlaying(false); resetWeights(); });
+  document.querySelectorAll('input[name="init"]').forEach((r) => r.addEventListener("change", (e) => {
+    S.init = e.target.value; $("initScale").disabled = S.init === "zeros"; setPlaying(false); resetWeights();
+  }));
+  $("initScale").addEventListener("input", (e) => { S.scale = +e.target.value; $("initScaleVal").textContent = S.scale.toFixed(2); setPlaying(false); resetWeights(); });
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", (e) => {
+    const old = S.mode; S.mode = e.target.value; setEtaDefaultIfChanged(old, S.dataset); S.diverged = false; updateHint();
+  }));
+  $("eta").addEventListener("input", (e) => { S.eta = niceEta(+e.target.value); $("etaVal").textContent = fmtEta(S.eta); S.diverged = false; updateHint(); });
+
+  // ---------- theme + resize ----------
+  readColours();
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const onScheme = () => { readColours(); drawAll(); };
+  if (mq.addEventListener) mq.addEventListener("change", onScheme); else if (mq.addListener) mq.addListener(onScheme);
+  let pendingLayout = 0;
+  const ro = new ResizeObserver(() => { if (!pendingLayout) pendingLayout = requestAnimationFrame(() => { pendingLayout = 0; layout(); }); });
+  ro.observe(document.querySelector(".viz"));
+  ro.observe(netCv.parentElement);
+
+  // ---------- start ----------
+  rebuildData(); syncData(); syncEta(); syncFormula();
+  S.p = Core.init({ K: S.K, init: S.init, scale: S.scale, seed: S.initSeed, useBias: S.useBias });
+  S.rng = Core.mulberry32((S.initSeed >>> 0) * 31 + 5);
+  measure(); computeGrid();
+  layout();
+
+  // ---------- test hooks ----------
+  window.__demo = {
+    makeDataset: Core.makeDataset, init: Core.init, forward: Core.forward, lossAndGrad: Core.lossAndGrad,
+    gradCheck: Core.gradCheck, train: Core.train, evaluate: Core.evaluate, split: Core.split, defaultEta: Core.defaultEta,
+    epoch: Core.epoch, core: Core,
+    state: () => ({
+      dataset: S.dataset, K: S.K, act: S.act, useBias: S.useBias, init: S.init, scale: S.scale, mode: S.mode, eta: S.eta,
+      speed: S.speed, epoch: S.epoch, playing: S.playing, diverged: S.diverged, hint: S.hint, hintText: $("hint").textContent,
+      trainLoss: S.cur.trL, testLoss: S.cur.teL, trainAcc: S.cur.trA, testAcc: S.cur.teA,
+      nTrain: S.sp.Xtr.length, nTest: S.sp.Xte.length, params: Core.clone(S.p), dataSeed: S.dataSeed, initSeed: S.initSeed
+    }),
+    step: (n) => { runEpochs(n == null ? 1 : n); computeGrid(); drawAll(); return S.epoch; },
+    play: () => setPlaying(true), pause: () => setPlaying(false)
+  };
+})();
+</script>
+</body>
+</html>

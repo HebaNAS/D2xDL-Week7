@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gradient Descent Bowl</title>
+<script>
+  // Apply ?theme=light|dark before first paint (the RISE embed forces light).
+  (function () {
+    try {
+      var t = new URLSearchParams(location.search).get('theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
+  --pos: #3274b5;   /* positive class (+1) and positive weights: HWU blue used on the slides */
+  --neg: #a62b17;   /* negative class (-1) and negative weights: the slides' red */
+  --unit1: #1b8a7a; --unit2: #c7841a;  /* hidden unit 1 / 2 lines (XOR demo) */
+  --ink-btn: #1f2a37; --ink-btn-fg: #ffffff; --focus: #3274b5;
+  --note-bg: #eef2f7;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-math: "Cambria Math", "STIX Two Math", "Times New Roman", Times, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.m { font-family: var(--font-math); font-style: italic; }
+
+.app {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px;
+  height: 100vh; height: 100dvh;
+  padding-block: 10px 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Header */
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 6px 20px; flex-wrap: wrap; }
+h1 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.2; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.formula { display: flex; flex-wrap: wrap; gap: 2px 18px; font-family: var(--font-math); font-size: 16.5px; line-height: 1.3; }
+.formula span { white-space: nowrap; }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 316px; gap: 16px; min-height: 0; }
+.plots { display: grid; grid-template-rows: minmax(0, 1fr) 172px; gap: 10px; min-height: 0; min-width: 0; }
+.plot-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-height: 0; }
+.card { display: flex; flex-direction: column; gap: 3px; margin: 0; background: var(--panel); border-radius: 12px;
+  padding: 7px 10px 6px; min-height: 0; min-width: 0; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 10px; flex-wrap: wrap; }
+.lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.lbl .m { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: var(--fg); }
+.hint { font-size: 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); align-items: center; min-height: 17px; }
+.legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend svg { display: block; overflow: visible; flex: none; }
+.legend .m { font-size: 13.5px; color: var(--fg); }
+.grad { width: 46px; height: 9px; border-radius: 2px; border: 1px solid var(--line); }
+.cv-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.cv-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#cvSurf { cursor: crosshair; touch-action: pan-y; }
+.tip { position: absolute; z-index: 2; pointer-events: none; background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 3px 7px; font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12px;
+  white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1px 2px 2px; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec + .sec { border-top: 1px solid var(--line); padding-top: 9px; }
+.status { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.3; min-height: 38px; font-weight: 550; }
+.status .badge { flex: none; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--bg); background: var(--pos); margin-top: 0; font-family: var(--font-ui); }
+.status[data-kind="bad"] .badge { background: var(--neg); }
+.status[data-kind="done"] .badge, .status[data-kind="cf"] .badge { background: var(--unit1); }
+.status[data-kind="hover"] .badge { background: var(--unit1); }
+.status[data-kind="osc"] .badge, .status[data-kind="bounce"] .badge { background: var(--unit2); }
+.status[data-kind="idle"] .badge { background: var(--muted); }
+.btn-grid { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 6px; }
+.btn-grid .wide { grid-column: 1 / -1; }
+button { font: inherit; font-size: 13px; height: 30px; padding: 0 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); white-space: nowrap; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--ink-btn); color: var(--ink-btn-fg); border-color: var(--ink-btn); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+button.primary svg { fill: currentColor; }
+.readouts { display: grid; grid-template-columns: auto 1fr auto 1fr; column-gap: 8px; row-gap: 1px; align-items: baseline; font-size: 13px; }
+.readouts .k { color: var(--muted); font-size: 12px; }
+.readouts .k .m { color: var(--fg); font-size: 14.5px; }
+.readouts .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; padding-right: 8px; white-space: nowrap; }
+.algo { background: var(--note-bg); border-radius: 8px; padding: 5px 8px; font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  font-size: 12px; line-height: 1.5; min-height: 84px; }
+.algo div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.algo .hd { color: var(--muted); }
+.algo .ln { color: var(--muted); font-weight: 700; display: inline-block; width: 1.6em; }
+.algo .sym { font-family: var(--font-math); font-style: italic; font-size: 13.5px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.seg label { font-size: 13px; padding: 3px 12px; border-radius: 6px; cursor: pointer; user-select: none; }
+.seg input:checked + label { background: var(--ink-btn); color: var(--ink-btn-fg); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 1px; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; color: var(--fg); text-transform: none; letter-spacing: 0; }
+.check input { accent-color: var(--pos); width: 15px; height: 15px; margin: 0; }
+.srow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 58px; align-items: center; column-gap: 8px; height: 26px; }
+.srow > label { font-family: var(--font-math); font-style: italic; font-size: 16px; line-height: 1; }
+.srow > label.word { font-family: var(--font-ui); font-style: normal; font-size: 12px; color: var(--muted); }
+.srow.wide { grid-template-columns: 64px minmax(0, 1fr) 40px; }
+.srow output { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; text-align: right; }
+input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 18px; cursor: pointer; }
+.chips { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.chip { height: 28px; padding: 0 8px; font-size: 12.5px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-radius: 14px; }
+.chip .cv { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--fg); background: var(--note-bg); font-weight: 600; }
+.chip[aria-pressed="true"] .cv { color: var(--fg); }
+.small-note { font-size: 12.5px; color: var(--muted); margin: 0; line-height: 1.4; border-top: 1px solid var(--line); padding-top: 8px; }
+.small-note .m { color: var(--fg); font-size: 14px; }
+.small-note .nw { white-space: nowrap; }
+.small-note sub { line-height: 0; }
+
+footer { font-size: 12px; color: var(--muted); }
+
+/* Phone / narrow */
+@media (max-width: 899px) {
+  .app { display: flex; flex-direction: column; height: auto; min-height: 100vh; gap: 14px; padding-block: 12px 14px; }
+  .main { display: flex; flex-direction: column; gap: 16px; }
+  .plots { display: flex; flex-direction: column; gap: 14px; }
+  .plot-pair { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  #cardData .cv-wrap { flex: none; aspect-ratio: 5 / 4; width: 100%; }
+  #cardSurf .cv-wrap { flex: none; aspect-ratio: 1 / 1; width: 100%; }
+  #cardLoss .cv-wrap { flex: none; aspect-ratio: 2 / 1; width: 100%; }
+  .controls { overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <h1>Gradient Descent Bowl</h1>
+      <p class="sub">Each update moves <span class="m">w</span> a step downhill on the SSE surface. The learning rate <span class="m">η</span> decides whether it reaches the bottom.</p>
+    </div>
+    <div class="formula" aria-label="Model and loss">
+      <span><span class="m">ŷ</span> = <span class="m">w</span>₀ + <span class="m">w</span>₁<span class="m">x</span></span>
+      <span>SSE(<span class="m">w</span>) = Σ<sub class="m">n</sub> (<span class="m">Y</span>(<span class="m">x</span><sub class="m">n</sub>) − <span class="m">ŷ</span>(<span class="m">x</span><sub class="m">n</sub>))²</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="plots" aria-label="Plots">
+      <div class="plot-pair">
+        <figure class="card" id="cardData">
+          <figcaption class="card-head">
+            <span class="lbl">Data and current line</span>
+            <label class="check" for="showSq"><input type="checkbox" id="showSq" checked> Show squared errors</label>
+          </figcaption>
+          <div class="legend" aria-hidden="true">
+            <span><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" style="fill:var(--pos);stroke:var(--fg)" stroke-width="1"/></svg><span>house (<span class="m">x</span>, <span class="m">y</span>)</span></span>
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--neg)" stroke-width="2"/></svg><span class="m">ŷ = w₀ + w₁x</span></span>
+            <span id="legSq"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" style="fill:var(--unit2);fill-opacity:.25;stroke:var(--unit2)" stroke-width="1"/></svg><span>squared error (<span class="m">y</span> − <span class="m">ŷ</span>)²</span></span>
+          </div>
+          <div class="cv-wrap"><canvas id="cvData" role="img" aria-label="House price data with the current regression line and its residuals"></canvas><div class="tip" id="tipData" hidden></div></div>
+        </figure>
+        <figure class="card" id="cardSurf">
+          <figcaption class="card-head">
+            <span class="lbl">Loss surface log SSE(<span class="m">w</span>₀, <span class="m">w</span>₁)</span>
+            <span class="hint">Click or drag to set the start</span>
+          </figcaption>
+          <div class="legend" aria-hidden="true">
+            <span><span>low</span><span class="grad" id="gradSw"></span><span>high</span></span>
+            <span><svg width="12" height="12" viewBox="-6 -6 12 12"><path id="starIcon" style="fill:var(--fg);stroke:var(--bg)" stroke-width="1"/></svg><span>closed form</span></span>
+            <span><svg width="22" height="10" viewBox="0 0 22 10"><line x1="0" y1="5" x2="16" y2="5" style="stroke:var(--neg)" stroke-width="2"/><circle cx="16" cy="5" r="4" style="fill:var(--neg);stroke:var(--bg)" stroke-width="1.5"/></svg><span>path, current <span class="m">w</span></span></span>
+          </div>
+          <div class="cv-wrap"><canvas id="cvSurf" role="img" aria-label="Contour map of log SSE over w0 and w1 with the gradient descent path"></canvas><div class="tip" id="tipSurf" hidden></div></div>
+        </figure>
+      </div>
+      <figure class="card" id="cardLoss">
+        <figcaption class="card-head">
+          <span class="lbl">SSE after each epoch (log scale)</span>
+          <span class="legend" aria-hidden="true">
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--unit2)" stroke-width="2"/></svg><span>SSE</span></span>
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/></svg><span>minimum SSE* = <span id="sseStarLeg">3.1048</span></span></span>
+          </span>
+        </figcaption>
+        <div class="cv-wrap"><canvas id="cvLoss" role="img" aria-label="SSE after each epoch on a log scale"></canvas><div class="tip" id="tipLoss" hidden></div></div>
+      </figure>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="sec">
+        <div class="status" id="status" data-kind="idle" aria-live="polite"><span class="badge" id="statusBadge" aria-hidden="true">•</span><span id="statusTxt">Ready</span></div>
+        <div class="btn-grid">
+          <button type="button" class="primary" id="btnPlay" aria-pressed="false"></button>
+          <button type="button" id="btnStep">Step</button>
+          <button type="button" id="btnReset">Reset</button>
+          <button type="button" class="wide" id="btnClosed">Closed form <span class="m">w</span> = (XᵀX)⁻¹XᵀY</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="readouts" aria-label="Current values">
+          <span class="k">epoch <span class="m">k</span></span><span class="v" id="rEpoch">0</span>
+          <span class="k">updates</span><span class="v" id="rUpd">0</span>
+          <span class="k"><span class="m">w</span>₀</span><span class="v" id="rW0">0.0000</span>
+          <span class="k"><span class="m">w</span>₁</span><span class="v" id="rW1">0.0000</span>
+          <span class="k">SSE</span><span class="v" id="rSse">0</span>
+          <span class="k">SSE*</span><span class="v" id="rSseStar">0</span>
+        </div>
+        <div class="algo" id="algo" aria-label="Current step of the algorithm"></div>
+      </div>
+
+      <div class="sec">
+        <div class="row">
+          <span class="lbl" id="modeLbl">Update mode</span>
+          <div class="seg" role="radiogroup" aria-labelledby="modeLbl">
+            <input type="radio" name="mode" id="modeOnline" value="online" checked><label for="modeOnline">Online</label>
+            <input type="radio" name="mode" id="modeBatch" value="batch"><label for="modeBatch">Batch</label>
+          </div>
+        </div>
+        <div class="srow">
+          <label for="eta">η</label>
+          <input type="range" id="eta" min="0" max="1000" step="1" value="500" aria-describedby="etaVal">
+          <output id="etaVal" for="eta">0.0100</output>
+        </div>
+        <div class="chips" role="group" aria-label="Learning-rate presets">
+          <button type="button" class="chip" id="presetTooSmall" data-preset="tooSmall" aria-pressed="false"><span>Too small</span><span class="cv"></span></button>
+          <button type="button" class="chip" id="presetGood" data-preset="good" aria-pressed="false"><span>Good</span><span class="cv"></span></button>
+          <button type="button" class="chip" id="presetOsc" data-preset="oscillates" aria-pressed="false"><span>Oscillates</span><span class="cv"></span></button>
+          <button type="button" class="chip" id="presetDiv" data-preset="diverges" aria-pressed="false"><span>Diverges</span><span class="cv"></span></button>
+        </div>
+        <div class="srow wide">
+          <label for="speed" class="word">Updates/s</label>
+          <input type="range" id="speed" min="1" max="120" step="1" value="20" aria-describedby="speedVal">
+          <output id="speedVal" for="speed">20</output>
+        </div>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Start point (line 1)</span>
+        <div class="srow">
+          <label for="w0Start"><span>w</span>₀</label>
+          <input type="range" id="w0Start" min="-4" max="12" step="0.01" value="0" aria-describedby="w0StartVal">
+          <output id="w0StartVal" for="w0Start">0.00</output>
+        </div>
+        <div class="srow">
+          <label for="w1Start"><span>w</span>₁</label>
+          <input type="range" id="w1Start" min="-1" max="4" step="0.01" value="0" aria-describedby="w1StartVal">
+          <output id="w1StartVal" for="w1Start">0.00</output>
+        </div>
+      </div>
+
+      <p class="small-note" id="modeNote"></p>
+    </aside>
+  </main>
+
+  <footer>F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= Model (pure functions) ================= */
+// Lecture notebook data: x = house size (1,000 sq ft), y = price (100,000s). x_n = [1, x] so w0 is the bias.
+const XS = [1, 2, 3, 4, 5, 6];
+const YS = [6, 7, 10, 13, 13, 15];
+const N = XS.length;
+const W0R = [-4, 12], W1R = [-1, 4];          // loss-surface window
+const ETA_MIN = 0.0005, ETA_MAX = 0.2;        // log slider range (0.2 so online mode can show divergence)
+const DIVERGE_SSE = 1e6;
+const PATH_MAX = 400;
+
+function sse(w0, w1) {
+  let s = 0;
+  for (let i = 0; i < N; i++) { const r = YS[i] - (w0 + w1 * XS[i]); s += r * r; }
+  return s;
+}
+// XᵀX and XᵀY with rows x_n = [1, x_n]
+const XtX = [[N, 0], [0, 0]], XtY = [0, 0];
+for (let i = 0; i < N; i++) { XtX[0][1] += XS[i]; XtX[1][1] += XS[i] * XS[i]; XtY[0] += YS[i]; XtY[1] += XS[i] * YS[i]; }
+XtX[1][0] = XtX[0][1];
+function closedForm() {
+  const a = XtX[0][0], b = XtX[0][1], c = XtX[1][0], d = XtX[1][1];
+  const det = a * d - b * c;
+  return [(d * XtY[0] - b * XtY[1]) / det, (-c * XtY[0] + a * XtY[1]) / det];
+}
+const WSTAR = closedForm();
+const SSE_STAR = sse(WSTAR[0], WSTAR[1]);
+// Eigen-directions of XᵀX: steep (λmax) and shallow (λmin) directions of the bowl.
+const TR = XtX[0][0] + XtX[1][1], DET = XtX[0][0] * XtX[1][1] - XtX[0][1] * XtX[1][0];
+const DISC = Math.sqrt(TR * TR / 4 - DET);
+const LMAX = TR / 2 + DISC, LMIN = TR / 2 - DISC;
+const vS = (() => { const v = [XtX[0][1], LMAX - XtX[0][0]]; const n = Math.hypot(v[0], v[1]); return [v[0] / n, v[1] / n]; })();
+const vF = [-vS[1], vS[0]];
+const XMAX = Math.max(...XS);
+
+// Slide lines 4-6 for one example: ŷ = wᵀx_n, δ = Y − ŷ, w ← w + η δ x_n
+function onlineUpdate(w, i, eta) {
+  const x = XS[i], yhat = w[0] + w[1] * x, d = YS[i] - yhat;
+  return { yhat, d, w: [w[0] + eta * d, w[1] + eta * d * x] };
+}
+// Batch: w ← w + η Σ_n δ_n x_n
+function batchUpdate(w, eta) {
+  let g0 = 0, g1 = 0;
+  for (let i = 0; i < N; i++) { const d = YS[i] - (w[0] + w[1] * XS[i]); g0 += d; g1 += d * XS[i]; }
+  return { g: [g0, g1], w: [w[0] + eta * g0, w[1] + eta * g1] };
+}
+const isBad = s => !Number.isFinite(s) || s > DIVERGE_SSE;
+function runEpochs(mode, eta, nEpochs, start = [0, 0]) {
+  let w = [+start[0], +start[1]], diverged = false, k = 0;
+  outer: for (k = 0; k < nEpochs; k++) {
+    if (mode === 'batch') {
+      w = batchUpdate(w, eta).w;
+      if (isBad(sse(w[0], w[1]))) { diverged = true; k++; break; }
+    } else {
+      for (let i = 0; i < N; i++) {
+        w = onlineUpdate(w, i, eta).w;
+        if (isBad(sse(w[0], w[1]))) { diverged = true; k++; break outer; }
+      }
+    }
+  }
+  return { w, sse: sse(w[0], w[1]), diverged, epochs: k };
+}
+// Online GD with fixed η is a linear map per epoch: w → M w + b. Find where it settles (a small loop of 6 points).
+function onlineCycle(eta) {
+  let M = [[1, 0], [0, 1]], b = [0, 0];
+  for (let i = 0; i < N; i++) {
+    const x = XS[i];
+    const P = [[1 - eta, -eta * x], [-eta * x, 1 - eta * x * x]];
+    M = [[P[0][0] * M[0][0] + P[0][1] * M[1][0], P[0][0] * M[0][1] + P[0][1] * M[1][1]],
+         [P[1][0] * M[0][0] + P[1][1] * M[1][0], P[1][0] * M[0][1] + P[1][1] * M[1][1]]];
+    b = [P[0][0] * b[0] + P[0][1] * b[1] + eta * YS[i], P[1][0] * b[0] + P[1][1] * b[1] + eta * YS[i] * x];
+  }
+  const tr = M[0][0] + M[1][1], det = M[0][0] * M[1][1] - M[0][1] * M[1][0];
+  const disc = tr * tr / 4 - det;
+  const rho = disc >= 0 ? Math.max(Math.abs(tr / 2 + Math.sqrt(disc)), Math.abs(tr / 2 - Math.sqrt(disc))) : Math.sqrt(det);
+  if (!(rho < 1)) return { rho, stable: false };
+  const A = [[1 - M[0][0], -M[0][1]], [-M[1][0], 1 - M[1][1]]];
+  const dA = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+  const wfp = [(A[1][1] * b[0] - A[0][1] * b[1]) / dA, (-A[1][0] * b[0] + A[0][0] * b[1]) / dA];
+  const pts = []; let w = wfp, R = 0, maxS = 0, minS = Infinity;
+  for (let i = 0; i < N; i++) {
+    w = onlineUpdate(w, i, eta).w; pts.push(w);
+    R = Math.max(R, Math.hypot(w[0] - wfp[0], w[1] - wfp[1]));
+    const s = sse(w[0], w[1]); maxS = Math.max(maxS, s); minS = Math.min(minS, s);
+  }
+  return { rho, stable: true, wfp, pts, R, maxS, minS };
+}
+
+// Learning-rate presets, verified by simulation (see the self-tests in the report):
+//   batch is stable for η < 2/λmax ≈ 0.0209 and zig-zags across the valley for η > 1/λmax ≈ 0.0104;
+//   online (one example at a time) only blows up for η above ≈ 0.133 on this data, but for η > 2/(1 + 6²) ≈ 0.054
+//   each update on x = 6 overshoots by more than it corrects, so w keeps bouncing far from the minimum.
+const PRESETS = {
+  online: { tooSmall: 0.001, good: 0.01, oscillates: 0.06, diverges: 0.15 },
+  batch:  { tooSmall: 0.001, good: 0.01, oscillates: 0.02, diverges: 0.022 }
+};
+
+/* ================= State ================= */
+const S = {
+  mode: 'online', eta: 0.01, speed: 20, start: [0, 0], showSq: true,
+  w: [0, 0], updates: 0, n: 0, epochs: 0,
+  path: [], trail: [], loss: [],
+  playing: false, diverged: false, converged: false,
+  last: null, cfAt: -1, jump: null, anim: null,
+  cyc: onlineCycle(0.01), hover: { data: null, surf: null, loss: null }
+};
+const curSse = () => sse(S.w[0], S.w[1]);
+// Batch GD counts as converged once w equals the closed form to the 4 decimals shown in the readouts.
+const atMin = () => Math.abs(S.w[0] - WSTAR[0]) < 5e-5 && Math.abs(S.w[1] - WSTAR[1]) < 5e-5;
+
+function resetRun() {
+  S.anim = null;
+  S.w = [S.start[0], S.start[1]];
+  S.updates = 0; S.n = 0; S.epochs = 0;
+  S.path = [S.w.slice()]; S.trail = [S.w.slice()];
+  S.loss = [[0, curSse()]];
+  S.diverged = false; S.converged = false; S.last = null; S.cfAt = -1; S.jump = null;
+  markDirty();
+}
+function pushCapped(arr, p, cap) { arr.push(p); if (arr.length > cap) arr.splice(0, arr.length - cap); }
+function decimate(arr, cap) {
+  if (arr.length <= cap) return;
+  const out = [arr[0]];
+  for (let i = 1; i < arr.length - 1; i += 2) out.push(arr[i]);
+  out.push(arr[arr.length - 1]);
+  arr.length = 0; Array.prototype.push.apply(arr, out);
+}
+function endEpoch() {
+  S.epochs++;
+  S.loss.push([S.epochs, curSse()]); decimate(S.loss, 6000);
+  S.trail.push(S.w.slice()); decimate(S.trail, 4000);
+}
+function doStep() {
+  if (S.diverged) return false;
+  if (S.mode === 'online') {
+    const i = S.n, wOld = S.w;
+    const u = onlineUpdate(wOld, i, S.eta);
+    S.w = u.w; S.last = { mode: 'online', i, yhat: u.yhat, d: u.d, w: u.w };
+    S.n = (i + 1) % N; S.updates++;
+    if (S.n === 0) endEpoch();
+  } else {
+    const u = batchUpdate(S.w, S.eta);
+    S.w = u.w; S.last = { mode: 'batch', g: u.g, w: u.w };
+    S.updates++; endEpoch();
+  }
+  pushCapped(S.path, S.w.slice(), PATH_MAX);
+  const s = curSse();
+  if (isBad(s)) { S.diverged = true; setPlaying(false); }
+  markDirty();
+  return true;
+}
+
+/* ================= Status line ================= */
+function classify() {
+  if (S.anim) return ['cf', 'Solving w = (XᵀX)⁻¹XᵀY directly…'];
+  if (S.cfAt >= 0 && S.updates === S.cfAt) return ['cf', 'Closed form: one matrix solve lands exactly on the minimum'];
+  if (S.diverged) return ['bad', 'Diverging: η is too large for this data. Paused once SSE passed 10⁶'];
+  if (S.updates === 0) return ['idle', 'Ready: press Play, or Step through one update at a time'];
+  const s = curSse(), eta = S.eta;
+  if (S.mode === 'batch') {
+    const rs = 1 - eta * LMAX;
+    if (Math.abs(rs) >= 1) return ['bad', 'Diverging: η is too large for this data'];
+    if (atMin()) return ['done', 'Converged: w matches the closed-form solution to 4 decimals'];
+    const e = [S.w[0] - WSTAR[0], S.w[1] - WSTAR[1]];
+    const cs = e[0] * vS[0] + e[1] * vS[1], cf = e[0] * vF[0] + e[1] * vF[1];
+    if (rs < 0 && Math.abs(cs) > 0.03) return ['osc', 'Oscillating across the valley: each step overshoots the steep direction'];
+    if (eta <= 0.002) return ['slow', 'Converging very slowly: η is small, so every step is tiny'];
+    if (LMAX * cs * cs > LMIN * cf * cf) return ['go', 'Converging: w heads down the steep side of the bowl'];
+    return ['valley', 'Converging slowly along the flat valley floor'];
+  }
+  const cyc = S.cyc;
+  if (!cyc.stable) return ['bad', 'Diverging: η is too large for this data'];
+  const p = cyc.pts[(S.n + N - 1) % N];
+  const e = [S.w[0] - p[0], S.w[1] - p[1]];
+  if (Math.hypot(e[0], e[1]) < Math.max(2 * cyc.R, 1e-4)) {
+    return cyc.maxS <= 2 * SSE_STAR
+      ? ['hover', 'Hovering near the minimum: each example pulls w slightly differently']
+      : ['bounce', 'Stuck bouncing in the valley: η is too large, so w never settles on the minimum'];
+  }
+  if (eta > 2 / (1 + XMAX * XMAX)) return ['osc', 'Oscillating: each update overshoots its own example, so w zig-zags'];
+  if (eta <= 0.002) return ['slow', 'Converging very slowly: η is small, so every step is tiny'];
+  const cs = e[0] * vS[0] + e[1] * vS[1], cf = e[0] * vF[0] + e[1] * vF[1];
+  if (LMAX * cs * cs > LMIN * cf * cf) return ['go', 'Converging: w heads down the steep side of the bowl'];
+  return ['valley', 'Converging slowly along the flat valley floor'];
+}
+const BADGE = { bad: '!', done: '✓', cf: '✓', hover: '≈', osc: '~', bounce: '~', idle: '•', slow: '•', go: '•', valley: '•' };
+
+/* ================= Formatting ================= */
+const minus = s => s.replace(/-/g, '−');
+function f4(v) {
+  if (!Number.isFinite(v)) return v > 0 ? '∞' : (v < 0 ? '−∞' : 'NaN');
+  const a = Math.abs(v);
+  if (a >= 1e5) return minus(v.toExponential(2).replace('e+', 'e'));
+  return minus(v.toFixed(4));
+}
+function fS(v) {
+  if (!Number.isFinite(v)) return '∞';
+  if (v >= 1e5) return v.toExponential(2).replace('e+', 'e');
+  return v.toFixed(4);
+}
+const f2 = v => minus(v.toFixed(2));
+function tickNum(v) { return minus(String(Math.round(v * 1000) / 1000)); }
+function compact(v) {
+  if (v >= 1e6) return (v / 1e6) + 'M';
+  if (v >= 1e3) return (v / 1e3) + 'K';
+  return String(+v.toPrecision(3));
+}
+
+/* ================= Theme ================= */
+let C = {};
+function parseColor(str) {
+  str = (str || '').trim();
+  if (str[0] === '#') {
+    let h = str.slice(1);
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h.slice(0, 6), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const m = str.match(/[\d.]+/g);
+  return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n);
+  C = {
+    bg: parseColor(g('--bg')), panel: parseColor(g('--panel')), fg: parseColor(g('--fg')), muted: parseColor(g('--muted')),
+    line: parseColor(g('--line')), pos: parseColor(g('--pos')), neg: parseColor(g('--neg')), unit1: parseColor(g('--unit1')),
+    unit2: parseColor(g('--unit2')),
+    fontUi: g('--font-ui').trim() || 'sans-serif', fontNum: g('--font-num').trim() || 'monospace', fontMath: g('--font-math').trim() || 'serif'
+  };
+  C.dark = (C.bg[0] + C.bg[1] + C.bg[2]) < 300;
+  const lo = heatColor(0), hi = heatColor(1);
+  document.getElementById('gradSw').style.background = `linear-gradient(90deg, rgb(${lo}), rgb(${heatColor(0.5)}), rgb(${hi}))`;
+}
+// One-hue sequential ramp: panel → blue. Low SSE stays close to the panel, high SSE is the strongest blue.
+function heatColor(t) {
+  const a = C.dark ? 0.04 + 0.62 * t : 0.04 + 0.74 * t;
+  return [0, 1, 2].map(k => Math.round(C.panel[k] + (C.pos[k] - C.panel[k]) * a));
+}
+
+/* ================= Canvas helpers ================= */
+function makePlot(id, margins) {
+  const cv = document.getElementById(id);
+  return { cv, ctx: cv.getContext('2d'), m: margins, w: 1, h: 1, dpr: 1, pr: { x: 0, y: 0, w: 1, h: 1 }, base: null };
+}
+const plots = {
+  data: makePlot('cvData', { l: 38, r: 8, t: 6, b: 34 }),
+  surf: makePlot('cvSurf', { l: 38, r: 8, t: 6, b: 34 }),
+  loss: makePlot('cvLoss', { l: 42, r: 10, t: 6, b: 32 })
+};
+function sizePlot(P) {
+  const r = P.cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  P.w = Math.max(1, r.width); P.h = Math.max(1, r.height); P.dpr = dpr;
+  const W = Math.max(1, Math.round(P.w * dpr)), H = Math.max(1, Math.round(P.h * dpr));
+  if (P.cv.width !== W) P.cv.width = W;
+  if (P.cv.height !== H) P.cv.height = H;
+  P.pr = { x: P.m.l, y: P.m.t, w: Math.max(10, P.w - P.m.l - P.m.r), h: Math.max(10, P.h - P.m.t - P.m.b) };
+}
+const CL = 1e4;
+const clampPx = v => (Number.isFinite(v) ? Math.max(-CL, Math.min(CL, v)) : (v > 0 ? CL : -CL));
+function font(px, kind = 'ui', style = '') { return `${style} ${px}px ${kind === 'num' ? C.fontNum : kind === 'math' ? C.fontMath : C.fontUi}`.trim(); }
+// Draw a label made of plain and maths (italic serif) pieces.
+function richText(ctx, parts, x, y, align = 'center') {
+  let total = 0;
+  const widths = parts.map(p => { ctx.font = p.math ? font(14, 'math', 'italic') : font(12); const w = ctx.measureText(p.t).width; total += w; return w; });
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  ctx.textAlign = 'left';
+  parts.forEach((p, i) => { ctx.font = p.math ? font(14, 'math', 'italic') : font(12); ctx.fillText(p.t, cx, y); cx += widths[i]; });
+}
+function starPath(ctx, x, y, R) {
+  const r = R * 0.45;
+  ctx.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r : R;
+    const px = x + rr * Math.cos(a), py = y + rr * Math.sin(a);
+    k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+(function legendStar() {
+  const pts = [];
+  for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? 2.4 : 5.4; pts.push(`${(rr * Math.cos(a)).toFixed(2)},${(rr * Math.sin(a)).toFixed(2)}`); }
+  document.getElementById('starIcon').setAttribute('d', 'M' + pts.join('L') + 'Z');
+})();
+
+/* ---------- (A) data plot ---------- */
+const DX = [0, 7], DY = [0, 20];
+function drawData() {
+  const P = plots.data, ctx = P.ctx, pr = P.pr;
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.clearRect(0, 0, P.w, P.h);
+  const X = x => pr.x + (x - DX[0]) / (DX[1] - DX[0]) * pr.w;
+  const Y = y => pr.y + (DY[1] - y) / (DY[1] - DY[0]) * pr.h;
+  // grid
+  ctx.lineWidth = 1; ctx.strokeStyle = rgba(C.line, 1);
+  ctx.fillStyle = rgba(C.muted, 1); ctx.font = font(12); ctx.textBaseline = 'middle';
+  for (let x = 0; x <= 7; x++) {
+    const px = Math.round(X(x)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(px, pr.y); ctx.lineTo(px, pr.y + pr.h); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillText(String(x), px, pr.y + pr.h + 9);
+  }
+  for (let y = 0; y <= 20; y += 5) {
+    const py = Math.round(Y(y)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(pr.x, py); ctx.lineTo(pr.x + pr.w, py); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(String(y), pr.x - 6, py);
+  }
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = rgba(C.muted, 1);
+  richText(ctx, [{ t: 'x', math: true }, { t: '  house size (1,000 sq ft)' }], pr.x + pr.w / 2, P.h - 4);
+  ctx.save(); ctx.translate(11, pr.y + pr.h / 2); ctx.rotate(-Math.PI / 2);
+  richText(ctx, [{ t: 'y', math: true }, { t: '  price (100,000s)' }], 0, 2); ctx.restore();
+
+  const w = S.w;
+  const act = S.mode === 'online' ? (S.last && S.last.mode === 'online' ? S.last.i : S.n) : -1;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(pr.x, pr.y, pr.w, pr.h); ctx.clip();
+  // squared errors: a square on each residual, side = residual's on-screen length
+  if (S.showSq) {
+    for (let i = 0; i < N; i++) {
+      const px = X(XS[i]), py = Y(YS[i]), ph = clampPx(Y(w[0] + w[1] * XS[i]));
+      const side = Math.min(Math.abs(ph - py), 4 * CL);
+      const top = Math.min(py, ph);
+      ctx.fillStyle = rgba(C.unit2, i === act ? 0.3 : 0.13);
+      ctx.fillRect(px, top, side, side);
+      ctx.strokeStyle = rgba(C.unit2, i === act ? 0.95 : 0.6); ctx.lineWidth = 1;
+      ctx.strokeRect(px + 0.5, top + 0.5, Math.max(0, side - 1), Math.max(0, side - 1));
+    }
+  }
+  // residuals
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < N; i++) {
+    const px = X(XS[i]), py = Y(YS[i]), ph = clampPx(Y(w[0] + w[1] * XS[i]));
+    ctx.strokeStyle = rgba(i === act ? C.fg : C.muted, i === act ? 0.9 : 0.75);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, ph); ctx.stroke();
+  }
+  // current line, clipped in data space so huge weights stay drawable
+  const seg = clipLine(w[0], w[1], DX, [DY[0] - 5, DY[1] + 5]);
+  if (seg) {
+    ctx.strokeStyle = rgba(C.neg, 1); ctx.lineWidth = 2.25; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(X(seg[0]), Y(seg[1])); ctx.lineTo(X(seg[2]), Y(seg[3])); ctx.stroke();
+  }
+  ctx.restore();
+  // points
+  for (let i = 0; i < N; i++) {
+    const px = X(XS[i]), py = Y(YS[i]);
+    ctx.beginPath(); ctx.arc(px, py, 6.5, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.bg, 1); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.pos, 1); ctx.fill();
+    ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 1; ctx.stroke();
+  }
+  if (act >= 0) {
+    const px = X(XS[act]), py = Y(YS[act]);
+    ctx.beginPath(); ctx.arc(px, py, 11, 0, 2 * Math.PI); ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 4.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(px, py, 11, 0, 2 * Math.PI); ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = font(11.5, 'ui', '600'); ctx.textAlign = 'center';
+    const lx = px - 22 < pr.x ? px + 24 : px - 24, ly = py - 13 < pr.y + 10 ? py + 26 : py - 13;
+    ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = rgba(C.panel, 0.95); ctx.strokeText('n = ' + (act + 1), lx, ly);
+    ctx.fillStyle = rgba(C.fg, 1); ctx.fillText('n = ' + (act + 1), lx, ly);
+  }
+  // hover
+  const h = S.hover.data, tip = document.getElementById('tipData');
+  if (h != null) {
+    const i = h, yh = w[0] + w[1] * XS[i], d = YS[i] - yh;
+    tip.innerHTML = `x = ${XS[i]}, y = ${YS[i]}<br>ŷ = ${f4(yh)}<br>δ = ${f4(d)}, δ² = ${fS(d * d)}`;
+    placeTip(tip, X(XS[i]), Y(YS[i]), P);
+  } else tip.hidden = true;
+}
+// Clip y = a + b x to the box xr × yr; returns [x1, y1, x2, y2] or null.
+function clipLine(a, b, xr, yr) {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  let x1 = xr[0], x2 = xr[1];
+  if (Math.abs(b) > 1e-12) {
+    const xa = (yr[0] - a) / b, xb = (yr[1] - a) / b;
+    x1 = Math.max(x1, Math.min(xa, xb)); x2 = Math.min(x2, Math.max(xa, xb));
+    if (x1 > x2) return null;
+  } else if (a < yr[0] || a > yr[1]) return null;
+  return [x1, a + b * x1, x2, a + b * x2];
+}
+function placeTip(tip, x, y, P) {
+  tip.hidden = false;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = x + 12, top = y - th - 10;
+  if (left + tw > P.w - 2) left = x - tw - 12;
+  if (top < 2) top = y + 12;
+  tip.style.left = Math.max(2, left) + 'px'; tip.style.top = Math.max(2, Math.min(P.h - th - 2, top)) + 'px';
+}
+
+/* ---------- (B) loss surface ---------- */
+const sX = (P, w0) => P.pr.x + (w0 - W0R[0]) / (W0R[1] - W0R[0]) * P.pr.w;
+const sY = (P, w1) => P.pr.y + (W1R[1] - w1) / (W1R[1] - W1R[0]) * P.pr.h;
+const SSE_MAX = Math.max(sse(W0R[0], W1R[0]), sse(W0R[0], W1R[1]), sse(W0R[1], W1R[0]), sse(W0R[1], W1R[1]));
+function buildSurface() {
+  const P = plots.surf, pr = P.pr, dpr = P.dpr;
+  const off = P.base || (P.base = document.createElement('canvas'));
+  off.width = P.cv.width; off.height = P.cv.height;
+  const ctx = off.getContext('2d');
+  const x0 = Math.round(pr.x * dpr), y0 = Math.round(pr.y * dpr);
+  const W = Math.max(1, Math.round(pr.w * dpr)), H = Math.max(1, Math.round(pr.h * dpr));
+  const img = ctx.createImageData(W, H), d = img.data;
+  const lo = Math.log(SSE_STAR), hi = Math.log(SSE_MAX);
+  const lut = []; for (let k = 0; k <= 255; k++) lut.push(heatColor(k / 255));
+  for (let j = 0; j < H; j++) {
+    const w1 = W1R[1] - (j + 0.5) / H * (W1R[1] - W1R[0]);
+    for (let i = 0; i < W; i++) {
+      const w0 = W0R[0] + (i + 0.5) / W * (W0R[1] - W0R[0]);
+      let t = (Math.log(sse(w0, w1)) - lo) / (hi - lo); t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const c = lut[Math.round(t * 255)], o = (j * W + i) * 4;
+      d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, x0, y0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // contours: SSE(w) = SSE* + (w − w*)ᵀ XᵀX (w − w*) is an exact ellipse for each level; 10 log-spaced levels
+  ctx.save(); ctx.beginPath(); ctx.rect(pr.x, pr.y, pr.w, pr.h); ctx.clip();
+  ctx.lineWidth = 1; ctx.strokeStyle = rgba(C.fg, C.dark ? 0.28 : 0.26);
+  for (let k = 0; k < 10; k++) {
+    const L = Math.exp(lo + (hi - lo) * (k + 0.5) / 10), r = Math.sqrt(L - SSE_STAR);
+    ctx.beginPath();
+    for (let a = 0; a <= 240; a++) {
+      const th = a / 240 * 2 * Math.PI, cf = r * Math.cos(th) / Math.sqrt(LMIN), cs = r * Math.sin(th) / Math.sqrt(LMAX);
+      const w0 = WSTAR[0] + cf * vF[0] + cs * vS[0], w1 = WSTAR[1] + cf * vF[1] + cs * vS[1];
+      const px = clampPx(sX(P, w0)), py = clampPx(sY(P, w1));
+      a ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  // axes
+  ctx.fillStyle = rgba(C.muted, 1); ctx.font = font(12); ctx.textBaseline = 'middle';
+  ctx.strokeStyle = rgba(C.line, 1);
+  for (let v = -4; v <= 12; v += 2) {
+    const px = Math.round(sX(P, v)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(px, pr.y + pr.h); ctx.lineTo(px, pr.y + pr.h + 4); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillText(tickNum(v), px, pr.y + pr.h + 11);
+  }
+  for (let v = -1; v <= 4; v++) {
+    const py = Math.round(sY(P, v)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(pr.x - 4, py); ctx.lineTo(pr.x, py); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(tickNum(v), pr.x - 7, py);
+  }
+  ctx.textBaseline = 'alphabetic';
+  richText(ctx, [{ t: 'w', math: true }, { t: '₀  bias' }], pr.x + pr.w / 2, P.h - 4);
+  ctx.save(); ctx.translate(11, pr.y + pr.h / 2); ctx.rotate(-Math.PI / 2);
+  richText(ctx, [{ t: 'w', math: true }, { t: '₁  slope' }], 0, 2); ctx.restore();
+  ctx.strokeStyle = rgba(C.line, 1); ctx.strokeRect(pr.x + 0.5, pr.y + 0.5, pr.w - 1, pr.h - 1);
+  // closed-form minimum
+  const sx = sX(P, WSTAR[0]), sy = sY(P, WSTAR[1]);
+  starPath(ctx, sx, sy, 9); ctx.fillStyle = rgba(C.bg, 1); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = rgba(C.bg, 1); ctx.stroke();
+  starPath(ctx, sx, sy, 8); ctx.fillStyle = rgba(C.fg, 1); ctx.fill();
+}
+function strokePoly(ctx, P, pts) {
+  ctx.beginPath(); let pen = false;
+  for (const p of pts) {
+    if (!p) { pen = false; continue; }
+    const px = clampPx(sX(P, p[0])), py = clampPx(sY(P, p[1]));
+    pen ? ctx.lineTo(px, py) : ctx.moveTo(px, py); pen = true;
+  }
+  ctx.stroke();
+}
+// Older segments fade so the newest steps stand out (and a long zig-zag does not become a solid block).
+function strokePolyFade(ctx, P, pts, color, width) {
+  const n = pts.length;
+  ctx.lineWidth = width;
+  for (let i = 1; i < n; i++) {
+    const a = pts[i - 1], b = pts[i];
+    if (!a || !b) continue;
+    const age = n - 1 - i;   // updates since this segment was drawn
+    ctx.strokeStyle = rgba(color, Math.max(0.16, 1 - age / 160));
+    ctx.beginPath();
+    ctx.moveTo(clampPx(sX(P, a[0])), clampPx(sY(P, a[1])));
+    ctx.lineTo(clampPx(sX(P, b[0])), clampPx(sY(P, b[1])));
+    ctx.stroke();
+  }
+}
+function drawSurf() {
+  const P = plots.surf, ctx = P.ctx, pr = P.pr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, P.cv.width, P.cv.height);
+  if (P.base) ctx.drawImage(P.base, 0, 0);
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.save(); ctx.beginPath(); ctx.rect(pr.x, pr.y, pr.w, pr.h); ctx.clip();
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  // long-run trail (one point per epoch) once the detailed path (last 400 updates) has dropped its oldest points
+  if (S.updates >= PATH_MAX && S.trail.length > 1) {
+    ctx.strokeStyle = rgba(C.neg, 0.35); ctx.lineWidth = 1.25; strokePoly(ctx, P, S.trail);
+  }
+  if (S.path.length > 1) strokePolyFade(ctx, P, S.path, C.neg, 1.75);
+  if (S.jump) {
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = rgba(C.fg, 0.85); ctx.lineWidth = 1.5;
+    strokePoly(ctx, P, [S.jump.from, S.jump.to]); ctx.setLineDash([]);
+  }
+  ctx.restore();
+  // start marker
+  const st = S.start, spx = sX(P, st[0]), spy = sY(P, st[1]);
+  ctx.beginPath(); ctx.arc(spx, spy, 5.5, 0, 2 * Math.PI); ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 4; ctx.stroke();
+  ctx.beginPath(); ctx.arc(spx, spy, 5.5, 0, 2 * Math.PI); ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 1.5; ctx.stroke();
+  // current w (clamped to the edge if it has left the window)
+  const w = S.w;
+  if (Number.isFinite(w[0]) && Number.isFinite(w[1])) {
+    let px = sX(P, w[0]), py = sY(P, w[1]);
+    const out = px < pr.x || px > pr.x + pr.w || py < pr.y || py > pr.y + pr.h;
+    px = Math.max(pr.x + 6, Math.min(pr.x + pr.w - 6, px)); py = Math.max(pr.y + 6, Math.min(pr.y + pr.h - 6, py));
+    ctx.beginPath(); ctx.arc(px, py, 6, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.bg, 1); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, 4.5, 0, 2 * Math.PI);
+    if (out) { ctx.strokeStyle = rgba(C.neg, 1); ctx.lineWidth = 2; ctx.stroke(); }
+    else { ctx.fillStyle = rgba(C.neg, 1); ctx.fill(); ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 1; ctx.stroke(); }
+  }
+  const h = S.hover.surf, tip = document.getElementById('tipSurf');
+  if (h) {
+    ctx.strokeStyle = rgba(C.fg, 0.35); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(h.px + 0.5, pr.y); ctx.lineTo(h.px + 0.5, pr.y + pr.h); ctx.moveTo(pr.x, h.py + 0.5); ctx.lineTo(pr.x + pr.w, h.py + 0.5); ctx.stroke();
+    tip.innerHTML = `w₀ = ${f2(h.w0)}, w₁ = ${f2(h.w1)}<br>SSE = ${fS(sse(h.w0, h.w1))}`;
+    placeTip(tip, h.px, h.py, P);
+  } else tip.hidden = true;
+}
+
+/* ---------- (C) loss vs epoch ---------- */
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function drawLoss() {
+  const P = plots.loss, ctx = P.ctx, pr = P.pr;
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.clearRect(0, 0, P.w, P.h);
+  const L = S.loss.filter(p => Number.isFinite(p[1]) && p[1] > 0);
+  const kMax = Math.max(10, L.length ? L[L.length - 1][0] : 0);
+  let sMax = SSE_STAR * 10, sMin = SSE_STAR;
+  for (const p of L) { if (p[1] > sMax) sMax = p[1]; if (p[1] < sMin) sMin = p[1]; }
+  const yLo = Math.log10(sMin * 0.8), yHi = Math.log10(sMax * 1.4);
+  const X = k => pr.x + k / kMax * pr.w;
+  const Y = s => pr.y + (yHi - Math.log10(s)) / (yHi - yLo) * pr.h;
+  ctx.lineWidth = 1; ctx.strokeStyle = rgba(C.line, 1); ctx.fillStyle = rgba(C.muted, 1); ctx.font = font(12); ctx.textBaseline = 'middle';
+  const dec = yHi - yLo;
+  for (let e = Math.floor(yLo); e <= Math.ceil(yHi); e++) {
+    for (const m of [1, 2, 5]) {
+      const v = m * Math.pow(10, e), lv = Math.log10(v);
+      if (lv < yLo || lv > yHi) continue;
+      if (m !== 1 && dec > 2.6) continue;
+      const py = Math.round(Y(v)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(pr.x, py); ctx.lineTo(pr.x + pr.w, py); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.fillText(compact(v), pr.x - 6, py);
+    }
+  }
+  const st = niceStep(kMax / 7);
+  for (let k = 0; k <= kMax + 1e-9; k += st) {
+    const px = Math.round(X(k)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(px, pr.y + pr.h); ctx.lineTo(px, pr.y + pr.h + 4); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillText(compact(k), px, pr.y + pr.h + 11);
+  }
+  ctx.textBaseline = 'alphabetic';
+  richText(ctx, [{ t: 'epoch ' }, { t: 'k', math: true }], pr.x + pr.w / 2, P.h - 3);
+  ctx.strokeStyle = rgba(C.line, 1); ctx.beginPath(); ctx.moveTo(pr.x + 0.5, pr.y); ctx.lineTo(pr.x + 0.5, pr.y + pr.h); ctx.lineTo(pr.x + pr.w, pr.y + pr.h + 0.5); ctx.stroke();
+  // SSE* reference
+  const ys = Y(SSE_STAR);
+  ctx.setLineDash([5, 4]); ctx.strokeStyle = rgba(C.muted, 1); ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pr.x, ys); ctx.lineTo(pr.x + pr.w, ys); ctx.stroke(); ctx.setLineDash([]);
+  // curve
+  ctx.save(); ctx.beginPath(); ctx.rect(pr.x, pr.y - 2, pr.w + 2, pr.h + 4); ctx.clip();
+  if (L.length > 1) {
+    ctx.strokeStyle = rgba(C.unit2, 1); ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); L.forEach((p, i) => { const px = X(p[0]), py = Y(p[1]); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.stroke();
+  }
+  if (L.length) {
+    const p = L[L.length - 1], px = X(p[0]), py = Y(p[1]);
+    ctx.beginPath(); ctx.arc(px, py, 6, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.panel, 1); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.unit2, 1); ctx.fill();
+  }
+  ctx.restore();
+  const h = S.hover.loss, tip = document.getElementById('tipLoss');
+  if (h != null && L.length) {
+    const kq = (h - pr.x) / pr.w * kMax;
+    let best = L[0];
+    for (const p of L) if (Math.abs(p[0] - kq) < Math.abs(best[0] - kq)) best = p;
+    const px = X(best[0]), py = Y(best[1]);
+    ctx.strokeStyle = rgba(C.fg, 0.35); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px + 0.5, pr.y); ctx.lineTo(px + 0.5, pr.y + pr.h); ctx.stroke();
+    ctx.beginPath(); ctx.arc(px, py, 4.5, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.fg, 1); ctx.fill();
+    tip.textContent = `epoch ${best[0]}: SSE = ${fS(best[1])}`;
+    placeTip(tip, px, py, P);
+  } else tip.hidden = true;
+}
+
+/* ================= Controls & readouts ================= */
+const $ = id => document.getElementById(id);
+const els = {
+  play: $('btnPlay'), step: $('btnStep'), reset: $('btnReset'), closed: $('btnClosed'),
+  eta: $('eta'), etaVal: $('etaVal'), speed: $('speed'), speedVal: $('speedVal'),
+  w0: $('w0Start'), w0Val: $('w0StartVal'), w1: $('w1Start'), w1Val: $('w1StartVal'),
+  showSq: $('showSq'), legSq: $('legSq'), algo: $('algo'),
+  rEpoch: $('rEpoch'), rUpd: $('rUpd'), rW0: $('rW0'), rW1: $('rW1'), rSse: $('rSse'), rSseStar: $('rSseStar'),
+  status: $('status'), statusTxt: $('statusTxt'), badge: $('statusBadge'),
+  chips: Array.from(document.querySelectorAll('.chip'))
+};
+const ICON_PLAY = '<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><path d="M1 0.8 L10 6 L1 11.2 Z"/></svg>';
+const ICON_PAUSE = '<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><rect x="1" y="1" width="3.2" height="10"/><rect x="6.8" y="1" width="3.2" height="10"/></svg>';
+function setPlaying(on) {
+  S.playing = on;
+  els.play.innerHTML = on ? ICON_PAUSE + 'Pause' : ICON_PLAY + 'Play';
+  els.play.setAttribute('aria-pressed', on ? 'true' : 'false');
+  lastT = null; acc = 0;
+}
+const LOG_MIN = Math.log10(ETA_MIN), LOG_MAX = Math.log10(ETA_MAX);
+const sliderToEta = v => Math.max(ETA_MIN, Math.round(Math.pow(10, LOG_MIN + v / 1000 * (LOG_MAX - LOG_MIN)) * 1e4) / 1e4);
+const etaToSlider = e => Math.round((Math.log10(e) - LOG_MIN) / (LOG_MAX - LOG_MIN) * 1000);
+function setEta(e, fromSlider) {
+  S.eta = e; S.cyc = onlineCycle(e);
+  if (!fromSlider) els.eta.value = etaToSlider(e);
+  els.etaVal.textContent = e.toFixed(4);
+  syncChips(); markDirty();
+}
+function syncChips() {
+  const pr = PRESETS[S.mode];
+  for (const c of els.chips) {
+    const v = pr[c.dataset.preset];
+    c.querySelector('.cv').textContent = v.toFixed(4);
+    c.setAttribute('aria-pressed', Math.abs(v - S.eta) < 1e-9 ? 'true' : 'false');
+  }
+}
+function setStart(w0, w1, fromSlider) {
+  w0 = Math.max(W0R[0], Math.min(W0R[1], Math.round(w0 * 100) / 100));
+  w1 = Math.max(W1R[0], Math.min(W1R[1], Math.round(w1 * 100) / 100));
+  S.start = [w0, w1];
+  if (!fromSlider) { els.w0.value = w0; els.w1.value = w1; }
+  els.w0Val.textContent = f2(w0); els.w1Val.textContent = f2(w1);
+  resetRun();
+}
+function setMode(m) {
+  S.mode = m;
+  $(m === 'online' ? 'modeOnline' : 'modeBatch').checked = true;
+  els.step.textContent = m === 'online' ? 'Step' : 'Step epoch';
+  els.step.title = m === 'online' ? 'Process one example (lines 4 to 6)' : 'One batch update over all six examples';
+  $('modeNote').innerHTML = m === 'online'
+    ? 'Online: one update per example. With a fixed <span class="m">η</span>, <span class="m">w</span> ends up circling the minimum instead of landing on it; a smaller <span class="m">η</span> gives a smaller circle.'
+    : `Batch: zig-zags across the valley once <span class="m">η</span> &gt; <span class="nw">1/λ<sub>max</sub> = ${(1 / LMAX).toFixed(4)}</span> and blows up once <span class="m">η</span> &gt; <span class="nw">2/λ<sub>max</sub> = ${(2 / LMAX).toFixed(4)}</span> (λ<sub>max</sub> ≈ ${LMAX.toFixed(1)}, the largest eigenvalue of XᵀX).`;
+  syncChips(); resetRun();
+}
+
+const sym = t => `<span class="sym">${t}</span>`;
+function algoHTML() {
+  if (S.anim || (S.cfAt >= 0 && S.updates === S.cfAt)) {
+    return `<div class="hd">Closed form (no iterations)</div>
+      <div>XᵀX = [[${XtX[0][0]}, ${XtX[0][1]}], [${XtX[1][0]}, ${XtX[1][1]}]]</div>
+      <div>XᵀY = [${XtY[0]}, ${XtY[1]}]</div>
+      <div>${sym('w')} = (XᵀX)⁻¹XᵀY = [${f4(WSTAR[0])}, ${f4(WSTAR[1])}]</div>`;
+  }
+  const L = S.last;
+  if (S.mode === 'online') {
+    if (!L || L.mode !== 'online') {
+      const i = S.n;
+      return `<div class="hd">next: ${sym('n')} = ${i + 1}, ${sym('x')}ₙ = [1, ${XS[i]}], ${sym('Y')} = ${YS[i]}</div>
+        <div><span class="ln">4</span>${sym('ŷ')} = ${sym('w')}ᵀ·${sym('x')}ₙ</div>
+        <div><span class="ln">5</span>${sym('δ')} = ${sym('Y')} − ${sym('ŷ')}</div>
+        <div><span class="ln">6</span>${sym('w')} ← ${sym('w')} + ${sym('η')}·${sym('δ')}·${sym('x')}ₙ</div>`;
+    }
+    const i = L.i;
+    return `<div class="hd">${sym('n')} = ${i + 1}, ${sym('x')}ₙ = [1, ${XS[i]}], ${sym('Y')}(${sym('x')}ₙ) = ${YS[i]}</div>
+      <div><span class="ln">4</span>${sym('ŷ')} = ${sym('w')}ᵀ·${sym('x')}ₙ = ${f4(L.yhat)}</div>
+      <div><span class="ln">5</span>${sym('δ')} = ${YS[i]} − ${f4(L.yhat)} = ${f4(L.d)}</div>
+      <div><span class="ln">6</span>${sym('w')} ← ${sym('w')} + ${sym('η')}·${sym('δ')}·${sym('x')}ₙ = [${f4(L.w[0])}, ${f4(L.w[1])}]</div>`;
+  }
+  const g = L && L.mode === 'batch' ? L.g : null;
+  return `<div class="hd">batch: all six examples, then one update</div>
+    <div><span class="ln">4</span>${sym('ŷ')}ₙ = ${sym('w')}ᵀ·${sym('x')}ₙ for every ${sym('n')}</div>
+    <div><span class="ln">5</span>Σ ${sym('δ')}ₙ${sym('x')}ₙ = ${g ? `[${f4(g[0])}, ${f4(g[1])}]` : '…'}</div>
+    <div><span class="ln">6</span>${sym('w')} ← ${sym('w')} + ${sym('η')}·Σ${sym('δ')}ₙ${sym('x')}ₙ${g ? ` = [${f4(L.w[0])}, ${f4(L.w[1])}]` : ''}</div>`;
+}
+let lastAlgo = '', lastStatus = '';
+function updateReadouts() {
+  const k = S.mode === 'online' ? Math.ceil(S.updates / N) : S.updates;
+  els.rEpoch.textContent = String(k);
+  els.rUpd.textContent = String(S.updates);
+  els.rW0.textContent = f4(S.w[0]); els.rW1.textContent = f4(S.w[1]);
+  els.rSse.textContent = fS(curSse());
+  const a = algoHTML(); if (a !== lastAlgo) { els.algo.innerHTML = a; lastAlgo = a; }
+  const [kind, txt] = classify();
+  if (txt !== lastStatus) {
+    els.statusTxt.textContent = txt; els.status.dataset.kind = kind; els.badge.textContent = BADGE[kind] || '•';
+    lastStatus = txt;
+  }
+  if (kind === 'done' && S.playing) { S.converged = true; setPlaying(false); }
+}
+
+/* ================= Loop ================= */
+let dirty = true, lastT = null, acc = 0;
+function markDirty() { dirty = true; }
+const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+function tick(t) {
+  if (S.anim) {
+    const a = S.anim, u = reduceMotion.matches ? 1 : Math.min(1, (t - a.t0) / 600);
+    const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+    S.w = [a.from[0] + (WSTAR[0] - a.from[0]) * e, a.from[1] + (WSTAR[1] - a.from[1]) * e];
+    if (u >= 1) {
+      S.w = WSTAR.slice(); S.jump = { from: a.from, to: WSTAR.slice() };
+      S.path.push(null); S.path.push(WSTAR.slice()); S.trail.push(null); S.trail.push(WSTAR.slice());
+      S.cfAt = S.updates; S.anim = null;
+    }
+    dirty = true;
+  } else if (S.playing) {
+    if (lastT == null) lastT = t;
+    const dt = Math.min(250, t - lastT); lastT = t;
+    acc += dt * S.speed / 1000;
+    let n = Math.floor(acc); acc -= n;
+    if (n > 12) n = 12;
+    for (let i = 0; i < n && S.playing; i++) {
+      doStep();
+      if (S.mode === 'batch' && atMin()) { S.converged = true; setPlaying(false); }
+    }
+  }
+  if (dirty) { render(); dirty = false; }
+  requestAnimationFrame(tick);
+}
+function render() {
+  if (!plots.surf.base) buildSurface();
+  drawData(); drawSurf(); drawLoss(); updateReadouts();
+}
+
+/* ================= Events ================= */
+els.play.addEventListener('click', () => {
+  if (S.anim) return;
+  if (!S.playing && (S.diverged || S.converged)) resetRun();
+  setPlaying(!S.playing); markDirty();
+});
+els.step.addEventListener('click', () => {
+  if (S.anim) return;
+  setPlaying(false);
+  if (S.diverged || S.converged) resetRun();
+  doStep();
+  if (S.mode === 'batch' && atMin()) S.converged = true;
+});
+els.reset.addEventListener('click', () => { setPlaying(false); resetRun(); });
+els.closed.addEventListener('click', () => {
+  setPlaying(false);
+  const from = Number.isFinite(S.w[0]) && Number.isFinite(S.w[1]) && !S.diverged ? S.w.slice() : S.start.slice();
+  if (S.diverged) resetRun();
+  S.anim = { from, t0: performance.now() }; markDirty();
+});
+els.eta.addEventListener('input', () => setEta(sliderToEta(+els.eta.value), true));
+els.speed.addEventListener('input', () => { S.speed = +els.speed.value; els.speedVal.textContent = String(S.speed); });
+els.w0.addEventListener('input', () => setStart(+els.w0.value, S.start[1], true));
+els.w1.addEventListener('input', () => setStart(S.start[0], +els.w1.value, true));
+els.showSq.addEventListener('change', () => { S.showSq = els.showSq.checked; els.legSq.style.visibility = S.showSq ? '' : 'hidden'; markDirty(); });
+document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', () => { if (r.checked) setMode(r.value); }));
+for (const c of els.chips) c.addEventListener('click', () => {
+  const was = S.playing;
+  setEta(PRESETS[S.mode][c.dataset.preset]);
+  resetRun(); if (was) setPlaying(true);
+});
+
+// (B): click or drag to set the start point
+function surfW(ev) {
+  const P = plots.surf, r = P.cv.getBoundingClientRect();
+  const x = ev.clientX - r.left, y = ev.clientY - r.top, pr = P.pr;
+  const w0 = W0R[0] + (x - pr.x) / pr.w * (W0R[1] - W0R[0]);
+  const w1 = W1R[1] - (y - pr.y) / pr.h * (W1R[1] - W1R[0]);
+  const inside = x >= pr.x && x <= pr.x + pr.w && y >= pr.y && y <= pr.y + pr.h;
+  return { x, y, w0, w1, inside };
+}
+let dragging = false;
+const cvS = plots.surf.cv;
+cvS.addEventListener('pointerdown', ev => {
+  const p = surfW(ev); if (!p.inside) return;
+  dragging = true; try { cvS.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+  setPlaying(false); setStart(p.w0, p.w1, false);
+});
+cvS.addEventListener('pointermove', ev => {
+  const p = surfW(ev);
+  if (dragging) setStart(p.w0, p.w1, false);
+  S.hover.surf = p.inside && ev.pointerType !== 'touch' ? { px: p.x, py: p.y, w0: p.w0, w1: p.w1 } : null;
+  markDirty();
+});
+const endDrag = () => { dragging = false; };
+cvS.addEventListener('pointerup', endDrag);
+cvS.addEventListener('pointercancel', endDrag);
+cvS.addEventListener('pointerleave', () => { S.hover.surf = null; markDirty(); });
+
+plots.data.cv.addEventListener('pointermove', ev => {
+  const P = plots.data, r = P.cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, pr = P.pr;
+  let best = null, bd = 16;
+  for (let i = 0; i < N; i++) {
+    const px = pr.x + XS[i] / 7 * pr.w, py = pr.y + (20 - YS[i]) / 20 * pr.h, d = Math.hypot(px - x, py - y);
+    if (d < bd) { bd = d; best = i; }
+  }
+  if (best !== S.hover.data) { S.hover.data = best; markDirty(); }
+});
+plots.data.cv.addEventListener('pointerleave', () => { S.hover.data = null; markDirty(); });
+plots.loss.cv.addEventListener('pointermove', ev => {
+  const P = plots.loss, r = P.cv.getBoundingClientRect(), x = ev.clientX - r.left;
+  S.hover.loss = x >= P.pr.x && x <= P.pr.x + P.pr.w ? x : null; markDirty();
+});
+plots.loss.cv.addEventListener('pointerleave', () => { S.hover.loss = null; markDirty(); });
+
+// Resize & theme
+const ro = new ResizeObserver(() => {
+  for (const k in plots) sizePlot(plots[k]);
+  plots.surf.base = null; markDirty();
+});
+for (const k in plots) ro.observe(plots[k].cv.parentElement);
+function onTheme() { readTheme(); plots.surf.base = null; markDirty(); }
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', onTheme); else if (mq.addListener) mq.addListener(onTheme);
+}
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ================= Init ================= */
+readTheme();
+els.rSseStar.textContent = SSE_STAR.toFixed(4);
+$('sseStarLeg').textContent = SSE_STAR.toFixed(4);
+setPlaying(false);
+setEta(0.01);
+setMode('online');
+for (const k in plots) sizePlot(plots[k]);
+requestAnimationFrame(tick);
+
+/* ================= Test hooks ================= */
+window.__demo = {
+  closedForm: () => WSTAR.slice(),
+  sse: (w0, w1) => sse(w0, w1),
+  runEpochs: (mode, eta, nEpochs, start = [0, 0]) => runEpochs(mode, eta, nEpochs, start),
+  presets: JSON.parse(JSON.stringify(PRESETS)),
+  onlineCycle: eta => onlineCycle(eta),
+  eig: { lmax: LMAX, lmin: LMIN, vSteep: vS.slice(), vShallow: vF.slice() },
+  state: () => ({ mode: S.mode, eta: S.eta, w: S.w.slice(), updates: S.updates, epochs: S.epochs, playing: S.playing,
+    diverged: S.diverged, status: els.statusTxt.textContent, sse: curSse() }),
+  status: () => classify()
+};
+})();
+</script>
+</body>
+</html>
