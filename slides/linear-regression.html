@@ -398,38 +398,43 @@
 
 <!-- ================================================================ 19b. Toolbox -->
 <section>
-  <h2>Calculus Toolbox: Five Facts</h2>
+  <h2>Calculus Toolbox: Six Facts</h2>
   <div class="rule"></div>
-  <p class="muted" style="font-size: 23px;">Every derivation in this lecture uses only these. Keep them in view.</p>
+  <p class="muted" style="font-size: 23px;">The derivations in this lecture are built from these. Keep them in view.</p>
   <div class="toolbox">
-    <div class="tool span2">
+    <div class="tool">
       <span class="name">1 · Chain rule</span>
-      <span class="fact">If \(L\) depends on \(w\) only through \(u\): \(\quad \dfrac{\partial L}{\partial w} = \dfrac{\partial L}{\partial u} \cdot \dfrac{\partial u}{\partial w}\)</span>
+      <span class="fact">If \(L\) depends on \(w\) only through \(u\): \(\ \dfrac{\partial L}{\partial w} = \dfrac{\partial L}{\partial u} \cdot \dfrac{\partial u}{\partial w}\)</span>
       <span class="use">Used in every derivation today</span>
     </div>
     <div class="tool">
-      <span class="name">2 · Linear term</span>
+      <span class="name">2 · Power rule</span>
+      <span class="fact">\(\dfrac{d}{du}\, u^2 = 2u\)</span>
+      <span class="use">The squared loss</span>
+    </div>
+    <div class="tool">
+      <span class="name">3 · Linear term</span>
       <span class="fact">\(\dfrac{\partial (\mathbf{w}^T \mathbf{a})}{\partial \mathbf{w}} = \mathbf{a}\), so \(\dfrac{\partial (\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} = \mathbf{x}\)</span>
       <span class="use">Closed form, and every gradient that ends in \(\mathbf{x}_n\)</span>
     </div>
     <div class="tool">
-      <span class="name">3 · Quadratic term</span>
+      <span class="name">4 · Quadratic term</span>
       <span class="fact">\(\dfrac{\partial (\mathbf{w}^T A \mathbf{w})}{\partial \mathbf{w}} = 2A\mathbf{w}\) for symmetric \(A\)</span>
       <span class="use">Closed form, with \(A = X^T X\)</span>
     </div>
     <div class="tool">
-      <span class="name">4 · Sigmoid</span>
+      <span class="name">5 · Sigmoid</span>
       <span class="fact">\(\sigma'(z) = \sigma(z)\big(1 - \sigma(z)\big)\)</span>
       <span class="use">Logistic regression, with both losses</span>
     </div>
     <div class="tool">
-      <span class="name">5 · Logarithm</span>
+      <span class="name">6 · Logarithm</span>
       <span class="fact">\(\dfrac{d}{du} \log u = \dfrac{1}{u}\)</span>
       <span class="use">The log-loss</span>
     </div>
   </div>
   <aside class="notes">
-    Copy these five onto the whiteboard (B) in a corner, then come back (B again) and point to each one when it is used.
+    Copy these six onto the whiteboard (B) in a corner, then come back (B again) and point to each one when it is used.
     Most students who get lost in a derivation are missing one of these facts, not the logic.
   </aside>
 </section>
@@ -479,7 +484,7 @@
     \[ \nabla_{\mathbf{w}} L(\mathbf{w}) = 0 - 2\,X^T Y + 2\,X^T X\mathbf{w} = 2\,X^T X\mathbf{w} - 2\,X^T Y \]
   </div>
   <aside class="notes">
-    Each line uses one toolbox fact: a constant, fact 2 (linear term), fact 3 (quadratic term). Ask which fact before each click.
+    Each line uses one toolbox fact: a constant, fact 3 (linear term), fact 4 (quadratic term). Ask which fact before each click.
     X^T X is symmetric because (X^T X)^T = X^T X.
   </aside>
 </section>
@@ -510,7 +515,7 @@
   <p class="check-tag">One minute with your neighbour, then we compare answers.</p>
   <div class="checks">
     <div class="q"><span class="n">1</span><span>Our customer data has 10 transactions and 3 features plus the bias. What shape is \(X^T X\)? And \(\mathbf{w}\)?</span>
-      <div class="ans fragment"><b>\(4 \times 4\) and \(4 \times 1\).</b> The sizes depend on \(D\), not on \(N\): that is why the closed form costs \(\mathcal{O}(D^3 + D^2N)\) (next slide).</div>
+      <div class="ans fragment"><b>\(4 \times 4\) and \(4 \times 1\)</b> (\(D = 4\), counting the bias). Building \(X^T X\) costs \(\mathcal{O}(D^2N)\); inverting the \(D \times D\) matrix costs \(\mathcal{O}(D^3)\) whatever \(N\) is (next slide).</div>
     </div>
     <div class="q"><span class="n">2</span><span>Two columns of \(X\) are identical (the same feature recorded twice). Can we compute \((X^T X)^{-1}\)?</span>
       <div class="ans fragment"><b>No.</b> \(X^T X\) has no inverse, and infinitely many \(\mathbf{w}\) give the same minimum (any split of the weight between the two copies). Gradient descent still runs; regularisation also fixes it.</div>
@@ -632,7 +637,7 @@
 <section>
   <h2>Use Case: Gradient Calculation for \(l^{(sqr)}\)</h2>
   <div class="rule"></div>
-  <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{w}} L = \sum_n -2\, \delta\, \hat{Y}(\mathbf{x}_n)\big(1 - \hat{Y}(\mathbf{x}_n)\big)\, \mathbf{x}_n\)</span><span class="where">line 6 of the logistic regression algorithm</span></div>
+  <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{w}} L = \sum_n -2\, \delta\, \hat{Y}(\mathbf{x}_n)\big(1 - \hat{Y}(\mathbf{x}_n)\big)\, \mathbf{x}_n\)</span><span class="where">gives line 6 of the logistic regression algorithm (the 2 is absorbed into \(\eta\))</span></div>
   <ul class="bul" style="margin-top: 20px;">
     <li>Consider the following <span class="b">learning objective</span>:
       \[ L(\mathbf{w}) = \sum_n \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big)^2, \quad \text{where } \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
@@ -658,7 +663,7 @@
     <div class="eq fragment">\(= \sum_n 2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \cdot \big( -\nabla_{\mathbf{w}} \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)\)</div>
     <div class="why fragment">sum rule: the derivative of a difference is the difference of the derivatives; \(Y(\mathbf{x}_n)\) does not depend on \(\mathbf{w}\)</div>
   </div>
-  <aside class="notes">Before each click ask: “what is the outer function, and what is inside it?” (fact 1).</aside>
+  <aside class="notes">Before each click ask: “what is the outer function, and what is inside it?” (facts 1 and 2).</aside>
 </section>
 
 <!-- ================================================================ 32. Squared loss derivative 2/2 -->
@@ -676,7 +681,7 @@
     <div class="why fragment">let the error \(\delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\)</div>
   </div>
   <aside class="notes">
-    Facts 4 and 2. Stop on the last line and point at Ŷ(1 − Ŷ): it is at most 0.25, and close to 0 when Ŷ is near 0 or 1.
+    Facts 5 and 3. Stop on the last line and point at Ŷ(1 − Ŷ): it is at most 0.25, and close to 0 when Ŷ is near 0 or 1.
     Plant the question: what happens when the model is confidently wrong? We answer it after the log-loss.
   </aside>
 </section>
@@ -736,7 +741,7 @@
     <div class="eq fragment">\(\displaystyle = \frac{-Y + Y\hat{Y} + \hat{Y} - Y\hat{Y}}{\hat{Y}(1 - \hat{Y})} = \color{#3274B5}{\frac{\hat{Y} - Y}{\hat{Y}(1 - \hat{Y})}}\)</div>
     <div class="why fragment">expand; the \(Y\hat{Y}\) terms cancel</div>
   </div>
-  <aside class="notes">Fact 5 and the chain rule for log(1 − Ŷ). Ask for the common denominator before clicking: most errors happen here.</aside>
+  <aside class="notes">Fact 6 and the chain rule for log(1 − Ŷ). Ask for the common denominator before clicking: most errors happen here.</aside>
 </section>
 
 <!-- ================================================================ 36. Log loss derivative part 2 -->
@@ -751,7 +756,7 @@
     <div class="fragment">\[ \frac{\partial \hat{Y}}{\partial \mathbf{w}} = \frac{\partial \sigma(\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} = \sigma(\mathbf{w}^T \cdot \mathbf{x})\big(1 - \sigma(\mathbf{w}^T \cdot \mathbf{x})\big) \cdot \frac{\partial (\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} \]</div>
     <div class="fragment">\[ = \color{#A62B17}{\hat{Y}(1 - \hat{Y}) \cdot \mathbf{x}} \]</div>
   </div>
-  <aside class="notes">Facts 4 and 2: the same steps as in the squared-loss derivation.</aside>
+  <aside class="notes">Facts 5 and 3: the same steps as in the squared-loss derivation.</aside>
 </section>
 
 <!-- ================================================================ 37. Log loss derivative part 3 -->
@@ -795,7 +800,7 @@
   <p class="check-tag">One minute with your neighbour, then we compare answers.</p>
   <div class="checks">
     <div class="q"><span class="n">1</span><span>The model predicts \(\hat{Y} = 0.01\), but \(Y = 1\). Compare the size of the two updates for this example.</span>
-      <div class="ans fragment"><b>Log loss is about 100× larger.</b> Squared: \(\delta\,\hat{Y}(1 - \hat{Y}) = 0.99 \times 0.0099 \approx 0.0098\). Log: \(\delta = 0.99\). The next demo races the two.</div>
+      <div class="ans fragment"><b>Log loss is about 100× larger.</b> Squared: \(\delta\,\hat{Y}(1 - \hat{Y}) = 0.99 \times 0.0099 \approx 0.0098\). Log: \(\delta = 0.99\). (Updates as in the algorithms, with the squared loss’s 2 absorbed into \(\eta\); the raw gradients differ by about 50×.) The next demo races the two.</div>
     </div>
     <div class="q"><span class="n">2</span><span>Which factor disappeared from the log-loss gradient, and where did it go?</span>
       <div class="ans fragment"><b>\(\hat{Y}(1 - \hat{Y})\)</b>, the sigmoid’s slope. It cancels against the denominator of \(\partial LL_n / \partial \hat{Y}\) (Part 3).</div>

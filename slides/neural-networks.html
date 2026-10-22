@@ -223,8 +223,8 @@
       <li>Surrogates to <span style="color: #306F1D;">non-linear</span> as in the perceptron</li>
       <li>BUT they are <span class="b">differentiable</span>!
         <ul>
-          <li><span class="r">hyperbolic tangent \([-1, 1]\)</span></li>
-          <li><span class="b">Sigmoid \([0, 1]\)</span></li>
+          <li><span class="r">hyperbolic tangent \((-1, 1)\)</span></li>
+          <li><span class="b">Sigmoid \((0, 1)\)</span></li>
         </ul>
       </li>
     </ul>
@@ -257,7 +257,7 @@
           <tr class="fragment"><td>+1</td><td>+1</td><td class="num">+1.00</td><td class="num">+1.00</td><td class="num">−1.00</td><td class="out">−1</td></tr>
         </tbody>
       </table>
-      <p class="small muted">\(\tanh(5) = 0.9999\), so each hidden unit is almost a ±1 switch.</p>
+      <p class="small muted">\(\tanh(5) \approx 0.9999\), so each hidden unit is almost a ±1 switch.</p>
       <div class="callout fragment">Each hidden unit is one line, like a perceptron. The output unit combines the two lines.</div>
     </div>
   </div>
@@ -274,7 +274,7 @@
   <div class="rule"></div>
   <figure>
     <img class="fig" src="assets/fig/nn-xor-hidden-space.png" alt="Left: input space with two parallel lines, h1 = 0 and h2 = 0, giving a band-shaped region. Right: hidden space where the points sit at corners and the line h1 − h2 − 1 = 0 separates them." style="max-height: 530px;">
-    <figcaption>The output unit only sees \((h_1, h_2)\). There, \((-1, 1)\) and \((1, -1)\) land on the same point, and one straight line separates the classes.</figcaption>
+    <figcaption>The output unit only sees \((h_1, h_2)\). The inputs \((-1, 1)\) and \((1, -1)\) both map to the hidden point \((1, -1)\), and one straight line separates the classes.</figcaption>
   </figure>
 </section>
 
@@ -326,12 +326,14 @@
   <h2>Two-Layer Networks are Universal Function Approximators</h2>
   <div class="rule"></div>
   <div class="box" style="font-size: 27px; margin-top: 40px; padding: 20px 26px;">
-    <p><b>Theorem:</b> Let \(F\) be a continuous function on a bounded subset of \(D\)-dimensional space. Then there exists a two-layer neural network \(\hat{F}\) with a finite number of hidden units that approximates \(F\) arbitrarily well. Namely, for all \(\mathbf{x}\) in the domain of \(F\),
+    <p><b>Theorem:</b> Let \(F\) be a continuous function on a closed, bounded subset of \(D\)-dimensional space, and let \(\epsilon &gt; 0\). Then there exists a two-layer neural network \(\hat{F}\) (sigmoid or tanh hidden units with biases, linear output) with a finite number of hidden units that approximates \(F\) arbitrarily well. Namely, for all \(\mathbf{x}\) in the domain of \(F\),
       \[ |F(\mathbf{x}) - \hat{F}(\mathbf{x})| &lt; \epsilon \]</p>
   </div>
-  <p style="font-size: 30px; margin-top: 30px;">… or put simply, two-layer networks can <span class="r">approximate</span> any function!</p>
+  <p style="font-size: 30px; margin-top: 30px;">… or put simply, with enough hidden units, two-layer networks can <span class="r">approximate</span> any continuous function on a bounded region!</p>
   <aside class="notes">
     The theorem says such a network exists. It does not say how many hidden units we need, or that gradient descent will find the weights.
+    The conditions matter: the function must be continuous, the region closed and bounded, and the hidden units need biases
+    (the XOR slides later show a tanh network without biases cannot even output a constant).
   </aside>
 </section>
 
@@ -401,7 +403,7 @@
     <ol>
       <li><span>\(\mathbf{w}^{(0)} \leftarrow \langle 0, 0, \ldots, 0 \rangle,\ b^{(0)} \leftarrow 0\)</span><span class="cmt">// initialise the weights vector and bias</span></li>
       <li><span><b>for</b> \(k = 1 \ldots maxIter\) <b>do</b></span></li>
-      <li><span class="i1">\(\mathbf{g}^{(k)} \leftarrow \nabla_{\mathbf{w}, b} L(\mathbf{w}, b; \mathbf{D})\big|_{\mathbf{w}, b^{(k-1)}}\)</span><span class="cmt">// gradient (slope of the loss) at the current point</span></li>
+      <li><span class="i1">\(\mathbf{g}^{(k)} \leftarrow \nabla_{\mathbf{w}, b} L(\mathbf{w}, b; \mathbf{D})\big|_{\mathbf{w}^{(k-1)}, b^{(k-1)}}\)</span><span class="cmt">// gradient (slope of the loss) at the current point</span></li>
       <li class="hl"><span class="i1">\(\mathbf{w}^{(k)} \leftarrow \mathbf{w}^{(k-1)} - \eta^{(k)} \mathbf{g}^{(k)}\)</span><span class="cmt">// step down the gradient</span></li>
       <li class="hl"><span class="i1">\(b^{(k)} \leftarrow b^{(k-1)} - \eta^{(k)} \frac{\partial L}{\partial b}\)</span><span class="cmt">// update the bias the same way</span></li>
       <li><span><b>end for</b></span></li>
@@ -410,7 +412,7 @@
   </div>
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 30px; font-size: 18px; margin-top: 18px;">
     <div><b>Greek letters</b><br>\(\eta\) (eta): learning rate, the step size<br>\(\nabla\) (nabla): gradient, the vector of partial derivatives<br>\(\partial\): partial derivative</div>
-    <div><b>Notation</b><br>\(\mathbf{w}^{(k)}\): value of \(\mathbf{w}\) at iteration \(k\)<br>\(\langle 0, \ldots, 0 \rangle\): vector of zeros<br>\(\leftarrow\): assignment<br>\(\big|_{\mathbf{w}, b^{(k-1)}}\): evaluated at the previous values</div>
+    <div><b>Notation</b><br>\(\mathbf{w}^{(k)}\): value of \(\mathbf{w}\) at iteration \(k\)<br>\(\langle 0, \ldots, 0 \rangle\): vector of zeros<br>\(\leftarrow\): assignment<br>\(\big|_{\mathbf{w}^{(k-1)}, b^{(k-1)}}\): evaluated at the previous values</div>
     <div><b>Variables</b><br>\(\mathbf{w}, b\): weights and bias we optimise<br>\(L\): loss, the prediction error<br>\(\mathbf{D}\): the training data<br>\(\mathbf{g}\): gradient, the update direction<br>\(k\): iteration number</div>
   </div>
   <aside class="notes">
@@ -495,7 +497,7 @@
       <h3><span class="b">Part 1:</span> how does the loss change with the prediction?</h3>
       <div class="deriv wide" style="font-size: 23px;">
         <div class="eq fragment">\(L = \frac{1}{2}(y_n - g)^2 = \frac{1}{2} e_n^2\)</div>
-        <div class="why fragment"></div>
+        <div class="why"></div>
         <div class="eq fragment">\(\displaystyle \frac{\partial L}{\partial g} = \frac{\partial L}{\partial e} \cdot \frac{\partial e}{\partial g} = (y_n - g) \cdot (-1)\)</div>
         <div class="why fragment">chain rule again: \(e = y_n - g\), so \(\partial e / \partial g = -1\)</div>
         <div class="eq fragment">\(\color{#3274B5}{\displaystyle \frac{\partial L}{\partial g} = -e_n}\)</div>
@@ -506,7 +508,7 @@
       <h3><span class="r">Part 2:</span> how does the prediction change with \(v_i\)?</h3>
       <div class="deriv wide" style="font-size: 23px;">
         <div class="eq fragment">\(g = \mathit{identity}\Big(\sum_i v_i \cdot h_{i,n}\Big)\)</div>
-        <div class="why fragment"></div>
+        <div class="why"></div>
         <div class="eq fragment">\(\phantom{g} = v_1 h_{1,n} + v_2 h_{2,n} + \ldots + v_K h_{K,n}\)</div>
         <div class="why fragment">identity output: \(g\) is just the weighted sum</div>
         <div class="eq fragment">\(\color{#A62B17}{\displaystyle \frac{\partial g}{\partial v_i} = h_{i,n}}\)</div>
@@ -538,7 +540,7 @@
       <p class="small muted">* Assuming a linear (identity) activation at the output unit, \(g = \mathit{identity}(\sum_i v_i \cdot h_{i,n})\)</p>
     </div>
   </div>
-  <div class="callout fragment" style="font-size: 23px;">Compare with linear regression in Lecture 1: \(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\). The output layer is linear regression on the hidden features \(\mathbf{h}_n\) instead of the inputs \(\mathbf{x}_n\).</div>
+  <div class="callout fragment" style="font-size: 23px;">Compare with linear regression in Lecture 1: \(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\). The \(\mathbf{v}\) update is the same rule with the hidden features \(\mathbf{h}_n\) in place of the inputs \(\mathbf{x}_n\): for fixed hidden weights, the output layer is linear regression on \(\mathbf{h}_n\).</div>
   <aside class="notes">
     Point back to line 13 (g ← g − e h) and line 19 (v ← v − η g) of the backprop algorithm.
     The minus signs cancel: v − η(−e h) = v + η e h, which is the Lecture 1 update with h in place of x.
@@ -554,8 +556,8 @@
     <div class="q"><span class="n">1</span><span>The network predicts example \(n\) perfectly. How much does \(\mathbf{v}\) change on this example?</span>
       <div class="ans fragment"><b>Not at all.</b> \(e_n = 0\), so \(\nabla_{\mathbf{v}} = -e_n \mathbf{h}_n = \mathbf{0}\). Gradient descent only learns from errors.</div>
     </div>
-    <div class="q"><span class="n">2</span><span>Hidden unit \(i\) outputs \(h_i = 0\) for every example. What happens to its outgoing weight \(v_i\)?</span>
-      <div class="ans fragment"><b>It never changes.</b> Its gradient is \(-e_n h_{i,n} = 0\): a unit that says nothing gives \(v_i\) nothing to learn from.</div>
+    <div class="q"><span class="n">2</span><span>On example \(n\), hidden unit \(i\) outputs \(h_{i,n} = 0\). How much does its outgoing weight \(v_i\) change on this example?</span>
+      <div class="ans fragment"><b>Not at all.</b> Its gradient is \(-e_n h_{i,n} = 0\). \(v_i\) only learns from examples where unit \(i\) is active.</div>
     </div>
   </div>
   <aside class="notes">
@@ -567,7 +569,7 @@
 <section>
   <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\) (1/4)</h2>
   <div class="rule"></div>
-  <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{w}_i} = -e\, v_i \big(1 - \tanh^2(a_i)\big)\, \mathbf{x}\)</span><span class="where">line 15 of the backprop algorithm</span></div>
+  <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{w}_i} = -e\, v_i \big(1 - \tanh^2(a_i)\big)\, \mathbf{x}\)</span><span class="where">line 15 of the backprop algorithm, with \(a_i = \mathbf{w}_i \cdot \mathbf{x}\)</span></div>
   <div class="cols" style="grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.45fr); gap: 24px;">
     <div style="font-size: 24px;">
       <p><b>The loss function</b> (one example):
@@ -575,7 +577,7 @@
         where the error is \(e = y - \sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x})\).</p>
       <p><b>The chain rule:</b>
         \[ \frac{\partial L}{\partial \mathbf{w}_i} = \color{#3274B5}{\frac{\partial L}{\partial f_i}} \cdot \color{#A62B17}{\frac{\partial f_i}{\partial \mathbf{w}_i}} \]</p>
-      <p>In simple words: \(\mathbf{w}_i\) only reaches the loss through the activation \(f_i\) of hidden unit \(h_i\), so we go through it.</p>
+      <p>In simple words: \(\mathbf{w}_i\) only reaches the loss through the activation \(h_i = f_i = f(\mathbf{w}_i \cdot \mathbf{x})\) of hidden unit \(i\), so we go through it.</p>
     </div>
     <figure><img class="fig" src="../images/mlp6.png" alt="The network with an arrow at the hidden layer" style="max-height: 400px;"></figure>
   </div>
@@ -669,11 +671,12 @@
       <div class="ans fragment"><b>Almost not at all.</b> \(1 - \tanh^2(5) \approx 0.0002\). A saturated unit learns very slowly, the same problem as the sigmoid with the squared loss in Lecture 1.</div>
     </div>
     <div class="q"><span class="n">2</span><span>We start with every weight in \(\mathbf{W}\) and \(\mathbf{v}\) equal to 0. What do the gradients look like?</span>
-      <div class="ans fragment"><b>Nothing can move.</b> \(\mathbf{h} = \tanh(\mathbf{0}) = \mathbf{0}\), so \(\nabla_{\mathbf{v}} = -e\,\mathbf{h} = \mathbf{0}\); and \(v_i = 0\), so \(\nabla_{\mathbf{w}_i} = \mathbf{0}\). That is why we start from small random values.</div>
+      <div class="ans fragment"><b>The hidden layer never moves.</b> \(\mathbf{h} = \tanh(\mathbf{0}) = \mathbf{0}\), so \(v_1, \ldots, v_K\) get \(-e\,h_i = 0\); and \(v_i = 0\), so every \(\nabla_{\mathbf{w}_i} = \mathbf{0}\). Only the output bias learns, so the network can only predict a constant (the mean). That is why we start from small random values.</div>
     </div>
   </div>
   <aside class="notes">
     Question 2 leads into the algorithm (lines 1–2: small random values) and into “Issues with training”.
+    With biases, the output bias still gets −Σe, so the network learns the mean of y and nothing else.
     In the MLP Playground, choose “Zeros” to show it live.
   </aside>
 </section>
@@ -798,7 +801,7 @@
     <div class="ex fragment" data-fragment-index="3">\(i = 2\): T1 adds \(-e\, v_2 (1 - h_2^2)\, \mathbf{x} = -1.0446 \cdot 0.0543 \cdot 0.9589 \cdot \mathbf{x} = -0.0543 \cdot [0, 1, 1, 1]\) to \(\mathbf{G}_2\)</div>
   </div>
   <div class="callout fragment" data-fragment-index="4" style="margin-top: 26px;">\(v_1\) is negative and \(v_2\) positive, so the two hidden units get gradients of opposite sign (“\(v_i\) flips sign”). Music DL is 0 for T1, so its weights get nothing from T1.</div>
-  <p class="small muted" style="margin-top: 14px;">This is batch training: these are T1’s contributions. The weights change only after all 10 transactions (lines 18–19).</p>
+  <p class="small muted" style="margin-top: 14px;">This is batch training: these are T1’s contributions. The weights change only after all 10 transactions (lines 18–19). Computed at full precision and rounded to 4 decimals.</p>
   <aside class="notes">
     1 − h_i² is about 0.96 for both units: they are far from saturation, so the error flows back almost unchanged.
     Point at each factor of line 15 as you read the numbers.
@@ -816,7 +819,8 @@
     <p><b>Hidden layer</b></p>
     <div>\[ \mathbf{G} = \begin{bmatrix} 0.1008 & -0.1200 \\ 0.1014 & -0.1185 \\ 0.1916 & -0.2253 \\ 0.2024 & -0.2380 \end{bmatrix} \ \Rightarrow\ \mathbf{W}^{(1)} = \mathbf{W}^{(0)} - 0.1\,\mathbf{G} = \begin{bmatrix} 0.0396 & -0.0018 \\ 0.0546 & 0.1642 \\ -0.0426 & -0.0009 \\ 0.1377 & 0.1005 \end{bmatrix} \]</div>
   </div>
-  <div class="callout fragment" style="margin-top: 18px; font-size: 24px;">The output bias jumps from \(-0.046\) to \(0.402\). The hidden activations are still tiny, so the quickest way to cut the loss is to predict about 0.4, the share of Buys (4 of 10), for every customer. The total loss falls from 2.21 to 1.22.</div>
+  <div class="callout fragment" style="margin-top: 18px; font-size: 24px;">The output bias jumps from \(-0.046\) to \(0.402\). The hidden units’ contributions \(v_i h_i\) are still tiny (about 0.01) next to the bias input 1, so the quickest way to cut the loss is to predict about 0.4, the share of Buys (4 of 10), for every customer. The total loss falls from 2.21 to 1.22.</div>
+  <p class="small muted" style="margin-top: 10px;">Computed at full precision and rounded to 4 decimals.</p>
   <aside class="notes">
     Predicting 0.4 for everyone gives ½(4 × 0.6² + 6 × 0.4²) = 1.2, which is the plateau at the start of the loss curve on the next slide.
   </aside>
@@ -827,8 +831,8 @@
   <h2>Training for 300 Iterations</h2>
   <div class="rule"></div>
   <figure>
-    <img class="fig" src="assets/fig/nn-loss-curve.png" alt="Total loss over 300 iterations: a drop to a plateau at about 1.2, a fall to about 0.36 by iteration 30, a sharp jump to 1.36 at iteration 76, then a slow decline to 0.324" style="max-height: 470px;">
-    <figcaption>Total loss after each batch update. The notebook prints every 10th iteration, so the jump at iteration 76 does not show in its output. Try \(\eta = 0.05\) (no jump, but slower) and \(\eta = 0.2\) (diverges) in the notebook.</figcaption>
+    <img class="fig" src="assets/fig/nn-loss-curve.png" alt="Total loss over 300 iterations: a drop to a plateau at about 1.2, a fall to about 0.37 by iteration 30, a sharp jump to 1.36 at iteration 76, then a slow decline to 0.324" style="max-height: 470px;">
+    <figcaption>Total loss after each batch update. The notebook prints every 10th iteration, so only a small bump shows there (0.38 at 70, 0.43 at 80); the peak of 1.36 at iteration 76 falls between printed lines. Try \(\eta = 0.05\) (no jump, but slower) and \(\eta = 0.2\) (diverges) in the notebook.</figcaption>
   </figure>
   <aside class="notes">
     Three phases: predict the average (plateau at 1.2), the hidden units start to matter (fast fall),
@@ -871,8 +875,8 @@
   <h2>The Learned Decision Boundary</h2>
   <div class="rule"></div>
   <figure>
-    <img class="fig" src="assets/fig/nn-decision-surface.png" alt="Three 3-D plots of the cube of features. At iteration 0 there is no surface; at iterations 150 and 299 a gently curved surface separates most Buys from Cancels." style="max-height: 470px;">
-    <figcaption>The surface where the network output is 0.5. At iteration 0 the output stays between 0.41 and 0.44, so there is no surface yet. With two hidden units and fairly small weights, the learned surface is only gently curved.</figcaption>
+    <img class="fig" src="assets/fig/nn-decision-surface.png" alt="Three 3-D plots of the cube of features. With the random starting weights there is no surface; after 150 and 300 batch updates a gently curved surface separates most Buys from Cancels." style="max-height: 470px;">
+    <figcaption>The surface where the network output is 0.5. With the random starting weights the output stays between −0.05 and −0.04, so there is no surface yet. With two hidden units and fairly small weights, the learned surface is only gently curved.</figcaption>
   </figure>
 </section>
 
@@ -884,7 +888,7 @@
     <figure><img class="fig" src="assets/fig/nn-xor-bias.png" alt="Loss over 300 iterations on XOR: with biases it falls to 0 by iteration 70; without biases it stays at 2" style="max-height: 420px;"></figure>
     <ul class="bul" style="font-size: 23px;">
       <li>Same network and algorithm, trained on XOR (±1 inputs)</li>
-      <li><span class="r">Without biases</span>, tanh is odd, so the whole network is: \(f(-\mathbf{x}) = -f(\mathbf{x})\). XOR needs \(f(1, 1) = f(-1, -1) = -1\). Gradient descent settles at \(f = 0\) everywhere.</li>
+      <li><span class="r">Without biases</span>, tanh is odd, so the whole network is: \(f(-\mathbf{x}) = -f(\mathbf{x})\). XOR needs \(f(1, 1) = f(-1, -1) = -1\), but the two must have opposite signs. Gradient descent settles at \(f = 0\) on all four points (loss 2).</li>
       <li class="fragment"><span class="b">With biases</span>, 9 of 10 random starts solve XOR. The other one gets stuck: training is <span class="r">sensitive to initialisation</span>.</li>
     </ul>
   </div>
@@ -946,7 +950,7 @@
   <aside class="notes">
     A sequence that works:
     1) XOR corners with 2 hidden units, tanh: Play, then watch the boundary form.
-    2) Zeros initialisation: nothing moves (quick check 2).
+    2) Zeros initialisation: the hidden layer never moves; only the output bias learns, so the loss drops a little and stops (quick check 2).
     3) Circles or Moons: try 2 hidden units, then 8.
     4) Spiral: needs many more hidden units; compare the train and test results.
     5) Raise the learning rate until the loss jumps, as at iteration 76 in our example.
@@ -960,14 +964,14 @@
   <div class="rule"></div>
   <ul class="bul" style="font-size: 25px;">
     <li>A perceptron draws one line, so it cannot learn <span class="b">XOR</span>. A <span class="b">hidden layer</span> of tanh units moves the data to a space where one line works.</li>
-    <li>A two-layer network \(\hat{y} = \mathbf{v} \cdot \tanh(\mathbf{W} \cdot \mathbf{x})\) (with biases) can approximate any continuous function, given enough hidden units; more units mean more complex functions and a risk of overfitting.</li>
+    <li>A two-layer network \(\hat{y} = \sum_i v_i \tanh(\mathbf{w}_i \cdot \mathbf{x})\) (with biases) can approximate any continuous function on a closed, bounded region, given enough hidden units; more units mean more complex functions and a risk of overfitting.</li>
     <li><span class="r">Backpropagation</span> = gradient descent + chain rule
       <ul>
-        <li>output weights: \(\nabla_{\mathbf{v}} = -e\,\mathbf{h}\), linear regression on the hidden features</li>
+        <li>output weights: \(\nabla_{\mathbf{v}} = -e\,\mathbf{h}\), the Lecture 1 update with \(\mathbf{h}\) in place of \(\mathbf{x}\)</li>
         <li>hidden weights: \(\nabla_{\mathbf{w}_i} = -e\, v_i (1 - h_i^2)\, \mathbf{x}\), the error sent back through \(v_i\) and the tanh slope</li>
       </ul>
     </li>
-    <li>In practice: the loss is non-convex, so start from small random weights, keep the biases, and tune \(\eta\), \(K\) and batch vs online.</li>
+    <li>In practice: the loss is non-convex, so results depend on the starting point. Start from small random (not zero) weights so the hidden units differ, keep the biases, and tune \(\eta\), \(K\) and batch vs online.</li>
   </ul>
 </section>
 
