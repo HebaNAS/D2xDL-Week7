@@ -116,6 +116,10 @@ html, body { background: #ffffff; }
 }
 .reveal .algo .i1 { padding-left: 34px; }
 .reveal .algo .i2 { padding-left: 68px; }
+.reveal .algo .i3 { padding-left: 102px; }
+.reveal .algo.dense { font-size: 18.5px; line-height: 1.32; }
+.reveal .algo.dense li { padding: 0; gap: 8px; }
+.reveal .algo.dense li::before { min-width: 30px; }
 .reveal .algo .cmt { color: var(--muted); font-style: italic; margin-left: auto; padding-left: 20px; white-space: nowrap; }
 .reveal .algo li.hl { background: #eef4fb; border-radius: 6px; }
 
@@ -188,7 +192,7 @@ html, body { background: #ffffff; }
   position: absolute; left: 0; top: 0; width: 1366px; height: 724px; border: 0; background: #ffffff;
 }
 .reveal section.demo .demo-open {
-  position: absolute; right: 120px; bottom: 12px; font-size: 15px; color: var(--hw-blue);
+  position: absolute; right: 210px; bottom: 12px; font-size: 15px; color: var(--hw-blue);
 }
 .reveal section.demo .deck-footer { bottom: 12px; }
 /* a demo used as a figure inside a normal slide */
@@ -257,3 +261,34 @@ html.reveal-print .reveal .demo-inline { display: none; }
 .reveal .deriv.wide .eq { margin-top: 14px; }
 .reveal .deriv.wide .why { margin-left: 28px; }
 .reveal .deriv.wide .why:empty { display: none; }
+
+/* ---------- teaching aids for derivations ---------- */
+/* "Where we're heading": the result a derivation ends with, shown before it starts */
+.reveal .goal {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  border: 2px solid #c9d9ec; border-radius: 12px; padding: 6px 18px; margin: 10px 0 14px; background: #ffffff;
+}
+.reveal .goal .tag {
+  font-size: 15px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--hw-blue); white-space: nowrap;
+}
+.reveal .goal .where { font-size: 18px; color: var(--muted); }
+/* toolbox: the few facts a derivation uses, one card each */
+.reveal .toolbox { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; margin-top: 18px; }
+.reveal .toolbox .tool { background: var(--panel); border-radius: 12px; padding: 10px 18px 12px; display: flex; flex-direction: column; gap: 2px; }
+.reveal .toolbox .tool .name { font-size: 18px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.reveal .toolbox .tool .fact { font-size: 25px; }
+.reveal .toolbox .tool .use { font-size: 18px; color: var(--muted); }
+.reveal .toolbox .tool.span2 { grid-column: 1 / -1; }
+/* quick check: questions first, answers on click */
+.reveal .checks { display: flex; flex-direction: column; gap: 26px; margin-top: 26px; }
+.reveal .checks .q { font-size: 28px; display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 10px; }
+.reveal .checks .q .n {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--hw-blue); color: #fff; font-size: 19px; font-weight: 700;
+  display: grid; place-items: center; margin-top: 3px;
+}
+.reveal .checks .ans {
+  grid-column: 2; margin-top: 10px; font-size: 23px; color: var(--ink);
+  border-left: 4px solid var(--ok); background: #eef7f1; padding: 8px 14px; border-radius: 0 10px 10px 0;
+}
+.reveal .checks .ans b { color: var(--ok); }
+.reveal .check-tag { font-size: 20px; color: var(--muted); margin-top: 4px; }

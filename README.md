@@ -6,7 +6,7 @@ Perceptron [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org
 
 ## Lecture slides
 
-The lectures are web slide decks in `slides/` that run in any browser, also offline (everything they need is in this repository). Open `slides/linear-regression.html`, or `index.html` for everything this week.
+The lectures are web slide decks in `slides/` that run in any browser, also offline (everything they need is in this repository). Open `slides/linear-regression.html` (Lecture 1) or `slides/neural-networks.html` (Lecture 2), or `index.html` for everything this week.
 
 | Key | What it does |
 |---|---|
@@ -21,6 +21,8 @@ The lectures are web slide decks in `slides/` that run in any browser, also offl
 | ? | All keys |
 
 To make a PDF: open the deck with `?print-pdf` at the end of the address in Chrome, then print to PDF.
+
+Each derivation starts with a "Where we're heading" box showing the result, uses only the facts on the toolbox slide before it, and is followed by a quick-check slide (answers appear on click). Speaker notes (S) suggest what to ask the room before each step.
 
 ## Interactive demos
 

@@ -36,7 +36,7 @@
         var src = s.getAttribute('data-demo');
         var frame = document.createElement('iframe');
         frame.className = 'demo-frame';
-        frame.setAttribute('data-src', src);            // reveal.js loads it when the slide is near
+        frame.setAttribute('data-src', src + '#deck');            // reveal.js loads it when the slide is near
         frame.setAttribute('title', s.getAttribute('data-title') || 'Interactive demo');
         frame.setAttribute('allowfullscreen', '');
         s.insertBefore(frame, s.firstChild);

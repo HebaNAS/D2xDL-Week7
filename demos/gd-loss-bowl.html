@@ -19,6 +19,7 @@
     } catch (e) { /* ignore */ }
   })();
 </script>
+<script>if (location.hash === '#deck') document.documentElement.classList.add('in-deck');</script>
 <style>
 :root {
   --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
@@ -140,6 +141,7 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 18
 .small-note sub { line-height: 0; }
 
 footer { font-size: 12px; color: var(--muted); }
+html.in-deck footer { display: none; } /* the slides already carry a footer */
 
 /* Short screens (e.g. inside a 724px-tall slide): drop the explanatory note so the controls fit */
 @media (min-width: 900px) and (max-height: 745px) {
