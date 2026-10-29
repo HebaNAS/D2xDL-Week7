@@ -22,7 +22,7 @@ The lectures are web slide decks in `slides/` that run in any browser, also offl
 
 To make a PDF: open the deck with `?print-pdf` at the end of the address in Chrome, then print to PDF.
 
-Each derivation starts with a "Where we're heading" box showing the result, uses only the facts on the toolbox slide before it, and is followed by a quick-check slide (answers appear on click). Speaker notes (S) suggest what to ask the room before each step.
+On the maths slides, each click greys the equation and lights up one part, with its meaning in plain words underneath; the last click shows the whole equation again. Short primer slides explain the symbols, what a derivative is and the chain rule before they are used. Each derivation starts with a "Where we're heading" box showing the result, uses only the facts on the toolbox slide before it, and is followed by a quick-check slide (answers appear on click). Every slide has speaker notes (S): what to say, what each click shows, what to ask, and short maths refreshers.
 
 ## Interactive demos
 
