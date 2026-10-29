@@ -30,9 +30,36 @@
     This material has been created by staff of Heriot-Watt University and is protected by copyright.
   </div>
   <aside class="notes">
-    Keys: → / Space / clicker = next, ← = back, Esc or O = overview, S = this speaker view, F = full screen,
-    . = black screen, C = draw on the slide, B = whiteboard, Alt+click = zoom, ? = all keys.
-    After clicking inside a demo, the clicker and arrow keys still change slides.
+    <p><b>Keys:</b> → / Space / clicker = next, ← = back, Esc or O = overview, S = this speaker view, F = full screen, . = black screen, C = draw on the slide, B = whiteboard, Alt+click = zoom, ? = all keys. After clicking inside a demo, the clicker and arrow keys still change slides.</p>
+    <p><b>How the maths slides work:</b> on an equation, each click greys it out and lights up one part in red, with its meaning in words underneath. Talk through the lit part, then click. The last click shows the whole equation again.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 1b. Symbols in plain words -->
+<section>
+  <h2>Reading the Maths: Symbols in Plain Words</h2>
+  <div class="rule"></div>
+  <div class="symbols">
+    <div><span class="s">\(\mathbf{x}_n\)</span><span>example \(n\): one row of the data table, as a list of numbers</span></div>
+    <div><span class="s">\(\delta = Y - \hat{Y}\)</span><span>the error (“delta”): how far off the prediction is</span></div>
+    <div><span class="s">\(x_d\)</span><span>feature \(d\) of an example, e.g. “uses Online Games” (1 or 0)</span></div>
+    <div><span class="s">\(\sum_n\)</span><span>“add up over all the examples \(n\)”</span></div>
+    <div><span class="s">\(\mathbf{w},\ w_d\)</span><span>the weights: one number per feature, learned from the data</span></div>
+    <div><span class="s">\(\mathbf{w}^T \cdot \mathbf{x}\)</span><span>line up two lists, multiply matching entries, add up</span></div>
+    <div><span class="s">\(Y(\mathbf{x}_n),\ y_n\)</span><span>the true answer for example \(n\)</span></div>
+    <div><span class="s">\(\eta\)</span><span>“eta”, the learning rate: how big a step we take</span></div>
+    <div><span class="s">\(\hat{Y}\)</span><span>“Y-hat”: the model’s prediction (the hat means “estimated”)</span></div>
+    <div><span class="s">\(\leftarrow\)</span><span>“replace with”: an update step in an algorithm</span></div>
+    <div><span class="s">\(\min_{\mathbf{w}}\)</span><span>“find the \(\mathbf{w}\) that makes this as small as possible”</span></div>
+    <div><span class="s">\(\frac{\partial L}{\partial w},\ \nabla L\)</span><span>slope of the loss: how much it changes when a weight changes a little</span></div>
+    <div><span class="s">\(N,\ D\)</span><span>the number of examples, the number of features</span></div>
+    <div><span class="s">\(\sigma\)</span><span>“sigma”, the sigmoid: squashes any number into \((0, 1)\)</span></div>
+  </div>
+  <p class="in-words" style="margin-top: 18px;">Bold letters (\(\mathbf{w}, \mathbf{x}\)) are lists of numbers (vectors); plain letters are single numbers. Capitals like \(X\) are whole tables (matrices).</p>
+  <aside class="notes">
+    <p><b>Say:</b> Before any maths: these are the only symbols we need today. Each one is shorthand for a short sentence. Don’t memorise them now; come back to this slide whenever a symbol trips you up.</p>
+    <p><b>Point at:</b> the hat on Ŷ means “our estimate”. δ is just “true answer minus prediction”. Σ is a loop that adds things up. wᵀ·x is “multiply matching entries and add”: the whole lecture is built on that one operation.</p>
+    <p><b>Refresher:</b> a vector is a list of numbers, e.g. x = [1, 0, 1, 1] for transaction T1 with the bias 1 in front. A matrix is a table of numbers, one row per example. The T in wᵀ (“transpose”) turns a column into a row so that the multiplication lines up; it does not change any numbers.</p>
   </aside>
 </section>
 
@@ -42,10 +69,25 @@
   <div class="rule"></div>
   <ul class="bul" style="font-size: 30px; margin-top: 40px;">
     <li>A <span class="b">linear function</span> of features \(x_1, x_2, \ldots, x_D\) is a function that takes the form:
-      \[ f_{\mathbf{w}}(x_1, x_2, \ldots, x_D) = w_0 + w_1x_1 + \ldots + w_Dx_D = \sum_{d=0}^{D} w_d x_d = \mathbf{w}^T \cdot \mathbf{x} \]
+      <div class="eqx">\[ f_{\mathbf{w}}(x_1, x_2, \ldots, x_D) = \class{p-w0}{w_0} + \class{p-terms}{w_1x_1 + \ldots + w_Dx_D} = \class{p-sum}{\sum_{d=0}^{D} w_d x_d} = \class{p-dot}{\mathbf{w}^T \cdot \mathbf{x}} \]</div>
       where \(x_0 = 1\)
     </li>
   </ul>
+  <ol class="parts" style="margin-top: 26px;">
+    <li class="fragment" data-part="p-w0"><span class="k">\(w_0\)</span><span>the bias: the output when every feature is 0, a starting value</span></li>
+    <li class="fragment" data-part="p-terms"><span class="k">\(w_d\, x_d\)</span><span>each feature times its weight: a big weight means that feature moves the output a lot</span></li>
+    <li class="fragment" data-part="p-sum"><span class="k">\(\sum\)</span><span>shorthand for the same sum: add \(w_d x_d\) for \(d = 0, 1, \ldots, D\). With \(x_0 = 1\), the bias \(w_0\) is included</span></li>
+    <li class="fragment" data-part="p-dot"><span class="k">\(\mathbf{w}^T \cdot \mathbf{x}\)</span><span>the same thing again: line up the two lists, multiply matching entries, add up</span></li>
+    <li class="fragment"><span class="k">e.g.</span><span>\(\mathbf{w} = [1, 2, 3, 1]\) and \(\mathbf{x} = [1, 0, 1, 1]\): \(\ 1 \cdot 1 + 2 \cdot 0 + 3 \cdot 1 + 1 \cdot 1 = 5\)</span></li>
+  </ol>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1) w₀ 2) each w_d·x_d 3) the Σ 4) wᵀ·x 5) a worked example.</p>
+    <p><b>Say:</b> A linear model is a weighted sum. Each feature gets a weight; multiply and add. The bias w₀ is the starting value when every feature is 0.</p>
+    <p><b>For the Σ:</b> “Σ from d = 0 to D” means “for d = 0, 1, …, D, add up what follows”. It is a compact way to write the long sum. The trick x₀ = 1 lets w₀ join the sum, because w₀·1 = w₀.</p>
+    <p><b>For wᵀ·x:</b> the third way of writing the same number. Line up the weights and the features, multiply the pairs, add. In code this is a loop, or numpy’s dot.</p>
+    <p><b>Example:</b> w = [1, 2, 3, 1] and x = [1, 0, 1, 1] (transaction T1 with the bias): 1 + 0 + 3 + 1 = 5. We meet this exact sum again in the hand calculation.</p>
+    <p><b>Ask:</b> if Online Games has weight 3 and Music DL has weight 2, which one pushes the output up more when it is switched on?</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 3. Linear regression -->
@@ -53,7 +95,7 @@
   <h2>Linear Regression</h2>
   <div class="rule"></div>
   <div class="cols">
-    <ul class="bul">
+    <ul class="bul eqx">
       <li><em>“Linear regression is the problem of fitting a <span class="b">linear function</span> to a set of \(n\) examples, in which <span class="b">usually</span> the input and output features are <span class="b">numeric</span>.”</em></li>
       <li>Aim: <span class="r">predict</span> the <span class="b">output feature</span> \(\hat{Y}\) from input features \(x_1, x_2, \ldots, x_D\)</li>
       <li>Notation:
@@ -61,28 +103,56 @@
           <li>A <span class="b">feature</span> is a <span class="r">function</span> of an example \(\rightarrow\) often a <span class="b">human interpretation</span></li>
           <li>The <span class="b">weights</span> denote the “<span class="r">importance</span>” of features</li>
           <li>The <span class="b">sum of squared errors (SSE)</span> on examples \(X\) for output feature \(Y\) is:
-            \[ SSE(\mathbf{X}, \mathbf{w}) = \sum_{\mathbf{x}_n \in X} \big(Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\big)^2 \]
+            \[ SSE(\mathbf{X}, \mathbf{w}) = \class{p-sum}{\sum_{\mathbf{x}_n \in X}} \big(\class{p-y}{Y(\mathbf{x}_n)} - \class{p-yhat}{\hat{Y}(\mathbf{x}_n)}\big)^{\class{p-sq}{2}} \]
           </li>
         </ul>
       </li>
     </ul>
-    <figure><img class="fig" src="../images/linear-regression.png" alt="A straight line fitted through scattered points" style="max-height: 520px;"></figure>
+    <div class="stack-v" style="gap: 0;">
+    <figure><img class="fig" src="../images/linear-regression.png" alt="A straight line fitted through scattered points" style="max-height: 440px;"></figure>
+    <ol class="parts caption">
+      <li class="fragment" data-part="p-y"><span class="k">\(Y(\mathbf{x}_n)\)</span><span>the true output for example \(n\)</span></li>
+      <li class="fragment" data-part="p-yhat"><span class="k">\(\hat{Y}(\mathbf{x}_n)\)</span><span>what the line predicts for it</span></li>
+      <li class="fragment" data-part="p-sq"><span class="k">\((\ldots)^2\)</span><span>square the gap: always positive, and big misses count much more (a miss of 2 costs 4, a miss of 10 costs 100)</span></li>
+      <li class="fragment" data-part="p-sum"><span class="k">\(\sum\)</span><span>add the squared gaps over every example: one number that says how bad the line is</span></li>
+    </ol>
+    </div>
   </div>
+  <aside class="notes">
+    <p><b>Clicks:</b> the box under the plot walks through the SSE: true value, prediction, the square, the sum.</p>
+    <p><b>Say:</b> Each blue dot is one example; the red line is our model. For each dot, the vertical gap between dot and line is the error. The SSE squares every gap and adds them up: one number for how bad the line is. Training means finding the line with the smallest SSE.</p>
+    <p><b>Why square?</b> (1) A gap below the line and a gap above it should not cancel out; squaring makes both positive. (2) Big misses count much more than small ones (2² = 4, 10² = 100). (3) It gives a smooth bowl shape that is easy to slide down, as we will see.</p>
+    <p><b>Watch out:</b> Y(xₙ) means “the true output for example xₙ”, not Y times xₙ.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 4. Optimisation problem -->
 <section>
   <h2>Linear Regression: the Optimisation Problem</h2>
   <div class="rule"></div>
-  <ul class="bul" style="font-size: 28px;">
+  <ul class="bul eqx" style="font-size: 27px;">
     <li>Goal: find <span class="b">weights \(\mathbf{w}\)</span> that <span class="r">minimise \(SSE(X, \mathbf{w})\)</span></li>
     <li>Identical to optimising a <span class="b">linear model</span> w.r.t. the <span class="b">squared objective function</span> \(l^{(sqr)}\) over \(n\) examples <span class="b">without regularisation</span>:
-      \[ \min_{\mathbf{w}, b} \sum_n \big(y_n - (\mathbf{w}^T \cdot \mathbf{x}_n + b)\big)^2, \quad \text{where } w_0 = b \text{ (bias term) and } x_0 = 1 \]
+      \[ \class{p-min}{\min_{\mathbf{w}, b}} \class{p-sum}{\sum_n} \big(\class{p-y}{y_n} - \class{p-pred}{(\mathbf{w}^T \cdot \mathbf{x}_n + b)}\big)^2, \quad \text{where } w_0 = b \text{ (bias term) and } x_0 = 1 \]
     </li>
-    <li>For one example the gradient is \(\nabla_{\mathbf{w}} = -2\,(y_n - \mathbf{w}^T \cdot \mathbf{x}_n)\,\mathbf{x}_n\), so gradient descent moves \(\mathbf{w}\) along \((y_n - \mathbf{w}^T \cdot \mathbf{x}_n)\,\mathbf{x}_n\)
+    <li>For one example the gradient is \(\nabla_{\mathbf{w}} = \class{p-two}{-2}\,\class{p-err}{(y_n - \mathbf{w}^T \cdot \mathbf{x}_n)}\,\class{p-x}{\mathbf{x}_n}\), so gradient descent moves \(\mathbf{w}\) along \((y_n - \mathbf{w}^T \cdot \mathbf{x}_n)\,\mathbf{x}_n\)
       <div class="small muted" style="margin-top: 6px;">The 2 is absorbed into the learning rate \(\eta\).</div>
     </li>
   </ul>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-min"><span class="k">\(\min_{\mathbf{w}, b}\)</span><span>find the weights and bias that make everything after it as small as possible</span></li>
+    <li class="fragment" data-part="p-pred"><span class="k">\(\mathbf{w}^T \cdot \mathbf{x}_n + b\)</span><span>the model’s prediction for example \(n\)</span></li>
+    <li class="fragment" data-part="p-y p-pred p-sum"><span class="k">\(\sum (y_n - \ldots)^2\)</span><span>true answer minus prediction, squared, added up: the SSE from the last slide</span></li>
+    <li class="fragment" data-part="p-err"><span class="k">\(y_n - \mathbf{w}^T \cdot \mathbf{x}_n\)</span><span>the gradient’s first part is the error on one example: the bigger the miss, the bigger the step</span></li>
+    <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}_n\)</span><span>times the example’s features: a feature that is 0 leaves its weight alone</span></li>
+    <li class="fragment" data-part="p-two"><span class="k">\(-2\)</span><span>the 2 comes from the square; the minus says “step the other way to go downhill”</span></li>
+  </ol>
+  <aside class="notes">
+    <p><b>Clicks:</b> min → prediction → the SSE → then the one-example gradient: error, features, the −2.</p>
+    <p><b>Say:</b> “min over w, b” is an instruction: search all possible weights and biases for the ones that make this sum smallest. The thing inside is exactly the SSE from the last slide.</p>
+    <p><b>For the gradient:</b> the gradient is the slope of the loss for one example, and it has three parts. The error: no error, no change. The features: only weights whose feature is switched on get nudged. The −2: the 2 comes from the square (the slope of u² is 2u), and the minus means that to go downhill we move against the slope. Because we subtract the gradient, the update becomes w ← w + η·error·x.</p>
+    <p><b>Refresher:</b> l^(sqr) is just a name for the squared error. Where this gradient comes from is shown properly after the worked example, on the derivative and chain-rule slides.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 5. GD snapshots -->
@@ -93,6 +163,10 @@
     <img class="fig" src="assets/fig/gd-snapshots.png" alt="Six panels: the fitted line after 0, 5, 10, 20, 30 and 49 epochs, with SSE falling from 748 to 7.76" style="max-height: 540px;">
     <figcaption>House prices: \(x\) = size (1,000 sq ft), \(y\) = price (100,000s). Online updates with \(\eta = 0.01\), starting from \(\mathbf{w} = [0, 0]\). Each panel is the line after that many epochs; dashed lines are the errors.</figcaption>
   </figure>
+  <aside class="notes">
+    <p><b>Say:</b> Gradient descent starts from a bad line (w = [0, 0]: flat at 0) and improves it a little after every example. Read the panels left to right, top to bottom: the line swings up through the points and settles; the SSE in each title falls from 748 to 7.76.</p>
+    <p><b>Ask:</b> why does the line change a lot at first and only a little at the end? (Big errors give big steps; as the errors shrink, so do the steps.)</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 6. GD algorithm -->
@@ -114,6 +188,12 @@
     </ol>
   </div>
   <p class="small muted" style="margin-top: 18px;">Lines 4–6 are one update. The next slide runs them live, one example at a time.</p>
+  <p class="in-words fragment" style="margin-top: 10px;"><b>In words:</b> guess, measure the error, nudge each weight by (step size) × (error) × (its feature), and repeat for every example, many times.</p>
+  <aside class="notes">
+    <p><b>Say, line by line:</b> 1) start with zeros or random weights. 2) repeat everything maxIter times; one pass over the data is an epoch. 3) visit every example. 4) predict: the weighted sum. 5) the error δ: true minus predicted. 6) the update: each weight moves by η × δ × its feature. 7–9) close the loops and return the weights.</p>
+    <p><b>Why line 6 makes sense:</b> if the prediction was too low (δ &gt; 0), the weights of the features that are switched on go up, so next time the prediction is higher. Too high (δ &lt; 0): they go down. A feature that is 0 did not contribute to the mistake, so its weight is left alone. η keeps each step small so we don’t overshoot.</p>
+    <p><b>Click:</b> one click shows the whole algorithm in one sentence.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 7. DEMO gradient descent bowl -->
@@ -164,6 +244,10 @@
       <p class="tiny muted">Data: <span class="mono">data/customer_transactions.csv</span> (this example uses three of its four features).</p>
     </div>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> Ten customers. For each: which services they already use (yes/no) and whether they bought or cancelled. Can we predict buy or cancel from the services? We use three of the file’s four features so that we can draw the data.</p>
+    <p><b>Ask:</b> which single feature looks most linked to Buys? (Online Games: all four buyers use it, and only one games user cancelled.)</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 10. Classification option -->
@@ -196,6 +280,10 @@
       <li class="fragment">How to <span class="r">evaluate</span>?<ul><li>Accuracy, Precision, Recall, F1</li></ul></li>
     </ul>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> Option 1 treats the output as a class: Buys = +1, Cancels = −1, and predicts with the sign of the weighted sum, like the perceptron. Yes/No features become 1/0 so the maths can use them.</p>
+    <p><b>Say:</b> sign(·) means “positive → +1, negative → −1”. l^(exp.) is just one example of a loss for classifiers; any classification loss would do here.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 11. Regression option -->
@@ -233,6 +321,11 @@
       <li class="fragment">How to <span class="r">evaluate</span>? SSE, or Mean Squared Error (MSE)</li>
     </ul>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> Option 2 treats Buys/Cancels as the numbers 1 and 0 and fits a linear regression: predict a number and hope it lands near 0 or 1. This is the option we follow by hand next.</p>
+    <p><b>Read the equation aloud:</b> output = w₀ + w₁ × musicDown + w₂ × musicStream + w₃ × onlineGames. Four weights to learn.</p>
+    <p><b>Ask:</b> what would a prediction of 0.8 mean? (“Probably buys”. But nothing stops the model predicting 1.3 or −0.2; we come back to this.)</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 12. Set-up for the hand calculation -->
@@ -260,6 +353,10 @@
       </div>
     </div>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> We put a 1 in front of every example so the bias w₀ becomes an ordinary weight. Then we start from made-up weights [1, 2, 3, 1] with η = 1, and run the three lines of one update by hand: first on T1, then on T2.</p>
+    <p><b>Tip:</b> draw (C) the two vectors one above the other, w = [1, 2, 3, 1] over x = [1, 0, 1, 1], so the room can see the matching pairs.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 13. Iteration 1, T1 -->
@@ -276,6 +373,13 @@
     <div class="ex fragment" data-fragment-index="3">\(\mathbf{w}^{(1)} = \mathbf{w}^{(0)} + \eta \cdot \delta \cdot \mathbf{x}_{T1} = [1, 2, 3, 1] + 1 \cdot (-4) \cdot [1, 0, 1, 1] = [-3, 2, -1, -3]\)</div>
   </div>
   <div class="callout fragment" data-fragment-index="4" style="margin-top: 30px;">The prediction 5 was far too high, so every weight whose feature is on (\(x_d = 1\)) moved down by 4. The weight for Music DL (\(x_1 = 0\)) did not change.</div>
+  <aside class="notes">
+    <p><b>Clicks:</b> line 4 prediction, line 5 error, line 6 update, then the summary.</p>
+    <p><b>Line 4:</b> multiply matching entries: 1×1 + 2×0 + 3×1 + 1×1 = 5.</p>
+    <p><b>Line 5:</b> the true answer is 1 and we said 5, so δ = 1 − 5 = −4. Negative: we were too high.</p>
+    <p><b>Line 6:</b> new w = old w + η × δ × x = [1, 2, 3, 1] + 1 × (−4) × [1, 0, 1, 1]. Multiply −4 into x first: [−4, 0, −4, −4]. Then add: [−3, 2, −1, −3].</p>
+    <p><b>Ask before the last click:</b> which weight did not move, and why? (w₁, Music DL, because T1 does not use it: x₁ = 0.)</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 14. Iteration 1, T2 -->
@@ -291,6 +395,10 @@
     <span class="ln l6 fragment" data-fragment-index="3">6</span>
     <div class="ex fragment" data-fragment-index="3">\(\mathbf{w} \leftarrow [-3, 2, -1, -3] + 1 \cdot 1 \cdot [1, 1, 0, 0] = [-2, 3, -1, -3]\)</div>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> The same three lines with the new weights. Prediction −3 + 2 = −1; the truth is 0, so δ = +1: too low this time. The update adds 1 × [1, 1, 0, 0]: the bias and Music DL each go up by 1.</p>
+    <p><b>Ask before clicking:</b> let the room work out line 4 themselves (30 seconds). It checks they can do a dot product.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 15. Predictions after one pass -->
@@ -304,6 +412,10 @@
     <span class="ln">SSE</span><div class="ex fragment">\(SSE(X, \mathbf{w}) = 7^2 + (-1)^2 = 49 + 1 = 50\)</div>
   </div>
   <div class="callout warn fragment" style="margin-top: 26px;">The predictions are way off. We have done only <strong>one</strong> pass, and \(\eta = 1\) is too large here: one update took T1 from 5 (too high) to −7 (too low). Training needs many passes (epochs) and a smaller \(\eta\).</div>
+  <aside class="notes">
+    <p><b>Say:</b> After seeing each example once, check both. T1 went from 5 (too high) to −6 (far too low): we overcorrected. This is what too large a learning rate looks like: each step jumps over the target.</p>
+    <p><b>Say:</b> SSE = 7² + (−1)² = 50. The fix is many passes (epochs) with a smaller η. The next slides do exactly that by computer.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 16. Weights over 5 epochs -->
@@ -314,6 +426,10 @@
     <img class="fig" src="assets/fig/weights-evolution.png" alt="Four line charts: each weight after every update over 5 epochs, settling towards its final value" style="max-height: 520px;">
     <figcaption>Each weight after every update (10 updates per epoch). Dashed: the value after 5 epochs, \(\mathbf{w} = [-0.93, 0.81, 0.25, 0.89]\).</figcaption>
   </figure>
+  <aside class="notes">
+    <p><b>Say:</b> The computer runs the same three lines on all 10 transactions, 5 times over, with η = 0.3. Each plot is one weight after every single update (50 updates). They jump around early, then settle near the dashed final values.</p>
+    <p><b>Point at:</b> the jagged shape. Each example pulls the weights its own way (online updates), so the path zig-zags.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 17. Loss after 5 epochs -->
@@ -330,6 +446,9 @@
     </tbody>
   </table>
   <p class="center" style="margin-top: 14px;">Accuracy <strong>80%</strong> · SSE <strong>2.74</strong></p>
+  <aside class="notes">
+    <p><b>Say:</b> The SSE drops fast in the first two epochs, then flattens. Rounding each prediction at 0.5 gives 8 of 10 right (80%); T1 and T7 are the misses.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 18. 100 epochs -->
@@ -363,6 +482,10 @@
       </tbody>
     </table>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> With a smaller step and more passes the weights settle. Read the model: start at −0.574, add 0.522 for Music DL, 0.337 for Music Stream, 0.922 for Online Games. Online Games has the biggest weight: it pushes the prediction up most.</p>
+    <p><b>Colours:</b> green = on the correct side of 0.5 and close; pink and red = further off. T7 and T8 are on the wrong side of 0.5.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 19. Why not ideal -->
@@ -394,6 +517,70 @@
       <li class="fragment small muted">T1 and T8 have identical features but different outputs, so no model can get both right.</li>
     </ul>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> 80% accuracy, but look at the numbers: −0.237 and 1.208. What would a “−24% chance of buying” mean? Linear regression does not know the answer must be between 0 and 1. That is the motivation for logistic regression later today.</p>
+    <p><b>Say:</b> T1 and T8 have the same customer profile but different outcomes. No model using these three features can get both right.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 19a. What a derivative tells us -->
+<section>
+  <h2>What a Derivative Tells Us</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: 560px minmax(0, 1fr); gap: 30px; align-items: start;">
+    <svg class="diagram slope" viewBox="0 0 560 345" role="img" aria-label="The loss L(w) = (3 − w) squared, a U-shaped curve with its lowest point at w = 3. At w = 1 the tangent slopes down (slope −4); at w = 5 it slopes up (slope +4).">
+      <line x1="70" y1="300" x2="530" y2="300" class="axis"/><line x1="70" y1="300" x2="70" y2="14" class="axis"/>
+      <g class="tick"><text x="70" y="322">0</text><text x="145" y="322">1</text><text x="220" y="322">2</text><text x="295" y="322">3</text><text x="370" y="322">4</text><text x="445" y="322">5</text><text x="520" y="322">6</text></g>
+      <g class="tick left"><text x="60" y="305">0</text><text x="60" y="212">3</text><text x="60" y="118">6</text><text x="60" y="25">9</text></g>
+      <text x="530" y="342" class="lab end">weight <tspan font-style="italic">w</tspan></text>
+      <text x="80" y="18" class="lab">loss <tspan font-style="italic">L</tspan>(<tspan font-style="italic">w</tspan>) = (3 − <tspan font-style="italic">w</tspan>)²</text>
+      <polyline points="70.0,20.0 77.5,38.4 85.0,56.1 92.5,73.2 100.0,89.7 107.5,105.6 115.0,120.8 122.5,135.4 130.0,149.4 137.5,162.8 145.0,175.6 152.5,187.7 160.0,199.2 167.5,210.1 175.0,220.4 182.5,230.0 190.0,239.0 197.5,247.4 205.0,255.2 212.5,262.4 220.0,268.9 227.5,274.8 235.0,280.1 242.5,284.8 250.0,288.8 257.5,292.2 265.0,295.0 272.5,297.2 280.0,298.8 287.5,299.7 295.0,300.0 302.5,299.7 310.0,298.8 317.5,297.2 325.0,295.0 332.5,292.2 340.0,288.8 347.5,284.8 355.0,280.1 362.5,274.8 370.0,268.9 377.5,262.4 385.0,255.2 392.5,247.4 400.0,239.0 407.5,230.0 415.0,220.4 422.5,210.1 430.0,199.2 437.5,187.7 445.0,175.6 452.5,162.8 460.0,149.4 467.5,135.4 475.0,120.8 482.5,105.6 490.0,89.7 497.5,73.2 505.0,56.1 512.5,38.4 520.0,20.0" class="curve"/>
+      <circle cx="295" cy="300" r="7" class="minpt"/>
+      <g class="fragment" data-fragment-index="2"><line x1="88.8" y1="82.2" x2="201.2" y2="268.9" class="tan neg"/><circle cx="145" cy="175.6" r="6" class="dot neg"/>
+        <text x="152" y="160" class="lab neg">slope −4</text><path d="M150 228 h50" class="arrow neg" marker-end="url(#ah-neg)"/></g>
+      <g class="fragment" data-fragment-index="3"><line x1="388.8" y1="268.9" x2="501.2" y2="82.2" class="tan pos"/><circle cx="445" cy="175.6" r="6" class="dot pos"/>
+        <text x="438" y="160" class="lab pos end">slope +4</text><path d="M440 228 h-50" class="arrow pos" marker-end="url(#ah-pos)"/></g>
+      <defs><marker id="ah-neg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="neg-fill"/></marker>
+        <marker id="ah-pos" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="pos-fill"/></marker></defs>
+    </svg>
+    <ul class="bul" style="font-size: 23px;">
+      <li>The derivative \(\frac{dL}{dw}\) is the <span class="b">slope</span> of the loss: nudge \(w\) a little, and it says how much \(L\) changes, and in which direction</li>
+      <li class="fragment" data-fragment-index="1">Example: one data point with input 1 and true answer 3, so \(L(w) = (3 - w)^2\) and \(\frac{dL}{dw} = -2(3 - w)\)</li>
+      <li class="fragment" data-fragment-index="2">At \(w = 1\): slope \(-4\). Negative: the loss falls if \(w\) grows, so <span class="b">move right</span></li>
+      <li class="fragment" data-fragment-index="3">At \(w = 5\): slope \(+4\). Positive: <span class="r">move left</span></li>
+      <li class="fragment" data-fragment-index="4">Gradient descent: \(w \leftarrow w - \eta \cdot \text{slope}\). With \(\eta = 0.25\): \(w = 1 \to 2 \to 2.5 \to 2.75 \to \ldots \to 3\)</li>
+      <li class="fragment small" data-fragment-index="5">With many weights, \(\frac{\partial L}{\partial w_d}\) (“partial”) is the slope for one weight while the others stay put; \(\nabla L\) is the list of all of them</li>
+    </ul>
+  </div>
+  <aside class="notes">
+    <p><b>Purpose:</b> a refresher for anyone whose calculus is rusty. Everything after this uses only this idea.</p>
+    <p><b>Say:</b> A derivative answers one question: if I nudge this weight a tiny bit, does the loss go up or down, and how fast? That is the slope of the loss curve at that point.</p>
+    <p><b>Clicks:</b> 1) The example: one data point with input 1 and true answer 3, so the loss is (3 − w)² and its slope is −2(3 − w). 2) At w = 1 the slope is −4 (the blue line slopes down): increasing w lowers the loss, so move right. 3) At w = 5 the slope is +4: move left. 4) Gradient descent always steps against the slope: w ← w − η × slope. With η = 0.25 from w = 1: 1 − 0.25 × (−4) = 2, then 2.5, then 2.75, closing in on 3, the bottom of the bowl. 5) With several weights we take one slope per weight (the “partial” derivative ∂, others held fixed) and collect them in a list, the gradient ∇.</p>
+    <p><b>Refresher:</b> slope rules needed today: the slope of a constant is 0; of a·w it is a; of w² it is 2w. Near the bottom the slope itself shrinks, so the steps shrink too: that is why gradient descent slows down as it converges.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 19a2. Chain rule in plain words -->
+<section>
+  <h2>The Chain Rule in Plain Words</h2>
+  <div class="rule"></div>
+  <div class="callout" style="font-size: 24px;">Effects pass along a chain, and the rates <b>multiply</b>. If 1 AED buys 0.27 USD and 1 USD buys 0.92 EUR, then 1 AED buys \(0.27 \times 0.92 \approx 0.25\) EUR.</div>
+  <p style="margin-top: 16px;">If \(L\) depends on \(w\) only through some in-between quantity \(u\):</p>
+  <div style="display: flex; align-items: center; justify-content: center; gap: 30px;">\[ \frac{dL}{dw} = \frac{dL}{du} \cdot \frac{du}{dw} \]<span class="in-words">(how \(L\) reacts to \(u\)) × (how \(u\) reacts to \(w\))</span></div>
+  <p class="fragment" style="margin-top: 6px;">Example from the last slide: \(L = u^2\) where \(u = 3 - w\) is the error.</p>
+  <div class="eqx fragment" style="font-size: 30px;">\[ \frac{dL}{dw} = \class{p-out}{\frac{dL}{du}} \cdot \class{p-in}{\frac{du}{dw}} = \class{p-out}{2u} \cdot \class{p-in}{(-1)} = \class{p-res}{-2(3 - w)} \]</div>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-out"><span class="k">\(\frac{dL}{du} = 2u\)</span><span>outer step: \(L = u^2\), and the slope of a square is \(2u\)</span></li>
+    <li class="fragment" data-part="p-in"><span class="k">\(\frac{du}{dw} = -1\)</span><span>inner step: \(u = 3 - w\) goes down by 1 when \(w\) goes up by 1</span></li>
+    <li class="fragment" data-part="p-res"><span class="k">\(-2(3 - w)\)</span><span>multiply them: the same slope as on the last slide</span></li>
+  </ol>
+  <p class="in-words fragment" style="margin-top: 10px;">Every derivation today follows the chain from a weight to the loss and multiplies the steps.</p>
+  <aside class="notes">
+    <p><b>Say:</b> Most losses are a function of a function: the loss depends on the error, and the error depends on the weight. The chain rule says: multiply the rates along the chain.</p>
+    <p><b>Analogy:</b> currency. Dirhams → dollars → euros. If each dirham buys 0.27 dollars and each dollar buys 0.92 euros, each dirham buys 0.27 × 0.92 ≈ 0.25 euros. You never need a direct dirham-to-euro rate; you multiply the two you have. (Round made-up numbers, not today’s rates.)</p>
+    <p><b>Clicks:</b> 1) the example: L = u², u = 3 − w. 2) the equation. 3) outer rate: dL/du = 2u. 4) inner rate: du/dw = −1. 5) multiply: −2(3 − w), the slope from the last slide. 6) the closing line.</p>
+    <p><b>Ask:</b> what is the chain from a weight to the loss in linear regression? (weight → prediction → error → squared error.)</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 19b. Toolbox -->
@@ -434,8 +621,42 @@
     </div>
   </div>
   <aside class="notes">
-    Copy these six onto the whiteboard (B) in a corner, then come back (B again) and point to each one when it is used.
-    Most students who get lost in a derivation are missing one of these facts, not the logic.
+    <p><b>Say:</b> Facts 1 and 2 are the last two slides. Facts 3 and 4 are the list-of-numbers versions of “the slope of a·w is a” and “the slope of a·w² is 2a·w”. Facts 5 and 6 are new; we use them in the logistic regression part.</p>
+    <p><b>Tip:</b> copy these six onto the whiteboard (B) in a corner, then come back (B again) and point to each one when it is used. Most students who get lost in a derivation are missing one of these facts, not the logic.</p>
+    <p><b>Refresher on fact 5:</b> the sigmoid’s slope can be written with the sigmoid itself: σ’(z) = σ(z)(1 − σ(z)). At z = 0, σ = 0.5, so the slope is 0.25, its largest value.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 19c. All examples at once -->
+<section>
+  <h2>All Examples at Once: the Matrix Form</h2>
+  <div class="rule"></div>
+  <p>Customer data with the bias column, and the starting weights \(\mathbf{w}^{(0)} = [1, 2, 3, 1]\) from the hand example:</p>
+  <div class="eqx" style="font-size: 25px;">\[
+    \class{p-X}{\underbrace{\begin{bmatrix} 1 & 0 & 1 & 1 \\ 1 & 1 & 0 & 0 \\ 1 & 1 & 0 & 1 \\ \vdots & & & \vdots \\ 1 & 1 & 1 & 1 \end{bmatrix}}_{X\ (10 \times 4)}}
+    \;\;\class{p-w}{\underbrace{\begin{bmatrix} 1 \\ 2 \\ 3 \\ 1 \end{bmatrix}}_{\mathbf{w}\ (4 \times 1)}}
+    = \class{p-Xw}{\underbrace{\begin{bmatrix} 5 \\ 3 \\ 4 \\ \vdots \\ 7 \end{bmatrix}}_{X\mathbf{w}\ (10 \times 1)}}
+    \qquad
+    \class{p-Y}{\underbrace{\begin{bmatrix} 1 \\ 0 \\ 1 \\ \vdots \\ 1 \end{bmatrix}}_{Y}} -
+    \class{p-Xw}{\begin{bmatrix} 5 \\ 3 \\ 4 \\ \vdots \\ 7 \end{bmatrix}} =
+    \class{p-err}{\underbrace{\begin{bmatrix} -4 \\ -3 \\ -3 \\ \vdots \\ -6 \end{bmatrix}}_{Y - X\mathbf{w}}}
+  \]
+  \[ \class{p-sse}{(Y - X\mathbf{w})^T (Y - X\mathbf{w}) = (-4)^2 + (-3)^2 + (-3)^2 + \ldots + (-6)^2 = 173 = SSE} \]</div>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-X"><span class="k">\(X\)</span><span>the data table: one row per transaction (T1, T2, T3, …, T10): a 1 for the bias, then the three features</span></li>
+    <li class="fragment" data-part="p-w"><span class="k">\(\mathbf{w}\)</span><span>the weights, written as a column</span></li>
+    <li class="fragment" data-part="p-Xw"><span class="k">\(X\mathbf{w}\)</span><span>every prediction at once: each row times \(\mathbf{w}\). T1: \(1 \cdot 1 + 0 \cdot 2 + 1 \cdot 3 + 1 \cdot 1 = 5\). Sizes: \((10 \times 4)(4 \times 1) = (10 \times 1)\)</span></li>
+    <li class="fragment" data-part="p-Y"><span class="k">\(Y\)</span><span>the true outputs, also a column</span></li>
+    <li class="fragment" data-part="p-err"><span class="k">\(Y - X\mathbf{w}\)</span><span>every error at once</span></li>
+    <li class="fragment" data-part="p-sse"><span class="k">\((\ldots)^T(\ldots)\)</span><span>the transpose \(^T\) turns the column into a row; a row times a column multiplies matching entries and adds up: the SSE</span></li>
+  </ol>
+  <aside class="notes">
+    <p><b>Why this slide:</b> the closed form is written with matrices. This slide shows that the matrix notation is just our table and our hand calculation, done for all rows at once.</p>
+    <p><b>Clicks:</b> X → w → Xw → Y → the errors → the SSE.</p>
+    <p><b>For X:</b> the data table with a column of 1s for the bias: 10 rows (customers), 4 columns. We show rows T1, T2, T3 and T10.</p>
+    <p><b>For Xw:</b> multiplying the table by the weight column does the weighted sum for every row at once. Row T1 gives 5, the number we got by hand. Sizes: (10 × 4) times (4 × 1) gives (10 × 1). The inner numbers must match: one weight per column.</p>
+    <p><b>For the errors:</b> subtract the predictions from the true outputs, row by row. With these starting weights every prediction is too high.</p>
+    <p><b>For the last line:</b> (Y − Xw)ᵀ(Y − Xw) looks scary but means “square each error and add”: the transpose turns the column of errors into a row, and row × column multiplies matching entries and adds. Here 16 + 9 + 9 + 9 + 16 + 16 + 1 + 25 + 36 + 36 = 173.</p>
   </aside>
 </section>
 
@@ -458,12 +679,15 @@
       <div class="fragment">\[ \phantom{L(\mathbf{w})} = Y^T Y - Y^T X\mathbf{w} - \mathbf{w}^T X^T Y + \mathbf{w}^T X^T X\mathbf{w} \]</div>
       <div class="fragment">\[ \phantom{L(\mathbf{w})} = Y^T Y - 2\,\mathbf{w}^T X^T Y + \mathbf{w}^T X^T X\mathbf{w} \]
         <div class="tiny muted" style="margin-left: 30px;">because \(Y^T X\mathbf{w} = (Y^T X\mathbf{w})^T = \mathbf{w}^T X^T Y\): a single number equals its own transpose</div>
+        <div class="in-words fragment" style="margin-left: 30px; margin-top: 4px;"><b>In words:</b> the matrix version of \((a - b)^2 = a^2 - 2ab + b^2\)</div>
       </div>
     </li>
   </ul>
   <aside class="notes">
-    Say the destination first. Then ask before each click: “what do we get when we multiply out the brackets?”
-    The middle step uses (AB)^T = B^T A^T.
+    <p><b>Say the destination first:</b> instead of walking downhill step by step, can we jump straight to the bottom? For linear regression, yes: w = (XᵀX)⁻¹XᵀY. Three slides get us there.</p>
+    <p><b>Say:</b> the loss in matrix form is the last line of the previous slide. To find where its slope is zero, we first multiply out the brackets.</p>
+    <p><b>Clicks:</b> 1) multiply out, like (a − b)(a − b) = a² − ab − ba + b². 2) rewrite (Xw)ᵀ as wᵀXᵀ, using (AB)ᵀ = BᵀAᵀ. 3) the two middle terms are the same single number, so they combine into −2wᵀXᵀY. 4) in words: this is (a − b)² = a² − 2ab + b².</p>
+    <p><b>Refresher:</b> transposing a product reverses the order, (AB)ᵀ = BᵀAᵀ, and a single number is its own transpose. That is all the matrix algebra this needs.</p>
   </aside>
 </section>
 
@@ -474,18 +698,20 @@
   <p>Differentiate \(L(\mathbf{w}) = Y^T Y - 2\,\mathbf{w}^T X^T Y + \mathbf{w}^T X^T X\mathbf{w}\) term by term:</p>
   <div class="deriv">
     <div class="eq fragment">\(\dfrac{\partial}{\partial \mathbf{w}} \big(Y^T Y\big) = 0\)</div>
-    <div class="why fragment">\(Y^T Y\) is a constant</div>
+    <div class="why fragment">\(Y^T Y\) does not contain \(\mathbf{w}\): a constant has slope 0</div>
     <div class="eq fragment">\(\dfrac{\partial}{\partial \mathbf{w}} \big(-2\,\mathbf{w}^T X^T Y\big) = -2\,X^T Y\)</div>
-    <div class="why fragment">as \(\frac{\partial}{\partial \mathbf{w}}(\mathbf{w}^T \mathbf{a}) = \mathbf{a}\), with the constant \(\mathbf{a} = X^T Y\)</div>
+    <div class="why fragment">fact 3, with \(\mathbf{a} = X^T Y\). One-number twin: \(\frac{d}{dw}(-2aw) = -2a\)</div>
     <div class="eq fragment">\(\dfrac{\partial}{\partial \mathbf{w}} \big(\mathbf{w}^T X^T X \mathbf{w}\big) = 2\,X^T X\mathbf{w}\)</div>
-    <div class="why fragment">as \(\frac{\partial}{\partial \mathbf{w}}(\mathbf{w}^T A \mathbf{w}) = 2A\mathbf{w}\) for symmetric \(A\); here \(A = X^T X\)</div>
+    <div class="why fragment">fact 4, with \(A = X^T X\). One-number twin: \(\frac{d}{dw}(a w^2) = 2aw\)</div>
   </div>
   <div class="fragment" style="margin-top: 22px;">Therefore
     \[ \nabla_{\mathbf{w}} L(\mathbf{w}) = 0 - 2\,X^T Y + 2\,X^T X\mathbf{w} = 2\,X^T X\mathbf{w} - 2\,X^T Y \]
   </div>
   <aside class="notes">
-    Each line uses one toolbox fact: a constant, fact 3 (linear term), fact 4 (quadratic term). Ask which fact before each click.
-    X^T X is symmetric because (X^T X)^T = X^T X.
+    <p><b>Say:</b> now take the slope of each of the three terms, one at a time.</p>
+    <p><b>Clicks</b> (each term is two clicks, the slope then its reason): 1–2) YᵀY has no w in it: slope 0. 3–4) −2wᵀXᵀY is w times a fixed list, so the slope is the fixed list (fact 3); with single numbers, the slope of −2aw is −2a. 5–6) wᵀXᵀXw has w twice, like a·w², so the slope is 2XᵀXw (fact 4). 7) add them up.</p>
+    <p><b>Tip:</b> keep the one-number twins on the board: d/dw (aw) = a and d/dw (aw²) = 2aw. Every line is just that, with matrices.</p>
+    <p><b>Refresher:</b> fact 4 needs A to be symmetric (equal to its own transpose). XᵀX always is, because (XᵀX)ᵀ = XᵀX.</p>
   </aside>
 </section>
 
@@ -498,13 +724,21 @@
     <div class="fragment">\[ 2\,X^T X\mathbf{w} - 2\,X^T Y = 0 \]</div>
     <div class="fragment">\[ X^T X\mathbf{w} = X^T Y \qquad \text{(the normal equations)} \]</div>
     <div class="fragment small muted center">Multiply both sides by \((X^T X)^{-1}\): we cannot divide by a matrix.</div>
-    <div class="fragment">\[ \color{#3274B5}{\mathbf{w} = (X^T X)^{-1} X^T Y} \]</div>
+    <div class="fragment eqx">\[ \mathbf{w} = \class{p-inv}{(X^T X)^{-1}} \class{p-xty}{X^T Y} \]</div>
   </div>
   <p class="fragment small">where \(X\) is the dataset \((N \times D)\) and \(Y\) are all the gold output values \((N \times 1)\).
     <span class="muted">In code, solve the normal equations (<span class="mono">np.linalg.solve(X.T @ X, X.T @ Y)</span>) instead of forming the inverse.</span></p>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-xty"><span class="k">\(X^T Y\)</span><span>for each feature, add up feature × true answer: how each feature lines up with the answers</span></li>
+    <li class="fragment" data-part="p-inv"><span class="k">\((X^T X)^{-1}\)</span><span>the matrix version of “divide by”: it undoes \(X^T X\), which adds up feature × feature</span></li>
+    <li class="fragment"><span class="k">1 feature</span><span>with one feature and no bias, this is just \(w = \dfrac{\sum_n x_n y_n}{\sum_n x_n^2}\)</span></li>
+  </ol>
   <aside class="notes">
-    At the minimum of a convex bowl the slope is zero in every direction, so we can solve for w in one step instead of walking down.
-    Link back to the Gradient Descent Bowl: the star is this w.
+    <p><b>Say:</b> at the bottom of a bowl the slope is zero in every direction. So set the gradient to zero and solve for w, as you would solve 2ax − 2b = 0 for x.</p>
+    <p><b>Clicks:</b> 1) gradient = 0. 2) move the second term across: XᵀXw = XᵀY, the “normal equations”. 3) we cannot divide by a matrix, so we multiply both sides by its inverse instead. 4) the result. 5) what X and Y are. 6–7) its two parts in words. 8) the one-feature version.</p>
+    <p><b>Plain meaning of the normal equations:</b> they can be written Xᵀ(Y − Xw) = 0. For every feature column, (feature × error) added over all examples is zero. With the bias column of 1s this says the errors add up to zero; for each feature, the errors show no leftover trend.</p>
+    <p><b>One-feature check:</b> minimise Σ(yₙ − w xₙ)². The slope is −2Σxₙ(yₙ − w xₙ); set it to 0 and w = Σxₙyₙ / Σxₙ². Same shape as (XᵀX)⁻¹XᵀY.</p>
+    <p><b>Link:</b> in the Gradient Descent Bowl demo, the star is this w, and the “Closed form” button jumps there.</p>
   </aside>
 </section>
 
@@ -521,7 +755,11 @@
       <div class="ans fragment"><b>No.</b> \(X^T X\) has no inverse, and infinitely many \(\mathbf{w}\) give the same minimum (any split of the weight between the two copies). Gradient descent still runs; regularisation also fixes it.</div>
     </div>
   </div>
-  <aside class="notes">Give a minute, take two or three answers, then click to show each answer.</aside>
+  <aside class="notes">
+    <p>Give a minute, take two or three answers, then click to show each answer.</p>
+    <p><b>Q1:</b> X is 10 × 4, so XᵀX is (4 × 10)(10 × 4) = 4 × 4, and w is 4 × 1. The number of examples disappears from the size of XᵀX.</p>
+    <p><b>Q2:</b> if two columns are identical, XᵀX has two identical rows and columns, so it has no inverse (the matrix version of dividing by zero). Any split of the weight between the two copies gives the same predictions, so there is no single best w.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 23. Why not always? -->
@@ -543,6 +781,11 @@
       <ul><li>\(D \le 100 \rightarrow\) closed form is faster</li><li>\(D \ge 10{,}000 \rightarrow\) gradient descent is probably faster</li></ul>
     </li>
   </ul>
+  <aside class="notes">
+    <p><b>Say:</b> O(·), “big O”, is a rough count of how the work grows with the size of the problem; constant factors are ignored.</p>
+    <p><b>Say:</b> gradient descent does K passes × N examples × D features. The closed form builds XᵀX (about D²N steps) and inverts a D × D table (about D³). Great when D is small; painful when D is huge: D³ for D = 10,000 is 10¹².</p>
+    <p><b>Ask:</b> images with one feature per pixel: a 100 × 100 image has D = 10,000. Which method would you choose?</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 24. Both methods on our data -->
@@ -562,7 +805,10 @@
     <li>Gradient descent <span class="r">approximates</span> it; how close depends on the number of iterations and \(\eta\)</li>
     <li class="small muted">Timings are from one run on a laptop and will vary. With \(D = 4\) the closed form wins easily.</li>
   </ul>
-  <aside class="notes">Optional: go back to the Gradient Descent Bowl demo (Esc → overview) and press "Closed form" to jump straight to the minimum.</aside>
+  <aside class="notes">
+    <p><b>Say:</b> on our tiny data both work. The closed form gives the exact minimum SSE (0.706); gradient descent after 100 epochs is close but not there yet (1.25). Its weights also differ from the closed-form weights: gradient descent has not finished.</p>
+    <p><b>Optional:</b> go back to the Gradient Descent Bowl demo (Esc → overview) and press “Closed form” to jump straight to the minimum.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 25. Complexity figure -->
@@ -573,6 +819,9 @@
     <img class="fig" src="assets/fig/complexity.png" alt="Left: closed-form cost grows like D cubed and overtakes gradient descent near D = 100. Right: for fixed D both grow linearly in N." style="max-height: 470px;">
     <figcaption>Operation counts from the formulas, not timings. Left: \(N = 1000\), varying \(D\). Right: \(D = 50\), varying \(N\); both grow linearly in \(N\), so \(D\) (not \(N\)) decides which method is faster.</figcaption>
   </figure>
+  <aside class="notes">
+    <p><b>Say:</b> left: with N fixed, the closed form’s cost explodes as D grows (the D³ term), while gradient descent grows slowly. They cross near D = 100. Right: with D fixed, both grow in a straight line with N, so it is the number of features that decides.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 26. Section: Logistic regression -->
@@ -600,6 +849,9 @@
     </ul>
     <figure><img class="fig" src="../images/hyperplane3.png" alt="A line separating positive and negative examples in two dimensions" style="max-height: 480px;"></figure>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> recall the perceptron: wᵀx + b is a score, the decision boundary is where the score is 0, and sign() turns the score into a class. Linear regression instead uses the score itself as the prediction and hopes it lands near 0 or 1.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 28. Sigmoid with explorer -->
@@ -607,21 +859,34 @@
   <h2>Sigmoid (Logistic) Activation Function</h2>
   <div class="rule"></div>
   <div class="cols" style="grid-template-columns: minmax(0, 1fr) 620px;">
-    <ul class="bul small">
+    <div class="stack-v" style="gap: 0;">
+    <ul class="bul small eqx">
       <li>What if we wanted to <span class="r">estimate the probability of the class \(P(\hat{Y}(\mathbf{x}) \mid \mathbf{x})\)</span> <span class="b">directly from the input features \(\mathbf{x}_n\)</span> with a linear model?
         <ul><li>\(P(\hat{Y}(\mathbf{x}) \mid \mathbf{x}) = \mathbf{w}^T \cdot \mathbf{x}\) would not work: the output is not bounded to \([0, 1]\)</li></ul>
       </li>
       <li>We can use the <span class="b">sigmoid</span> (or logistic) function:
         <ul>
-          <li>\(\sigma(z) = \dfrac{1}{1 + e^{-z}}\)</li>
+          <li>\(\sigma(z) = \class{p-frac}{\dfrac{1}{1 + \class{p-exp}{e^{-z}}}}\)</li>
           <li>so that
             \[ P(\hat{Y}(\mathbf{x}) \mid \mathbf{x}) = \frac{1}{1 + e^{-\mathbf{w}^T \cdot \mathbf{x}}} \]</li>
         </ul>
       </li>
     </ul>
+    <ol class="parts caption" style="font-size: 20px;">
+      <li class="fragment" data-part="p-exp"><span class="k">\(e^{-z}\)</span><span>always positive: huge when \(z\) is very negative, close to 0 when \(z\) is very positive</span></li>
+      <li class="fragment" data-part="p-frac"><span class="k">\(\frac{1}{1 + \ldots}\)</span><span>1 divided by something bigger than 1: always between 0 and 1</span></li>
+      <li class="fragment"><span class="k">values</span><span>\(\sigma(-4) \approx 0.02,\ \ \sigma(0) = 0.5,\ \ \sigma(4) \approx 0.98\)</span></li>
+    </ol>
+    </div>
     <iframe class="demo-inline" data-src="../demos/sigmoid-explorer.html#deck" title="Sigmoid explorer" style="height: 470px;"></iframe>
   </div>
-  <aside class="notes">Drag w: larger |w| gives a steeper curve and more confident predictions; a negative w flips it. Drag b: the 0.5 crossing moves to x* = −b/w.</aside>
+  <aside class="notes">
+    <p><b>Clicks:</b> e^(−z), then the fraction, then three values.</p>
+    <p><b>Say:</b> we want a probability, so we need to squash the score z = wᵀx into (0, 1). The sigmoid does that.</p>
+    <p><b>For e^(−z):</b> e ≈ 2.718. e to any power is positive. If z = 4, e^(−4) ≈ 0.018 (tiny); if z = −4, e^(4) ≈ 54.6 (huge).</p>
+    <p><b>For the fraction:</b> 1/(1 + tiny) ≈ 1; 1/(1 + huge) ≈ 0; at z = 0, e⁰ = 1, so σ = 1/2. Big positive score → probability near 1; big negative → near 0; score 0 → 50/50.</p>
+    <p><b>Demo:</b> drag w: a larger |w| makes the S steeper (more confident), a negative w flips it. Drag b: the 0.5 point moves to x* = −b/w.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 29. DEMO linear vs logistic -->
@@ -638,16 +903,22 @@
   <h2>Use Case: Gradient Calculation for \(l^{(sqr)}\)</h2>
   <div class="rule"></div>
   <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{w}} L = \sum_n -2\, \delta\, \hat{Y}(\mathbf{x}_n)\big(1 - \hat{Y}(\mathbf{x}_n)\big)\, \mathbf{x}_n\)</span><span class="where">gives line 6 of the logistic regression algorithm (the 2 is absorbed into \(\eta\))</span></div>
-  <ul class="bul" style="margin-top: 20px;">
+  <ul class="bul eqx" style="margin-top: 20px;">
     <li>Consider the following <span class="b">learning objective</span>:
-      \[ L(\mathbf{w}) = \sum_n \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big)^2, \quad \text{where } \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
+      \[ L(\mathbf{w}) = \class{p-sse}{\sum_n \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big)^2}, \quad \text{where } \hat{Y}(\mathbf{x}_n) = \class{p-sig}{\sigma(\mathbf{w}^T \cdot \mathbf{x}_n)} \]
     </li>
     <li>What do we need in order to run <span class="b">gradient descent</span>?
-      <ul><li class="fragment">The gradient \(\nabla_{\mathbf{w}} L\): how the loss changes as each weight changes</li></ul>
+      <ul><li class="fragment" data-fragment-index="3">The gradient \(\nabla_{\mathbf{w}} L\): how the loss changes as each weight changes</li></ul>
     </li>
   </ul>
+  <ol class="parts caption">
+    <li class="fragment" data-fragment-index="1" data-part="p-sse"><span class="k">\(\sum (Y - \hat{Y})^2\)</span><span>the same squared error as in linear regression</span></li>
+    <li class="fragment" data-fragment-index="2" data-part="p-sig"><span class="k">\(\sigma(\ldots)\)</span><span>but the prediction now goes through the sigmoid, so it lies between 0 and 1</span></li>
+  </ol>
   <aside class="notes">
-    Point at the destination and say: compared with linear regression, one new factor appears, Ŷ(1 − Ŷ). The next two slides show where it comes from.
+    <p><b>Say the destination:</b> the gradient will look just like linear regression’s, with one extra factor, Ŷ(1 − Ŷ). The next two slides show where it comes from; the payoff is seeing why that factor causes trouble.</p>
+    <p><b>Clicks:</b> 1) the squared error. 2) the sigmoid inside it. 3) why we need the gradient.</p>
+    <p><b>Say:</b> same squared error as before, but the prediction now goes through the sigmoid. To use gradient descent we need the slope of this loss for every weight.</p>
   </aside>
 </section>
 
@@ -659,30 +930,43 @@
     <div class="eq">\(\nabla_{\mathbf{w}} L = \nabla_{\mathbf{w}} \sum_n \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big)^2 = \nabla_{\mathbf{w}} \sum_n \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)^2\)</div>
     <div class="why"></div>
     <div class="eq fragment">\(= \sum_n 2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \nabla_{\mathbf{w}} \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)\)</div>
-    <div class="why fragment">power rule (brings down the 2) + chain rule (multiply by the derivative of the inside)</div>
+    <div class="why fragment">square rule: \((\text{stuff})^2 \to 2 \cdot \text{stuff}\), then times how the stuff changes (facts 1 and 2)</div>
     <div class="eq fragment">\(= \sum_n 2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \cdot \big( -\nabla_{\mathbf{w}} \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big)\)</div>
-    <div class="why fragment">sum rule: the derivative of a difference is the difference of the derivatives; \(Y(\mathbf{x}_n)\) does not depend on \(\mathbf{w}\)</div>
+    <div class="why fragment">the true answer \(Y\) does not change when \(\mathbf{w}\) changes (slope 0), so only \(-\sigma(\ldots)\) is left</div>
   </div>
-  <aside class="notes">Before each click ask: “what is the outer function, and what is inside it?” (facts 1 and 2).</aside>
+  <aside class="notes">
+    <p><b>Say:</b> we follow the chain: weight → score wᵀx → sigmoid → error → squared error.</p>
+    <p><b>Clicks</b> (each step is two clicks, the line then its reason): 1–2) the square rule: the slope of (stuff)² is 2 × stuff, times the slope of the stuff (chain rule). 3–4) the stuff is Y − σ(…). Y is a fixed true answer, so its slope is 0; what is left is minus the slope of the sigmoid part.</p>
+    <p><b>Ask:</b> before click 1, “what is the outer function here?” (the square). Before click 3, “does Y change when w changes?” (no).</p>
+    <p><b>Refresher:</b> the slope of a sum is the sum of the slopes, so we can work inside the Σ one example at a time.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 32. Squared loss derivative 2/2 -->
 <section>
   <h2>\(l^{(sqr)}\): Derivative with Respect to \(\mathbf{w}\) (2/2)</h2>
   <div class="rule"></div>
-  <div class="deriv wide">
+  <div class="deriv wide eqx">
     <div class="eq">\(= \sum_n -2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big( 1 - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \nabla_{\mathbf{w}} \, \mathbf{w}^T \cdot \mathbf{x}_n\)</div>
-    <div class="why">chain rule: the derivative of the sigmoid is \(\sigma(z)(1 - \sigma(z))\)</div>
+    <div class="why">chain rule again: the sigmoid’s slope \(\sigma(z)(1 - \sigma(z))\) (fact 5), times how its input changes</div>
     <div class="eq fragment">\(= \sum_n -2 \big( Y(\mathbf{x}_n) - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big( 1 - \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \big) \, \mathbf{x}_n\)</div>
-    <div class="why fragment">the derivative of the dot product \(\mathbf{w}^T \cdot \mathbf{x}_n\) with respect to \(\mathbf{w}\) is \(\mathbf{x}_n\)</div>
+    <div class="why fragment">the slope of \(\mathbf{w}^T \cdot \mathbf{x}_n\) with respect to \(\mathbf{w}\) is just \(\mathbf{x}_n\) (fact 3)</div>
     <div class="eq fragment">\(= \sum_n -2 \big( Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n) \big) \, \hat{Y}(\mathbf{x}_n) \big( 1 - \hat{Y}(\mathbf{x}_n) \big) \, \mathbf{x}_n\)</div>
-    <div class="why fragment">since \(\hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n)\)</div>
-    <div class="eq fragment">\(= \sum_n -2 \, \delta \, \hat{Y}(\mathbf{x}_n) \big( 1 - \hat{Y}(\mathbf{x}_n) \big) \, \mathbf{x}_n\)</div>
-    <div class="why fragment">let the error \(\delta = Y(\mathbf{x}_n) - \hat{Y}(\mathbf{x}_n)\)</div>
+    <div class="why fragment">rename: \(\sigma(\mathbf{w}^T \cdot \mathbf{x}_n)\) is our prediction \(\hat{Y}(\mathbf{x}_n)\)</div>
+    <div class="eq fragment">\(= \sum_n \class{p-two}{-2} \, \class{p-d}{\delta} \, \class{p-slope}{\hat{Y}(\mathbf{x}_n) \big( 1 - \hat{Y}(\mathbf{x}_n) \big)} \, \class{p-x}{\mathbf{x}_n}\)</div>
+    <div class="why fragment">rename the error \(Y - \hat{Y}\) as \(\delta\)</div>
   </div>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-d"><span class="k">\(\delta\)</span><span>the error, as in linear regression</span></li>
+    <li class="fragment" data-part="p-slope"><span class="k">\(\hat{Y}(1 - \hat{Y})\)</span><span>the sigmoid’s slope: at most 0.25 (when \(\hat{Y} = 0.5\)), close to 0 when \(\hat{Y}\) is near 0 or 1. This is the new part</span></li>
+    <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}_n\)</span><span>the features, as before</span></li>
+    <li class="fragment" data-part="p-two"><span class="k">\(-2\)</span><span>from the square; the algorithm absorbs it into \(\eta\)</span></li>
+  </ol>
   <aside class="notes">
-    Facts 5 and 3. Stop on the last line and point at Ŷ(1 − Ŷ): it is at most 0.25, and close to 0 when Ŷ is near 0 or 1.
-    Plant the question: what happens when the model is confidently wrong? We answer it after the log-loss.
+    <p><b>Clicks:</b> the first line is already showing: the sigmoid’s slope (fact 5). Each later step is two clicks, the line then its reason. 1–2) the slope of wᵀx is x (fact 3). 3–4) rename σ(wᵀx) as Ŷ. 5–6) rename the error as δ. 7–10) the four parts of the result, one at a time.</p>
+    <p><b>For the sigmoid slope:</b> the sigmoid’s slope at z is σ(z)(1 − σ(z)). It is steepest in the middle (0.5 × 0.5 = 0.25) and flat at both ends: at Ŷ = 0.99 it is 0.99 × 0.01 ≈ 0.01.</p>
+    <p><b>For the result:</b> compare with linear regression’s −2δx: the same, times Ŷ(1 − Ŷ). That factor is the problem. When the model is confidently wrong (Ŷ near 0 but Y = 1), Ŷ(1 − Ŷ) is near 0, so the update is tiny exactly when we need a big one.</p>
+    <p><b>Ask:</b> Ŷ = 0.01 and Y = 1. Is the error big? (yes, 0.99.) Is the update big? (no: 0.99 × 0.0099 ≈ 0.0098.)</p>
   </aside>
 </section>
 
@@ -705,21 +989,59 @@
     </ol>
   </div>
   <p class="small muted" style="margin-top: 16px;">Compared with linear regression, only lines 4 and 6 change: the sigmoid, and its derivative \(\hat{Y}(1 - \hat{Y})\) in the update (the 2 is absorbed into \(\eta\)).</p>
+  <aside class="notes">
+    <p><b>Say:</b> the same algorithm as linear regression with two changes: line 4 passes the score through the sigmoid, and line 6 multiplies by the sigmoid’s slope Ŷ(1 − Ŷ). The −2 from the square is folded into η.</p>
+    <p><b>Ask:</b> what happens on line 6 when Ŷ is 0.999 but the answer is 0? (almost no update: the model stays confidently wrong.) This is the motivation for the log-loss.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 34. Log loss -->
 <section>
   <h2>\(l^{(log)}\): Log Loss for Logistic Regression</h2>
   <div class="rule"></div>
-  <ul class="bul" style="margin-top: 26px;">
+  <ul class="bul eqx" style="margin-top: 20px;">
     <li>Quite often, instead of the squared loss \(l^{(sqr)}\), we optimise the <span class="b">log-loss</span> \(l^{(log)}\):
-      \[ LL(\mathbf{w}) = -\sum_n \Big[ Y(\mathbf{x}_n) \cdot \log \hat{Y}(\mathbf{x}_n) + \big(1 - Y(\mathbf{x}_n)\big) \cdot \log\big(1 - \hat{Y}(\mathbf{x}_n)\big) \Big] \]
+      \[ LL(\mathbf{w}) = \class{p-minus}{-}\sum_n \Big[ \class{p-one}{Y(\mathbf{x}_n) \cdot \log \hat{Y}(\mathbf{x}_n)} + \class{p-zero}{\big(1 - Y(\mathbf{x}_n)\big) \cdot \log\big(1 - \hat{Y}(\mathbf{x}_n)\big)} \Big] \]
       \[ \text{where } \hat{Y}(\mathbf{x}_n) = \sigma(\mathbf{w}^T \cdot \mathbf{x}_n) \]
     </li>
     <li>Log-loss is the natural choice for logistic regression: it comes from probability theory (it is the negative log-likelihood of the labels) and has much better optimisation properties: <span class="b">better gradients and faster learning</span></li>
   </ul>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-one"><span class="k">\(Y \log \hat{Y}\)</span><span>switched on only when the true answer is \(Y = 1\): it looks at the probability we gave to “1”</span></li>
+    <li class="fragment" data-part="p-zero"><span class="k">\((1 - Y) \log(1 - \hat{Y})\)</span><span>switched on only when \(Y = 0\): it looks at the probability we gave to “0”</span></li>
+    <li class="fragment" data-part="p-minus"><span class="k">\(-\)</span><span>the log of a number below 1 is negative; the minus makes the loss positive</span></li>
+    <li class="fragment"><span class="k">so</span><span>each example costs \(-\log(\text{probability given to the right answer})\): next slide</span></li>
+  </ol>
   <div class="goal"><span class="tag">Where we’re heading</span><span>\(\dfrac{\partial LL_n}{\partial \mathbf{w}} = -\delta \cdot \mathbf{x}_n\)</span><span class="where">the same update as linear regression: the \(\hat{Y}(1 - \hat{Y})\) factor disappears</span></div>
-  <aside class="notes">Say the destination before starting: three slides from now the sigmoid’s slope cancels out.</aside>
+  <aside class="notes">
+    <p><b>Clicks:</b> the Y = 1 half, the Y = 0 half, the minus, the summary line.</p>
+    <p><b>Say:</b> the log-loss looks long, but for each example only one half is switched on. If the true answer is 1, the second half is multiplied by 1 − Y = 0 and disappears, and the cost is −log Ŷ. If the answer is 0, the first half disappears, and the cost is −log(1 − Ŷ). Either way: −log(the probability we gave to the right answer).</p>
+    <p><b>Refresher:</b> log here is the natural log (ln). log 1 = 0; logs of numbers between 0 and 1 are negative, and they head towards −∞ as the number approaches 0. The minus sign turns them into positive costs.</p>
+    <p><b>Say the destination:</b> the box at the bottom. The gradient of this loss is just −δ·x, the linear regression update, with no Ŷ(1 − Ŷ) factor.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 34b. Log loss in numbers -->
+<section>
+  <h2>Log Loss in Numbers</h2>
+  <div class="rule"></div>
+  <p>Each example costs \(-\log p\), where \(p\) is the probability the model gave to the <b>right</b> answer (\(\log\) is the natural log, \(\ln\)):</p>
+  <table class="data big" style="margin: 20px auto 0; font-size: 24px;">
+    <thead><tr><th>Probability \(p\) given to the right answer</th><th>0.99</th><th>0.9</th><th>0.5</th><th>0.1</th><th>0.01</th></tr></thead>
+    <tbody>
+      <tr><td class="name">Log loss \(-\log p\)</td><td class="num">0.01</td><td class="num">0.11</td><td class="num">0.69</td><td class="num">2.30</td><td class="num">4.61</td></tr>
+      <tr class="fragment"><td class="name">Squared error \((1 - p)^2\)</td><td class="num">0.0001</td><td class="num">0.01</td><td class="num">0.25</td><td class="num">0.81</td><td class="num">0.98</td></tr>
+    </tbody>
+  </table>
+  <ul class="bul" style="margin-top: 26px;">
+    <li class="fragment">Confident and right: almost free. Confident and <span class="r">wrong</span>: expensive, with no upper limit</li>
+    <li class="fragment">The squared error never costs more than 1, however wrong the model is, so it pushes much less on bad mistakes</li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> read the first row: giving the right answer 99% costs almost nothing; 50/50 costs 0.69; giving it only 1% costs 4.6. The cost keeps growing as the probability heads to 0.</p>
+    <p><b>Clicks:</b> 1) the squared error for the same predictions. It can never exceed 1, so a confidently wrong model barely feels its mistake. 2–3) the two take-aways.</p>
+    <p><b>Ask:</b> a spam filter is 99% sure an important email is spam, and it is wrong. Which loss would you want training it?</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 35. Log loss derivative part 1 -->
@@ -735,13 +1057,18 @@
   <h3 style="margin-top: 14px;"><span class="b">Part 1:</span> \(\dfrac{\partial LL_n}{\partial \hat{Y}}\)</h3>
   <div class="deriv" style="font-size: 23px; row-gap: 4px;">
     <div class="eq fragment">\(\displaystyle \frac{\partial}{\partial \hat{Y}} \Big[ -Y \log \hat{Y} - (1 - Y) \log(1 - \hat{Y}) \Big] = -\frac{Y}{\hat{Y}} - (1 - Y) \cdot \frac{1}{1 - \hat{Y}} \cdot (-1)\)</div>
-    <div class="why fragment">derivative of \(\log\); the inner \(1 - \hat{Y}\) contributes \(-1\)</div>
+    <div class="why fragment">\(\log u\) has slope \(1/u\) (fact 6); inside \(\log(1 - \hat{Y})\), the \(1 - \hat{Y}\) has slope \(-1\) (chain rule)</div>
     <div class="eq fragment">\(\displaystyle = -\frac{Y}{\hat{Y}} + \frac{1 - Y}{1 - \hat{Y}} = \frac{-Y(1 - \hat{Y}) + (1 - Y)\hat{Y}}{\hat{Y}(1 - \hat{Y})}\)</div>
-    <div class="why fragment">common denominator</div>
+    <div class="why fragment">put both fractions over the same bottom, \(\hat{Y}(1 - \hat{Y})\), so they can be added</div>
     <div class="eq fragment">\(\displaystyle = \frac{-Y + Y\hat{Y} + \hat{Y} - Y\hat{Y}}{\hat{Y}(1 - \hat{Y})} = \color{#3274B5}{\frac{\hat{Y} - Y}{\hat{Y}(1 - \hat{Y})}}\)</div>
-    <div class="why fragment">expand; the \(Y\hat{Y}\) terms cancel</div>
+    <div class="why fragment">multiply out the top: \(+Y\hat{Y}\) and \(-Y\hat{Y}\) cancel</div>
   </div>
-  <aside class="notes">Fact 6 and the chain rule for log(1 − Ŷ). Ask for the common denominator before clicking: most errors happen here.</aside>
+  <aside class="notes">
+    <p><b>Say:</b> the same chain-rule plan as before. Part 1: how the loss reacts to the prediction. Part 2: how the prediction reacts to the weights (we know this from the sigmoid). Then multiply.</p>
+    <p><b>Clicks</b> (each step is two clicks, the line then its reason): 1–2) the slope of each log term: log u has slope 1/u; the second log has the inside 1 − Ŷ, whose slope is −1. 3–4) put both fractions over a common bottom so we can add them. 5–6) multiply out the top; the Y·Ŷ terms cancel. Result: (Ŷ − Y) / (Ŷ(1 − Ŷ)).</p>
+    <p><b>Ask:</b> before click 3, ask for the common denominator: most mistakes happen here.</p>
+    <p><b>Refresher:</b> to add a/b + c/d, rewrite it as (a·d + c·b)/(b·d).</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 36. Log loss derivative part 2 -->
@@ -756,7 +1083,9 @@
     <div class="fragment">\[ \frac{\partial \hat{Y}}{\partial \mathbf{w}} = \frac{\partial \sigma(\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} = \sigma(\mathbf{w}^T \cdot \mathbf{x})\big(1 - \sigma(\mathbf{w}^T \cdot \mathbf{x})\big) \cdot \frac{\partial (\mathbf{w}^T \cdot \mathbf{x})}{\partial \mathbf{w}} \]</div>
     <div class="fragment">\[ = \color{#A62B17}{\hat{Y}(1 - \hat{Y}) \cdot \mathbf{x}} \]</div>
   </div>
-  <aside class="notes">Facts 5 and 3: the same steps as in the squared-loss derivation.</aside>
+  <aside class="notes">
+    <p><b>Say:</b> Part 2 is the same as in the squared-loss derivation: the sigmoid’s slope Ŷ(1 − Ŷ) (fact 5), times x from the inside wᵀx (fact 3).</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 37. Log loss derivative part 3 -->
@@ -764,13 +1093,20 @@
   <h2>Derivative of the Log Loss (3/3)</h2>
   <div class="rule"></div>
   <h3>Part 3: combine them</h3>
-  <div style="font-size: 28px;">
+  <div class="eqx" style="font-size: 28px;">
     \[ \frac{\partial LL_n}{\partial \mathbf{w}} = \color{#3274B5}{\frac{\partial LL_n}{\partial \hat{Y}}} \cdot \color{#A62B17}{\frac{\partial \hat{Y}}{\partial \mathbf{w}}} \]
-    <div class="fragment">\[ = \color{#3274B5}{\frac{\hat{Y} - Y}{\hat{Y}(1 - \hat{Y})}} \cdot \color{#A62B17}{\hat{Y}(1 - \hat{Y}) \cdot \mathbf{x}} \]</div>
-    <div class="fragment">\[ = (\hat{Y} - Y) \cdot \mathbf{x} = -(Y - \hat{Y}) \cdot \mathbf{x} = -\delta \cdot \mathbf{x}, \quad \text{where } \delta = Y - \hat{Y} \]</div>
+    <div class="fragment" data-fragment-index="1">\[ = \frac{\hat{Y} - Y}{\class{p-c}{\hat{Y}(1 - \hat{Y})}} \cdot \class{p-c}{\hat{Y}(1 - \hat{Y})} \cdot \mathbf{x} \]</div>
+    <div class="fragment" data-fragment-index="3">\[ = (\hat{Y} - Y) \cdot \mathbf{x} = -(Y - \hat{Y}) \cdot \mathbf{x} = -\delta \cdot \mathbf{x}, \quad \text{where } \delta = Y - \hat{Y} \]</div>
   </div>
-  <div class="callout fragment" style="margin-top: 20px;">The sigmoid derivative \(\hat{Y}(1 - \hat{Y})\) cancels the denominator from the log derivative. This is why the log-loss works so well with the sigmoid.</div>
-  <aside class="notes">Before the second click, ask the room what cancels. Colour helps: blue denominator, red numerator.</aside>
+  <ol class="parts caption" style="font-size: 22px;">
+    <li class="fragment" data-fragment-index="2" data-part="p-c"><span class="k">\(\hat{Y}(1 - \hat{Y})\)</span><span>the same factor on the bottom (from the log) and on top (the sigmoid’s slope): they cancel</span></li>
+  </ol>
+  <div class="callout fragment" data-fragment-index="4" style="margin-top: 20px;">The sigmoid derivative \(\hat{Y}(1 - \hat{Y})\) cancels the denominator from the log derivative. This is why the log-loss works so well with the sigmoid.</div>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1) multiply the two parts. 2) the highlighted factor is on the bottom and on top: cancel it. 3) what is left: (Ŷ − Y)·x = −δ·x. 4) the take-away.</p>
+    <p><b>Say:</b> the sigmoid’s slope, the factor that made the squared loss stall, is exactly cancelled by the 1/(Ŷ(1 − Ŷ)) from the log. That is no accident: the log-loss and the sigmoid are made to fit together.</p>
+    <p><b>Ask:</b> before click 2, ask the room what cancels.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 38. Log loss gradient & update -->
@@ -791,6 +1127,10 @@
       <tr><td class="name">Log loss \(l^{(log)}\)</td><td>\(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\)</td><td class="ok">\(\delta \approx 1\): a full-size update</td></tr>
     </tbody>
   </table>
+  <aside class="notes">
+    <p><b>Say:</b> so logistic regression with the log-loss updates the weights exactly like linear regression: w ← w + η·δ·x. The only difference is that Ŷ is now σ(wᵀx).</p>
+    <p><b>Click:</b> the table. Read the last column: when the model is confidently wrong, the squared-loss update almost vanishes, while the log-loss update is full size.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 38b. Quick check: losses -->
@@ -806,7 +1146,11 @@
       <div class="ans fragment"><b>\(\hat{Y}(1 - \hat{Y})\)</b>, the sigmoid’s slope. It cancels against the denominator of \(\partial LL_n / \partial \hat{Y}\) (Part 3).</div>
     </div>
   </div>
-  <aside class="notes">Give a minute, take two or three answers, then click to show each answer. The factor 2 of the squared loss is absorbed into η, so we compare δ·Ŷ(1 − Ŷ) with δ.</aside>
+  <aside class="notes">
+    <p>Give a minute, take two or three answers, then click to show each answer.</p>
+    <p><b>Q1 working:</b> Ŷ(1 − Ŷ) = 0.01 × 0.99 = 0.0099, so the squared-loss update is δ × 0.0099 = 0.99 × 0.0099 ≈ 0.0098; the log-loss update is δ = 0.99. The factor 2 of the squared loss is absorbed into η, as in the algorithm.</p>
+    <p><b>Q2:</b> the sigmoid’s slope Ŷ(1 − Ŷ); it cancelled in Part 3.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 39. DEMO squared vs log loss -->
@@ -851,6 +1195,9 @@
       <p class="small muted">new → 1, short → 1, home → 1, read → 1</p>
     </div>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> a second small example: will I read an email? Three emails, three yes/no features. We turn words into 1s and 0s: new thread → 1, short → 1, at home → 1, read → 1.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 42. Emails model -->
@@ -867,6 +1214,10 @@
       <ul><li>\(\sigma(\mathbf{w}^T \cdot \mathbf{x}) \ge 0.5 \rightarrow\) predict 1 (read)</li><li>\(\sigma(\mathbf{w}^T \cdot \mathbf{x}) &lt; 0.5 \rightarrow\) predict 0 (skip)</li></ul>
     </li>
   </ul>
+  <aside class="notes">
+    <p><b>Say:</b> the model is a weighted sum of the three features plus a bias, passed through the sigmoid, so the output is a probability of reading. We start from the given weights and predict “read” when the probability is at least 0.5, which is the same as the score being at least 0.</p>
+    <p><b>Read the weights:</b> new thread (−0.7) and short (−0.9) push towards skipping; at home (+1.2) pushes towards reading; the bias 0.4 is the starting lean.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 43. Emails detailed calculations -->
@@ -883,7 +1234,13 @@
       <tr class="fragment"><td class="name" colspan="7" style="text-align: right;">Total SSE</td><td class="num"><strong>0.4956</strong></td></tr>
     </tbody>
   </table>
-  <aside class="notes">Question for the room: after one gradient step, which weight should change most, and in which direction? (E1 is wrong with only the bias on, so w₀ should go down.)</aside>
+  <aside class="notes">
+    <p><b>Clicks:</b> one row per email, then the total.</p>
+    <p><b>E1:</b> only the bias is on, so the score is 0.4. σ(0.4) = 1/(1 + e^(−0.4)) = 1/(1 + 0.670) = 0.599: predict read, but E1 was skipped. Wrong.</p>
+    <p><b>E2:</b> 0.4 − 0.7 − 0.9 = −1.2; σ(−1.2) = 1/(1 + 3.32) = 0.231: skip ✓. <b>E3:</b> 0.4 − 0.7 + 1.2 = 0.9; σ(0.9) = 1/(1 + 0.407) = 0.711: read ✓.</p>
+    <p><b>SSE:</b> square each error and add: 0.358 + 0.054 + 0.084 ≈ 0.496.</p>
+    <p><b>Ask:</b> after one gradient step, which weight should change most, and which way? (E1 is wrong with only the bias on, so w₀ should go down.)</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 44. Section: customer transactions again -->
@@ -921,6 +1278,11 @@
       </tbody>
     </table>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> scikit-learn’s LinearRegression solves the normal equations for us (the closed form). Read the model: start at 0, +0.118 for Music DL, −0.118 for streaming, +0.824 for Online Games.</p>
+    <p><b>Examples:</b> T7 uses only Online Games: 0 + 0.824 = 0.824. T5 uses only streaming: −0.118, a negative “probability”.</p>
+    <p><b>Say:</b> the SSE here (0.706) is the smallest possible for this model, lower than our gradient descent reached.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 46. Logistic regression (sklearn) -->
@@ -953,6 +1315,11 @@
       </tbody>
     </table>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> logistic regression puts the same kind of weighted sum through the sigmoid. Read it as a score: start at −20.94, +10.75 for Music DL, −7.25 for streaming, +28.19 for games; then σ turns the score into a probability.</p>
+    <p><b>Examples:</b> T7 (games only): −20.94 + 28.19 = 7.25, σ ≈ 0.999. T1 and T8 (streaming + games): −20.94 − 7.25 + 28.19 = 0.00, so σ(0) = 0.5: the model is exactly unsure, because one of them bought and the other did not. T2 (Music DL only): −20.94 + 10.75 = −10.19, σ ≈ 0.000.</p>
+    <p><b>Click:</b> why are these weights so big? Next slide.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 47. Why weights differ -->
@@ -987,6 +1354,10 @@
       <p class="tiny muted" style="margin-top: 8px;">Smaller \(C\) = stronger regularisation = smaller weights, and eventually underfitting.</p>
     </div>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> with the sigmoid, doubling every weight (bias included) keeps the same decisions but makes every prediction more confident. On data that is (almost) separable, more confidence always lowers the log-loss a little, so without a brake the weights keep growing, and the numbers you get depend on when the solver stops (the tol rows).</p>
+    <p><b>Say:</b> regularisation is the brake: a penalty for large weights. In scikit-learn, C is the inverse of its strength: small C = strong brake = small weights. Too strong (C = 0.1) and accuracy drops to 60%: underfitting.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 48. Weight scale figure -->
@@ -997,6 +1368,9 @@
     <img class="fig" src="assets/fig/sigmoid-weight-scale.png" alt="Sigmoid curves for weight scales 0.5, 1, 2 and 5: the larger the scale, the steeper the curve" style="max-height: 480px;">
     <figcaption>\(\sigma(s \cdot z)\) for weight scales \(s = 0.5, 1, 2, 5\). Try it live with “Compare weight scales” in the sigmoid explorer.</figcaption>
   </figure>
+  <aside class="notes">
+    <p><b>Say:</b> the same sigmoid with the score multiplied by 0.5, 1, 2 and 5. The 0.5 crossing does not move, but the curve gets steeper: larger weights make the probability jump from near 0 to near 1 over a shorter distance. Try it in the Sigmoid Explorer with “Compare weight scales”.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 49. Decision boundaries -->
@@ -1011,6 +1385,9 @@
       <li>Logistic regression’s dashed lines show \(P = 0.1, 0.3, 0.7, 0.9\): confidence changes quickly near the boundary because the weights are large</li>
     </ul>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> both models draw straight-line boundaries; logistic regression is still a linear classifier. The sigmoid changes how confident it is on each side, not the shape of the boundary. The dashed lines are equal-probability lines (10%, 30%, 70%, 90%); they are packed close together because the weights are large.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 50. Video -->
@@ -1021,6 +1398,9 @@
     <span class="play"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg></span>
     <span><span class="lc-title">Watch on YouTube</span><br><span class="lc-sub">The clip from the end of the notebook, starting at 2:10. Opens in a new tab.</span></span>
   </a>
+  <aside class="notes">
+    <p><b>Say:</b> a short recap video from the notebook. Play it from 2:10 if there is time, or set it for revision.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 51. Summary -->
@@ -1041,6 +1421,9 @@
       </ul>
     </li>
   </ul>
+  <aside class="notes">
+    <p><b>Say:</b> three ideas to take away. (1) Training means choosing weights that minimise a loss: walk downhill (gradient descent) or, for linear regression, solve directly (closed form). (2) Every update has the shape step × error × input. (3) For classification, put the score through a sigmoid and use the log-loss, so that confident mistakes get big corrections.</p>
+  </aside>
 </section>
 
 <!-- ================================================================ 52. Revise and experiment -->
@@ -1065,6 +1448,9 @@
       </ul>
     </div>
   </div>
+  <aside class="notes">
+    <p><b>Say:</b> everything from today is in the notebook and the demos. Suggested practice: in the notebook, change η (try 0.001 and 1) and the number of epochs, and watch the loss; in the Gradient Descent Bowl, pick the “Diverges” preset and explain why it blows up.</p>
+  </aside>
 </section>
 
 </div>

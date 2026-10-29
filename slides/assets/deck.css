@@ -292,3 +292,61 @@ html.reveal-print .reveal .demo-inline { display: none; }
 }
 .reveal .checks .ans b { color: var(--ok); }
 .reveal .check-tag { font-size: 20px; color: var(--muted); margin-top: 4px; }
+
+/* ---------- equation parts, one click at a time ----------
+   .eqx wraps an equation (or diagram) whose parts are marked \class{p-...}{...}.
+   While a part's label is the current click, the equation turns grey and that part lights up. */
+.reveal .eqx mjx-container, .reveal .eqx svg.diagram { transition: color .25s ease; }
+.reveal section.focus .eqx mjx-container, .reveal section.focus .eqx svg.diagram { color: #c2c9d3; }
+.reveal section.focus .eqx .lit { color: var(--hw-red); }
+.reveal section.focus .eqx svg.diagram .lit { color: var(--hw-red); }
+/* labels: a list that builds up (.parts) or one caption at a time (.parts.caption) */
+.reveal ol.parts { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 22px; }
+.reveal ol.parts > li { display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); column-gap: 14px; align-items: baseline; color: var(--muted); }
+.reveal ol.parts > li.current-fragment { color: var(--ink); }
+.reveal ol.parts > li > .k { justify-self: end; font-weight: 700; color: var(--hw-red); white-space: nowrap; }
+.reveal ol.parts > li.fragment.visible:not(.current-fragment) > .k { color: var(--muted); }
+.reveal ol.parts.caption { position: relative; display: block; min-height: 64px; margin-top: 12px;
+  background: #f6f2f1; border-radius: 10px; }
+.reveal ol.parts.caption > li { position: absolute; left: 0; right: 0; top: 0; padding: 10px 16px; color: var(--ink); }
+.reveal ol.parts.caption > li.fragment.visible:not(.current-fragment) { opacity: 0; visibility: hidden; }
+.reveal ol.parts.caption > li > .k { color: var(--hw-red) !important; }
+.reveal ol.parts.caption:not(:has(> li.visible)) { background: transparent; }
+.reveal .in-words { font-size: 21px; color: var(--muted); }
+.reveal .in-words b { color: var(--ink); }
+html.reveal-print .reveal ol.parts.caption { display: none; }
+
+/* ---------- symbols in plain words ---------- */
+.reveal .symbols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 40px; font-size: 21px; margin-top: 20px; }
+.reveal .symbols > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 14px; align-items: baseline; }
+.reveal .symbols .s { justify-self: end; font-size: 24px; color: var(--hw-blue); }
+
+/* ---------- hand-drawn SVG diagrams ---------- */
+.reveal svg.diagram { width: 100%; height: auto; overflow: visible; color: var(--ink); font-family: var(--font-ui); }
+.reveal svg.diagram .axis { stroke: #8a94a3; stroke-width: 1.5; }
+.reveal svg.diagram .tick text { font-size: 15px; fill: var(--muted); text-anchor: middle; }
+.reveal svg.diagram .tick.left text { text-anchor: end; }
+.reveal svg.diagram .lab { font-size: 17px; fill: currentColor; }
+.reveal svg.diagram .lab.end { text-anchor: end; }
+.reveal svg.diagram .curve { fill: none; stroke: var(--ink); stroke-width: 3; }
+.reveal svg.diagram .minpt { fill: var(--ok); }
+.reveal svg.diagram .tan { stroke-width: 3; stroke-dasharray: 7 5; }
+.reveal svg.diagram .tan.neg, .reveal svg.diagram .arrow.neg { stroke: var(--hw-blue); }
+.reveal svg.diagram .tan.pos, .reveal svg.diagram .arrow.pos { stroke: var(--hw-red); }
+.reveal svg.diagram .dot.neg, .reveal svg.diagram .neg-fill { fill: var(--hw-blue); }
+.reveal svg.diagram .dot.pos, .reveal svg.diagram .pos-fill { fill: var(--hw-red); }
+.reveal svg.diagram .lab.neg { fill: var(--hw-blue); font-weight: 700; }
+.reveal svg.diagram .lab.pos { fill: var(--hw-red); font-weight: 700; }
+.reveal svg.diagram .arrow { stroke-width: 3; fill: none; }
+.reveal ol.parts.caption:not(:has(> li.current-fragment)) { background: transparent; }
+.reveal table.data.big td.num { font-size: 24px; }
+
+/* network diagram */
+.reveal svg.diagram.net .edge { stroke: currentColor; stroke-width: 2; }
+.reveal svg.diagram.net .node { fill: #ffffff; stroke: currentColor; stroke-width: 2.5; }
+.reveal svg.diagram.net .lab { font-size: 21px; }
+.reveal svg.diagram.net .lab.mid { text-anchor: middle; }
+.reveal svg.diagram.net .lab.small { font-size: 15px; }
+.reveal svg.diagram.net .sub { font-size: 14px; }
+.reveal section.focus .eqx svg.diagram .lit .node { stroke-width: 3.5; }
+.reveal section.focus .eqx svg.diagram line.lit { stroke-width: 3.5; }

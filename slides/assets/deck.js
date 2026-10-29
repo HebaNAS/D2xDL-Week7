@@ -110,6 +110,34 @@
     });
   }
 
+  /* ---------- 5. equation parts: each click greys the equation and lights one part ----------
+     In TeX, wrap a part as \class{p-name}{...}; in a hand-drawn SVG, give the element class "p-name".
+     Below the equation, a fragment with data-part="p-name" (or several names) explains it in words. */
+  function wireParts(Reveal) {
+    function clear(s) {
+      s.classList.remove('focus');
+      Array.prototype.forEach.call(s.querySelectorAll('.lit'), function (el) { el.classList.remove('lit'); });
+    }
+    function update() {
+      Array.prototype.forEach.call(document.querySelectorAll('.reveal section.focus'), clear);
+      var slide = Reveal.getCurrentSlide();
+      if (!slide) return;
+      var names = [];
+      Array.prototype.forEach.call(slide.querySelectorAll('.fragment.current-fragment[data-part]'), function (f) {
+        names = names.concat((f.getAttribute('data-part') || '').split(/\s+/).filter(Boolean));
+      });
+      if (!names.length) return;
+      slide.classList.add('focus');
+      names.forEach(function (n) {
+        Array.prototype.forEach.call(slide.querySelectorAll('.eqx svg .' + n), function (el) { el.classList.add('lit'); });
+      });
+    }
+    Reveal.on('fragmentshown', update);
+    Reveal.on('fragmenthidden', update);
+    Reveal.on('slidechanged', update);
+    update();
+  }
+
   /* ---------- start ---------- */
   decorate();
   loadMath();
@@ -147,6 +175,7 @@
   }).then(function () {
     addTools();
     wireDemoKeys(window.Reveal);
+    wireParts(window.Reveal);
     if (document.documentElement.classList.contains('math-ready')) window.Reveal.layout();
   });
 })();
