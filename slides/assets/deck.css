@@ -306,9 +306,9 @@ html.reveal-print .reveal .demo-inline { display: none; }
 .reveal ol.parts > li.current-fragment { color: var(--ink); }
 .reveal ol.parts > li > .k { justify-self: end; font-weight: 700; color: var(--hw-red); white-space: nowrap; }
 .reveal ol.parts > li.fragment.visible:not(.current-fragment) > .k { color: var(--muted); }
-.reveal ol.parts.caption { position: relative; display: block; min-height: 64px; margin-top: 12px;
-  background: #f6f2f1; border-radius: 10px; }
-.reveal ol.parts.caption > li { position: absolute; left: 0; right: 0; top: 0; padding: 10px 16px; color: var(--ink); }
+.reveal ol.parts.caption { display: grid; margin-top: 12px; background: #f6f2f1; border-radius: 10px; }
+/* every caption sits in the same grid cell, so the box is as tall as the longest one */
+.reveal ol.parts.caption > li { grid-area: 1 / 1; padding: 10px 16px; color: var(--ink); }
 .reveal ol.parts.caption > li.fragment.visible:not(.current-fragment) { opacity: 0; visibility: hidden; }
 .reveal ol.parts.caption > li > .k { color: var(--hw-red) !important; }
 .reveal ol.parts.caption:not(:has(> li.visible)) { background: transparent; }
@@ -317,7 +317,7 @@ html.reveal-print .reveal .demo-inline { display: none; }
 html.reveal-print .reveal ol.parts.caption { display: none; }
 
 /* ---------- symbols in plain words ---------- */
-.reveal .symbols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 40px; font-size: 21px; margin-top: 20px; }
+.reveal .symbols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 36px; font-size: 20px; margin-top: 14px; }
 .reveal .symbols > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 14px; align-items: baseline; }
 .reveal .symbols .s { justify-self: end; font-size: 24px; color: var(--hw-blue); }
 

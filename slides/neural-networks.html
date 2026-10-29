@@ -31,7 +31,7 @@
   </div>
   <aside class="notes">
     <p><b>Keys:</b> → / Space / clicker = next, ← = back, Esc or O = overview, S = this speaker view, F = full screen, . = black screen, C = draw on the slide, B = whiteboard, Alt+click = zoom, ? = all keys. After clicking inside a demo, the clicker and arrow keys still change slides.</p>
-    <p><b>How the maths slides work:</b> on an equation or diagram, each click greys it out and lights up one part in red, with its meaning in words beside or under it. Talk through the lit part, then click. The last click shows everything again.</p>
+    <p><b>How the maths slides work:</b> on an equation or diagram, each click greys it out and lights up one part in red, with its meaning in words beside or under it. Talk through the lit part, then click. The last click on each maths slide shows everything again.</p>
   </aside>
 </section>
 
@@ -235,11 +235,12 @@
         <li class="fragment" data-part="p-tanh"><span class="k">\(\tanh(\ldots)\)</span><span>squashed into \((-1, 1)\): this is the hidden unit’s output \(h_i\)</span></li>
         <li class="fragment" data-part="p-v"><span class="k">\(v_i\)</span><span>how much the output listens to hidden unit \(i\)</span></li>
         <li class="fragment" data-part="p-sum"><span class="k">\(\sum_i\)</span><span>add over the hidden units: the output is a weighted sum of their outputs</span></li>
+        <li class="fragment"><span class="k">in words</span><span>weighted sums, squashed by tanh, then a weighted sum of those</span></li>
       </ol>
     </div>
   </div>
   <aside class="notes">
-    <p><b>Clicks:</b> the caption under the picture reads the last equation from the inside out: 1) weighted sum, 2) tanh, 3) the output weight v_i, 4) the sum over hidden units.</p>
+    <p><b>Clicks:</b> the caption under the picture reads the last equation from the inside out: 1) weighted sum, 2) tanh, 3) the output weight v_i, 4) the sum over hidden units, 5) the whole thing in words.</p>
     <p><b>Say:</b> two layers. Layer 1: each hidden unit i takes a weighted sum of the inputs, w_i·x, and passes it through an activation f. Layer 2: the output takes a weighted sum of the hidden outputs with weights v and passes it through g. We choose f = tanh and g = identity (no squashing at the output).</p>
     <p><b>Say:</b> the last line writes all hidden units at once: tanh(W·x) is the list of hidden outputs, and v· that list is the output.</p>
   </aside>
@@ -427,9 +428,9 @@
   </div>
   <p style="font-size: 30px; margin-top: 30px;">… or put simply, with enough hidden units, two-layer networks can <span class="r">approximate</span> any continuous function on a bounded region!</p>
   <aside class="notes">
-    <p><b>Say in plain words:</b> give a two-layer network enough hidden units and it can match any smooth (continuous) curve as closely as you like, over a limited range. Picture each tanh unit as a smooth step; with enough steps of the right heights in the right places you can trace any curve, like building a hill from bricks.</p>
+    <p><b>Say in plain words:</b> give a two-layer network enough hidden units and it can match any unbroken (continuous) curve, one you could draw without lifting the pen, even with corners, as closely as you like over a limited range. Picture each tanh unit as a smooth step; with enough steps of the right heights in the right places you can trace any curve, like building a hill from bricks.</p>
     <p><b>Say:</b> the theorem says such a network exists. It does not say how many hidden units we need, or that gradient descent will find the weights.</p>
-    <p><b>The conditions matter:</b> the function must be continuous, the region closed and bounded, and the hidden units need biases (the XOR slides later show a tanh network without biases cannot even output a constant).</p>
+    <p><b>The conditions matter:</b> the function must be continuous, the region closed and bounded, and the hidden units need biases (the XOR slides later show that a tanh network without biases cannot output any constant except 0: its output at −x is always minus its output at x).</p>
   </aside>
 </section>
 
@@ -500,9 +501,10 @@
     <li class="fragment" data-part="p-y p-yhat"><span class="k">\(y_n - \hat{y}_n\)</span><span>the error on example \(n\), squared as in Lecture 1</span></li>
     <li class="fragment" data-part="p-half"><span class="k">\(\frac{1}{2}\)</span><span>a convenience: it cancels the 2 that appears when we take the slope of the square</span></li>
     <li class="fragment" data-part="p-sum"><span class="k">\(\sum_n\)</span><span>add over all \(N\) training examples</span></li>
+    <li class="fragment"><span class="k">so</span><span>the same squared error as Lecture 1, with the network as the predictor</span></li>
   </ol>
   <aside class="notes">
-    <p><b>Clicks:</b> 1) min over W and v. 2) the network’s prediction. 3) the error. 4) the ½. 5) the sum over examples.</p>
+    <p><b>Clicks:</b> 1) min over W and v. 2) the network’s prediction. 3) the error. 4) the ½. 5) the sum over examples. 6) the whole objective again.</p>
     <p><b>Say:</b> the same squared error as Lecture 1. The only change is what ŷ is: before, a weighted sum of the inputs; now, a weighted sum of the hidden outputs, which are themselves tanh of weighted sums of the inputs.</p>
     <p><b>For the ½:</b> it changes nothing about where the minimum is. It is there so that, when we take the slope of the square, the 2 from the square cancels it and the formulas come out clean.</p>
   </aside>
@@ -613,7 +615,8 @@
         <li class="fragment" data-part="c-v"><span class="k">\(v_1\)</span><span>how the output reacts to \(h_1\) (fact 3)</span></li>
         <li class="fragment" data-part="c-h"><span class="k">\(1 - h_1^2\)</span><span>how \(h_1\) reacts to its weighted sum \(a_1\): the slope of tanh (fact 5)</span></li>
         <li class="fragment" data-part="c-x"><span class="k">\(\mathbf{x}\)</span><span>how \(a_1 = \mathbf{w}_1 \cdot \mathbf{x}\) reacts to \(\mathbf{w}_1\) (fact 4)</span></li>
-        <li class="fragment" data-part="c-e c-v c-h c-x"><span class="k">T1</span><span>with the numbers from our worked example: \(-1.0446 \times (-0.0469) \times 0.9613 \times \mathbf{x} = 0.0471\,\mathbf{x}\)</span></li>
+        <li class="fragment" data-part="c-e c-v c-h c-x"><span class="k">T1</span><span>with the numbers from our worked example: \(-1.0446 \times (-0.0469) \times 0.9613 \times \mathbf{x} \approx 0.0471\,\mathbf{x}\)</span></li>
+        <li class="fragment"><span class="k">every weight</span><span>gets its gradient the same way: one path to the loss, one product</span></li>
       </ol>
     </div>
   </div>
@@ -625,7 +628,7 @@
   <aside class="notes">
     <p><b>Why this slide:</b> the big picture before the formal derivation. The next eight slides only make each arrow on this path precise.</p>
     <p><b>Say:</b> how does the loss change if we nudge one weight going into hidden unit 1? The nudge travels a path: it changes a₁, which changes h₁, which changes ŷ, which changes the error and the loss. The chain rule says: multiply the rate at each step.</p>
-    <p><b>Clicks</b> (backwards from the loss, which is why it is called backpropagation): 1) the loss reacts to the output with −e. 2) the output reacts to h₁ with v₁. 3) h₁ reacts to a₁ with tanh’s slope, 1 − h₁². 4) a₁ reacts to the weights with x. 5) the whole path, with the numbers for transaction T1 that we compute later.</p>
+    <p><b>Clicks</b> (backwards from the loss, which is why it is called backpropagation): 1) the loss reacts to the output with −e. 2) the output reacts to h₁ with v₁. 3) h₁ reacts to a₁ with tanh’s slope, 1 − h₁². 4) a₁ reacts to the weights with x. 5) the whole path, with the numbers for transaction T1 that we compute later. 6) every weight works the same way.</p>
     <p><b>Say:</b> notice what each factor means: the error, how much the output listens to this unit, how responsive the unit is, and the input. If any of them is 0, this weight does not change.</p>
   </aside>
 </section>
@@ -700,14 +703,14 @@
   <h2>Two-layer NN: Gradient of output layer weights \(\mathbf{v}\) (3/3)</h2>
   <div class="rule"></div>
   <div class="cols even" style="gap: 30px; font-size: 24px;">
-    <div class="eqx">
+    <div>
       <p><b>Putting it together:</b></p>
       \[ \frac{\partial L}{\partial v_i} = \color{#3274B5}{-e_n} \cdot \color{#A62B17}{h_{i,n}} \]
       <p>In vector form, with \(\mathbf{h}_n = [h_{1,n}, h_{2,n}, \ldots]\) the hidden activations for example \(n\):</p>
-      \[ \nabla_{\mathbf{v}} = \class{p-e}{-e_n} \cdot \class{p-h}{\mathbf{h}_n} \]
+      <div class="eqx">\[ \nabla_{\mathbf{v}} = \class{p-e}{-e_n} \cdot \class{p-h}{\mathbf{h}_n} \]</div>
       <ol class="parts caption" style="font-size: 20px;">
         <li class="fragment" data-fragment-index="1" data-part="p-e"><span class="k">\(-e_n\)</span><span>the error: no error, no update</span></li>
-        <li class="fragment" data-fragment-index="2" data-part="p-h"><span class="k">\(\mathbf{h}_n\)</span><span>the hidden outputs: a unit that was strongly on gets its outgoing weight changed most</span></li>
+        <li class="fragment" data-fragment-index="2" data-part="p-h"><span class="k">\(\mathbf{h}_n\)</span><span>the hidden outputs: a unit with a large output (near \(+1\) or \(-1\)) gets its outgoing weight changed most; a unit at 0 gets no change</span></li>
       </ol>
     </div>
     <div class="fragment" data-fragment-index="3">
@@ -813,11 +816,11 @@
 <section>
   <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\) (4/4)</h2>
   <div class="rule"></div>
-  <div class="eqx" style="font-size: 25px;">
+  <div style="font-size: 25px;">
     <p><b>Putting it together:</b></p>
     \[ \nabla_{\mathbf{w}_i} = \color{#3274B5}{-e\, v_i} \cdot \color{#A62B17}{f'(\mathbf{w}_i \cdot \mathbf{x})\, \mathbf{x}} \]
     <p class="fragment">For tanh, the gradient \(f'\) is (fact 5): \(\quad f'(\mathbf{w}_i \cdot \mathbf{x}) = 1 - \tanh^2(\mathbf{w}_i \cdot \mathbf{x})\)</p>
-    <div class="fragment">
+    <div class="fragment eqx">
       <p>With \(a_i = \mathbf{w}_i \cdot \mathbf{x}\) (line 8 of the algorithm) and \(h_i = \tanh(a_i)\) (line 9):</p>
       \[ \nabla_{\mathbf{w}_i} = \class{p-e}{\underbrace{-e}_{\text{error}}} \cdot \class{p-v}{\underbrace{v_i}_{\text{how much the output uses } h_i}} \cdot \class{p-s}{\underbrace{\big(1 - \tanh^2(a_i)\big)}_{\text{slope of } h_i\text{, also } 1 - h_i^2}} \cdot \class{p-x}{\underbrace{\mathbf{x}}_{\text{input}}} \]
     </div>
@@ -827,9 +830,10 @@
     <li class="fragment" data-part="p-v"><span class="k">\(v_i\)</span><span>how much the output listens to unit \(i\): if \(v_i \approx 0\), unit \(i\) gets almost no blame</span></li>
     <li class="fragment" data-part="p-s"><span class="k">\(1 - h_i^2\)</span><span>how responsive unit \(i\) is: near 1 when \(a_i\) is near 0, near 0 when tanh is saturated (\(h_i \approx \pm 1\))</span></li>
     <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}\)</span><span>the inputs: a weight whose input is 0 does not change</span></li>
+    <li class="fragment"><span class="k">all four</span><span>error × outgoing weight × slope × input: the same path as on the chain-rule slide</span></li>
   </ol>
   <aside class="notes">
-    <p><b>Clicks:</b> 1) tanh’s slope (fact 5). 2) rewrite with a_i and h_i. Then the four factors one at a time: 3) the error, 4) v_i, 5) tanh’s slope, 6) x.</p>
+    <p><b>Clicks:</b> 1) tanh’s slope (fact 5). 2) rewrite with a_i and h_i. Then the four factors one at a time: 3) the error, 4) v_i, 5) tanh’s slope, 6) x, 7) all four together.</p>
     <p><b>Notation:</b> a_i is the weighted input w_i·x (line 8 of the algorithm), and h_i = tanh(a_i) is the activation (line 9). So 1 − tanh²(a_i) = 1 − h_i², which is how the code computes it.</p>
     <p><b>Say:</b> same four factors as the path slide; the next slide turns them into intuition.</p>
   </aside>
@@ -983,7 +987,7 @@
     <p><b>Clicks:</b> line 8, line 9, line 11, line 12, then the take-away.</p>
     <p><b>Line 8:</b> x = [0, 1, 1, 1], so we add rows 2–4 of each column of W and skip row 1 (Music DL is 0): a₁ = 0.0648 − 0.0234 + 0.1579 = 0.1993; a₂ = 0.1523 − 0.0234 + 0.0767 = 0.2056.</p>
     <p><b>Line 9:</b> tanh of small numbers is almost the number itself (a little smaller): h = [0.1967, 0.2028].</p>
-    <p><b>Line 11:</b> ŷ = v₁h₁ + v₂h₂ + v_bias·1 = (−0.0469)(0.1967) + (0.0543)(0.2028) − 0.0463 ≈ −0.0092 + 0.0110 − 0.0463 = −0.0446.</p>
+    <p><b>Line 11:</b> ŷ = v₁h₁ + v₂h₂ + v_bias·1 = (−0.0469)(0.1967) + (0.0543)(0.2028) − 0.0463 ≈ −0.0092 + 0.0110 − 0.0463 ≈ −0.0446 (the rounded terms add to −0.0445; the slide uses full precision).</p>
     <p><b>Line 12:</b> e = 1 − (−0.0446) = 1.0446. T1 is a Buy and the network says “about 0”, so the error is about 1.</p>
     <p><b>Ask before line 12:</b> what is the error?</p>
   </aside>
@@ -1008,7 +1012,7 @@
     <p><b>Clicks:</b> line 13, line 15 for unit 1, line 15 for unit 2, then the take-away.</p>
     <p><b>Line 13:</b> T1’s share of the output-weight gradient is −e × [h₁, h₂, 1] = −1.0446 × [0.1967, 0.2028, 1] = [−0.2054, −0.2118, −1.0446].</p>
     <p><b>Line 15, unit 1:</b> −e × v₁ × (1 − h₁²) × x = −1.0446 × (−0.0469) × 0.9613 × x = +0.0471 × [0, 1, 1, 1]. Two negatives make a positive.</p>
-    <p><b>Line 15, unit 2:</b> −1.0446 × 0.0543 × 0.9589 × x = −0.0543 × [0, 1, 1, 1].</p>
+    <p><b>Line 15, unit 2:</b> −1.0446 × 0.0543 × 0.9589 × x ≈ −0.0543 × [0, 1, 1, 1] (with the rounded numbers you get −0.0544; the slide uses full precision).</p>
     <p><b>Say:</b> 1 − h² is about 0.96 for both units: they are far from saturation, so the error flows back almost unchanged. v₁ and v₂ have opposite signs, so the two units are pushed in opposite directions. Point at each factor of line 15 as you read the numbers.</p>
     <p><b>Remember:</b> nothing changes yet. This is batch training: we add up these shares over all 10 transactions, then update once.</p>
   </aside>
@@ -1161,14 +1165,14 @@
             <li>can be seen as a form of <span class="b">regularisation</span></li>
           </ul>
         </li>
-        <li>More <span class="b">efficient</span> (10M examples and Online? Nah…)</li>
+        <li>More <span class="b">efficient</span> (10M examples and full batch? Nah…)</li>
       </ul>
     </li>
   </ul>
   <aside class="notes">
     <p><b>Say:</b> batch: add up the gradient over all examples, then take one step. Smooth, but each step costs a full pass over the data. Online (stochastic gradient descent): one step per example. Cheap and noisy, and the noise can help escape poor spots. Mini-batch: a small random group per step, the usual compromise.</p>
     <p><b>Say:</b> Adam and AdaGrad adjust the step size for each weight automatically; they are the default choice in modern libraries.</p>
-    <p><b>Ask:</b> 10 million examples: why not batch? (One step would need all 10 million examples first.)</p>
+    <p><b>Ask:</b> 10 million examples: why not full batch? (One step would need all 10 million examples first.) And why not pure online? (10 million tiny, noisy steps per pass, which modern hardware handles badly.) Hence mini-batches.</p>
   </aside>
 </section>
 

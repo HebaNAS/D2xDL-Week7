@@ -31,7 +31,7 @@
   </div>
   <aside class="notes">
     <p><b>Keys:</b> → / Space / clicker = next, ← = back, Esc or O = overview, S = this speaker view, F = full screen, . = black screen, C = draw on the slide, B = whiteboard, Alt+click = zoom, ? = all keys. After clicking inside a demo, the clicker and arrow keys still change slides.</p>
-    <p><b>How the maths slides work:</b> on an equation, each click greys it out and lights up one part in red, with its meaning in words underneath. Talk through the lit part, then click. The last click shows the whole equation again.</p>
+    <p><b>How the maths slides work:</b> on an equation, each click greys it out and lights up one part in red, with its meaning in words underneath. Talk through the lit part, then click. The last click on each maths slide shows the whole equation again.</p>
   </aside>
 </section>
 
@@ -52,10 +52,10 @@
     <div><span class="s">\(\leftarrow\)</span><span>“replace with”: an update step in an algorithm</span></div>
     <div><span class="s">\(\min_{\mathbf{w}}\)</span><span>“find the \(\mathbf{w}\) that makes this as small as possible”</span></div>
     <div><span class="s">\(\frac{\partial L}{\partial w},\ \nabla L\)</span><span>slope of the loss: how much it changes when a weight changes a little</span></div>
-    <div><span class="s">\(N,\ D\)</span><span>the number of examples, the number of features</span></div>
-    <div><span class="s">\(\sigma\)</span><span>“sigma”, the sigmoid: squashes any number into \((0, 1)\)</span></div>
+    <div><span class="s">\(N,\ D\)</span><span>the number of examples, the number of features (single numbers)</span></div>
+    <div><span class="s">\(\sigma\)</span><span>“sigma”, the sigmoid: squashes any number into \((0, 1)\). Not the same as capital \(\Sigma\) (add up)</span></div>
   </div>
-  <p class="in-words" style="margin-top: 18px;">Bold letters (\(\mathbf{w}, \mathbf{x}\)) are lists of numbers (vectors); plain letters are single numbers. Capitals like \(X\) are whole tables (matrices).</p>
+  <p class="in-words" style="margin-top: 18px;">Bold letters (\(\mathbf{w}, \mathbf{x}\)) are lists of numbers (vectors); plain letters are single numbers. \(X\) is the whole data table (a matrix); \(Y\) is one true answer, \(Y(\mathbf{x}_n)\), or the column of all of them.</p>
   <aside class="notes">
     <p><b>Say:</b> Before any maths: these are the only symbols we need today. Each one is shorthand for a short sentence. Don’t memorise them now; come back to this slide whenever a symbol trips you up.</p>
     <p><b>Point at:</b> the hat on Ŷ means “our estimate”. δ is just “true answer minus prediction”. Σ is a loop that adds things up. wᵀ·x is “multiply matching entries and add”: the whole lecture is built on that one operation.</p>
@@ -86,7 +86,7 @@
     <p><b>For the Σ:</b> “Σ from d = 0 to D” means “for d = 0, 1, …, D, add up what follows”. It is a compact way to write the long sum. The trick x₀ = 1 lets w₀ join the sum, because w₀·1 = w₀.</p>
     <p><b>For wᵀ·x:</b> the third way of writing the same number. Line up the weights and the features, multiply the pairs, add. In code this is a loop, or numpy’s dot.</p>
     <p><b>Example:</b> w = [1, 2, 3, 1] and x = [1, 0, 1, 1] (transaction T1 with the bias): 1 + 0 + 3 + 1 = 5. We meet this exact sum again in the hand calculation.</p>
-    <p><b>Ask:</b> if Online Games has weight 3 and Music DL has weight 2, which one pushes the output up more when it is switched on?</p>
+    <p><b>Ask:</b> in w = [1, 2, 3, 1] (bias, Music DL, Music Stream, Online Games), which service has weight 3? Which one pushes the output up most when it is switched on? (Music Stream, weight 3.)</p>
   </aside>
 </section>
 
@@ -115,11 +115,12 @@
       <li class="fragment" data-part="p-yhat"><span class="k">\(\hat{Y}(\mathbf{x}_n)\)</span><span>what the line predicts for it</span></li>
       <li class="fragment" data-part="p-sq"><span class="k">\((\ldots)^2\)</span><span>square the gap: always positive, and big misses count much more (a miss of 2 costs 4, a miss of 10 costs 100)</span></li>
       <li class="fragment" data-part="p-sum"><span class="k">\(\sum\)</span><span>add the squared gaps over every example: one number that says how bad the line is</span></li>
+      <li class="fragment"><span class="k">SSE</span><span>training means finding the weights that make this number as small as possible</span></li>
     </ol>
     </div>
   </div>
   <aside class="notes">
-    <p><b>Clicks:</b> the box under the plot walks through the SSE: true value, prediction, the square, the sum.</p>
+    <p><b>Clicks:</b> the box under the plot walks through the SSE: true value, prediction, the square, the sum, then what training does with it.</p>
     <p><b>Say:</b> Each blue dot is one example; the red line is our model. For each dot, the vertical gap between dot and line is the error. The SSE squares every gap and adds them up: one number for how bad the line is. Training means finding the line with the smallest SSE.</p>
     <p><b>Why square?</b> (1) A gap below the line and a gap above it should not cancel out; squaring makes both positive. (2) Big misses count much more than small ones (2² = 4, 10² = 100). (3) It gives a smooth bowl shape that is easy to slide down, as we will see.</p>
     <p><b>Watch out:</b> Y(xₙ) means “the true output for example xₙ”, not Y times xₙ.</p>
@@ -133,24 +134,25 @@
   <ul class="bul eqx" style="font-size: 27px;">
     <li>Goal: find <span class="b">weights \(\mathbf{w}\)</span> that <span class="r">minimise \(SSE(X, \mathbf{w})\)</span></li>
     <li>Identical to optimising a <span class="b">linear model</span> w.r.t. the <span class="b">squared objective function</span> \(l^{(sqr)}\) over \(n\) examples <span class="b">without regularisation</span>:
-      \[ \class{p-min}{\min_{\mathbf{w}, b}} \class{p-sum}{\sum_n} \big(\class{p-y}{y_n} - \class{p-pred}{(\mathbf{w}^T \cdot \mathbf{x}_n + b)}\big)^2, \quad \text{where } w_0 = b \text{ (bias term) and } x_0 = 1 \]
+      \[ \class{p-min}{\min_{\mathbf{w}}} \class{p-sum}{\sum_n} \big(\class{p-y}{y_n} - \class{p-pred}{\mathbf{w}^T \cdot \mathbf{x}_n}\big)^2, \quad \text{where } w_0 = b \text{ (bias term) and } x_0 = 1 \]
     </li>
     <li>For one example the gradient is \(\nabla_{\mathbf{w}} = \class{p-two}{-2}\,\class{p-err}{(y_n - \mathbf{w}^T \cdot \mathbf{x}_n)}\,\class{p-x}{\mathbf{x}_n}\), so gradient descent moves \(\mathbf{w}\) along \((y_n - \mathbf{w}^T \cdot \mathbf{x}_n)\,\mathbf{x}_n\)
       <div class="small muted" style="margin-top: 6px;">The 2 is absorbed into the learning rate \(\eta\).</div>
     </li>
   </ul>
   <ol class="parts caption">
-    <li class="fragment" data-part="p-min"><span class="k">\(\min_{\mathbf{w}, b}\)</span><span>find the weights and bias that make everything after it as small as possible</span></li>
-    <li class="fragment" data-part="p-pred"><span class="k">\(\mathbf{w}^T \cdot \mathbf{x}_n + b\)</span><span>the model’s prediction for example \(n\)</span></li>
+    <li class="fragment" data-part="p-min"><span class="k">\(\min_{\mathbf{w}}\)</span><span>find the weights (the bias is \(w_0\)) that make everything after it as small as possible</span></li>
+    <li class="fragment" data-part="p-pred"><span class="k">\(\mathbf{w}^T \cdot \mathbf{x}_n\)</span><span>the model’s prediction for example \(n\) (with \(x_0 = 1\), this already includes the bias)</span></li>
     <li class="fragment" data-part="p-y p-pred p-sum"><span class="k">\(\sum (y_n - \ldots)^2\)</span><span>true answer minus prediction, squared, added up: the SSE from the last slide</span></li>
-    <li class="fragment" data-part="p-err"><span class="k">\(y_n - \mathbf{w}^T \cdot \mathbf{x}_n\)</span><span>the gradient’s first part is the error on one example: the bigger the miss, the bigger the step</span></li>
+    <li class="fragment" data-part="p-err"><span class="k">\(y_n - \mathbf{w}^T \cdot \mathbf{x}_n\)</span><span>the gradient (the slope of the loss for each weight) starts with the error on one example: the bigger the miss, the bigger the step</span></li>
     <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}_n\)</span><span>times the example’s features: a feature that is 0 leaves its weight alone</span></li>
-    <li class="fragment" data-part="p-two"><span class="k">\(-2\)</span><span>the 2 comes from the square; the minus says “step the other way to go downhill”</span></li>
+    <li class="fragment" data-part="p-two"><span class="k">\(-2\)</span><span>the 2 comes from the square; the minus because the error \(y_n - \mathbf{w}^T \cdot \mathbf{x}_n\) shrinks as \(\mathbf{w}\) grows</span></li>
+    <li class="fragment"><span class="k">update</span><span>gradient descent subtracts the gradient; the two minuses cancel, so \(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\)</span></li>
   </ol>
   <aside class="notes">
-    <p><b>Clicks:</b> min → prediction → the SSE → then the one-example gradient: error, features, the −2.</p>
-    <p><b>Say:</b> “min over w, b” is an instruction: search all possible weights and biases for the ones that make this sum smallest. The thing inside is exactly the SSE from the last slide.</p>
-    <p><b>For the gradient:</b> the gradient is the slope of the loss for one example, and it has three parts. The error: no error, no change. The features: only weights whose feature is switched on get nudged. The −2: the 2 comes from the square (the slope of u² is 2u), and the minus means that to go downhill we move against the slope. Because we subtract the gradient, the update becomes w ← w + η·error·x.</p>
+    <p><b>Clicks:</b> min → prediction → the SSE → then the one-example gradient: error, features, the −2 → the update.</p>
+    <p><b>Say:</b> “min over w” is an instruction: search all possible weights for the ones that make this sum smallest. The bias is one of them (w₀, with x₀ = 1). The thing inside is exactly the SSE from the last slide.</p>
+    <p><b>For the gradient:</b> the gradient is the slope of the loss for each weight (it points uphill), and for one example it has three parts. The error: no error, no change. The features: only weights whose feature is switched on get nudged. The −2: the 2 comes from the square (the slope of u² is 2u); the minus comes from the error y − wᵀx, which goes down when w goes up (the same “−1” as on the chain-rule slide later). Gradient descent then subtracts the gradient, the two minuses cancel, and the update becomes w ← w + η·error·x.</p>
     <p><b>Refresher:</b> l^(sqr) is just a name for the squared error. Where this gradient comes from is shown properly after the worked example, on the derivative and chain-rule slides.</p>
   </aside>
 </section>
@@ -413,7 +415,7 @@
   </div>
   <div class="callout warn fragment" style="margin-top: 26px;">The predictions are way off. We have done only <strong>one</strong> pass, and \(\eta = 1\) is too large here: one update took T1 from 5 (too high) to −7 (too low). Training needs many passes (epochs) and a smaller \(\eta\).</div>
   <aside class="notes">
-    <p><b>Say:</b> After seeing each example once, check both. T1 went from 5 (too high) to −6 (far too low): we overcorrected. This is what too large a learning rate looks like: each step jumps over the target.</p>
+    <p><b>Say:</b> After seeing each example once, check both. T1 went from 5 (too high) to −7 right after its own update, and to −6 after the T2 update: far too low. We overcorrected. This is what too large a learning rate looks like: each step jumps over the target.</p>
     <p><b>Say:</b> SSE = 7² + (−1)² = 50. The fix is many passes (epochs) with a smaller η. The next slides do exactly that by computer.</p>
   </aside>
 </section>
@@ -649,10 +651,11 @@
     <li class="fragment" data-part="p-Y"><span class="k">\(Y\)</span><span>the true outputs, also a column</span></li>
     <li class="fragment" data-part="p-err"><span class="k">\(Y - X\mathbf{w}\)</span><span>every error at once</span></li>
     <li class="fragment" data-part="p-sse"><span class="k">\((\ldots)^T(\ldots)\)</span><span>the transpose \(^T\) turns the column into a row; a row times a column multiplies matching entries and adds up: the SSE</span></li>
+    <li class="fragment"><span class="k">so</span><span>the same SSE as before, written for all examples at once. The next three slides find its lowest point</span></li>
   </ol>
   <aside class="notes">
     <p><b>Why this slide:</b> the closed form is written with matrices. This slide shows that the matrix notation is just our table and our hand calculation, done for all rows at once.</p>
-    <p><b>Clicks:</b> X → w → Xw → Y → the errors → the SSE.</p>
+    <p><b>Clicks:</b> X → w → Xw → Y → the errors → the SSE → the link to the next slides.</p>
     <p><b>For X:</b> the data table with a column of 1s for the bias: 10 rows (customers), 4 columns. We show rows T1, T2, T3 and T10.</p>
     <p><b>For Xw:</b> multiplying the table by the weight column does the weighted sum for every row at once. Row T1 gives 5, the number we got by hand. Sizes: (10 × 4) times (4 × 1) gives (10 × 1). The inner numbers must match: one weight per column.</p>
     <p><b>For the errors:</b> subtract the predictions from the true outputs, row by row. With these starting weights every prediction is too high.</p>
@@ -749,7 +752,7 @@
   <p class="check-tag">One minute with your neighbour, then we compare answers.</p>
   <div class="checks">
     <div class="q"><span class="n">1</span><span>Our customer data has 10 transactions and 3 features plus the bias. What shape is \(X^T X\)? And \(\mathbf{w}\)?</span>
-      <div class="ans fragment"><b>\(4 \times 4\) and \(4 \times 1\)</b> (\(D = 4\), counting the bias). Building \(X^T X\) costs \(\mathcal{O}(D^2N)\); inverting the \(D \times D\) matrix costs \(\mathcal{O}(D^3)\) whatever \(N\) is (next slide).</div>
+      <div class="ans fragment"><b>\(4 \times 4\) and \(4 \times 1\)</b> (3 features plus the bias). Building \(X^T X\) takes about \(D^2N\) steps; inverting it takes about \(D^3\) steps, whatever \(N\) is (next slide).</div>
     </div>
     <div class="q"><span class="n">2</span><span>Two columns of \(X\) are identical (the same feature recorded twice). Can we compute \((X^T X)^{-1}\)?</span>
       <div class="ans fragment"><b>No.</b> \(X^T X\) has no inverse, and infinitely many \(\mathbf{w}\) give the same minimum (any split of the weight between the two copies). Gradient descent still runs; regularisation also fixes it.</div>
@@ -757,7 +760,7 @@
   </div>
   <aside class="notes">
     <p>Give a minute, take two or three answers, then click to show each answer.</p>
-    <p><b>Q1:</b> X is 10 × 4, so XᵀX is (4 × 10)(10 × 4) = 4 × 4, and w is 4 × 1. The number of examples disappears from the size of XᵀX.</p>
+    <p><b>Q1:</b> X is 10 × 4, so XᵀX is (4 × 10)(10 × 4) = 4 × 4, and w is 4 × 1. The number of examples disappears from the size of XᵀX. “About D³ steps” is the big-O idea of the next slide: a rough count of how the work grows.</p>
     <p><b>Q2:</b> if two columns are identical, XᵀX has two identical rows and columns, so it has no inverse (the matrix version of dividing by zero). Any split of the weight between the two copies gives the same predictions, so there is no single best w.</p>
   </aside>
 </section>
@@ -792,7 +795,7 @@
 <section>
   <h2>Both Methods on Our Data</h2>
   <div class="rule"></div>
-  <p>Customer transactions: \(N = 10\) examples, \(D = 4\) features (including the bias).</p>
+  <p>Customer transactions: \(N = 10\) examples, \(D = 3\) features plus the bias (4 weights).</p>
   <table class="data" style="margin: 20px 0;">
     <thead><tr><th>Method</th><th>\(w_0\)</th><th>\(w_1\)</th><th>\(w_2\)</th><th>\(w_3\)</th><th>SSE</th><th>Time (one run)</th></tr></thead>
     <tbody>
@@ -803,7 +806,7 @@
   <ul class="bul">
     <li>The closed form gives the <span class="b">exact</span> minimum of the SSE</li>
     <li>Gradient descent <span class="r">approximates</span> it; how close depends on the number of iterations and \(\eta\)</li>
-    <li class="small muted">Timings are from one run on a laptop and will vary. With \(D = 4\) the closed form wins easily.</li>
+    <li class="small muted">Timings are from one run on a laptop and will vary. With so few features the closed form wins easily.</li>
   </ul>
   <aside class="notes">
     <p><b>Say:</b> on our tiny data both work. The closed form gives the exact minimum SSE (0.706); gradient descent after 100 epochs is close but not there yet (1.25). Its weights also differ from the closed-form weights: gradient descent has not finished.</p>
@@ -960,11 +963,13 @@
     <li class="fragment" data-part="p-d"><span class="k">\(\delta\)</span><span>the error, as in linear regression</span></li>
     <li class="fragment" data-part="p-slope"><span class="k">\(\hat{Y}(1 - \hat{Y})\)</span><span>the sigmoid’s slope: at most 0.25 (when \(\hat{Y} = 0.5\)), close to 0 when \(\hat{Y}\) is near 0 or 1. This is the new part</span></li>
     <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}_n\)</span><span>the features, as before</span></li>
-    <li class="fragment" data-part="p-two"><span class="k">\(-2\)</span><span>from the square; the algorithm absorbs it into \(\eta\)</span></li>
+    <li class="fragment" data-part="p-two"><span class="k">\(-2\)</span><span>the 2 comes from the square and is absorbed into \(\eta\); the minus comes from \(-\sigma(\ldots)\) and cancels gradient descent’s minus, so line 6 adds</span></li>
+    <li class="fragment"><span class="k">compare</span><span>linear regression’s gradient is \(-2\,\delta\,\mathbf{x}_n\): the only new factor is \(\hat{Y}(1 - \hat{Y})\)</span></li>
   </ol>
   <aside class="notes">
-    <p><b>Clicks:</b> the first line is already showing: the sigmoid’s slope (fact 5). Each later step is two clicks, the line then its reason. 1–2) the slope of wᵀx is x (fact 3). 3–4) rename σ(wᵀx) as Ŷ. 5–6) rename the error as δ. 7–10) the four parts of the result, one at a time.</p>
+    <p><b>Clicks:</b> the first line is already showing: the sigmoid’s slope (fact 5). Each later step is two clicks, the line then its reason. 1–2) the slope of wᵀx is x (fact 3). 3–4) rename σ(wᵀx) as Ŷ. 5–6) rename the error as δ. 7–10) the four parts of the result, one at a time. 11) the comparison with linear regression.</p>
     <p><b>For the sigmoid slope:</b> the sigmoid’s slope at z is σ(z)(1 − σ(z)). It is steepest in the middle (0.5 × 0.5 = 0.25) and flat at both ends: at Ŷ = 0.99 it is 0.99 × 0.01 ≈ 0.01.</p>
+    <p><b>For the −2:</b> only the 2 is absorbed into η. The minus comes from −σ(…) (the error shrinks as the score grows) and cancels gradient descent’s own minus, which is why line 6 of the algorithm adds.</p>
     <p><b>For the result:</b> compare with linear regression’s −2δx: the same, times Ŷ(1 − Ŷ). That factor is the problem. When the model is confidently wrong (Ŷ near 0 but Y = 1), Ŷ(1 − Ŷ) is near 0, so the update is tiny exactly when we need a big one.</p>
     <p><b>Ask:</b> Ŷ = 0.01 and Y = 1. Is the error big? (yes, 0.99.) Is the update big? (no: 0.99 × 0.0099 ≈ 0.0098.)</p>
   </aside>
@@ -1016,7 +1021,8 @@
   <aside class="notes">
     <p><b>Clicks:</b> the Y = 1 half, the Y = 0 half, the minus, the summary line.</p>
     <p><b>Say:</b> the log-loss looks long, but for each example only one half is switched on. If the true answer is 1, the second half is multiplied by 1 − Y = 0 and disappears, and the cost is −log Ŷ. If the answer is 0, the first half disappears, and the cost is −log(1 − Ŷ). Either way: −log(the probability we gave to the right answer).</p>
-    <p><b>Refresher:</b> log here is the natural log (ln). log 1 = 0; logs of numbers between 0 and 1 are negative, and they head towards −∞ as the number approaches 0. The minus sign turns them into positive costs.</p>
+    <p><b>Refresher:</b> log here is the natural log (ln): ln p answers “e to what power gives p?”. ln 1 = 0; logs of numbers between 0 and 1 are negative, and they head towards −∞ as the number approaches 0. The minus sign turns them into positive costs.</p>
+    <p><b>“Negative log-likelihood”:</b> the likelihood is the probability the model gives to all the observed labels together (a product over examples). Taking −log turns the product into a sum and “make the labels as probable as possible” into “make the loss as small as possible”.</p>
     <p><b>Say the destination:</b> the box at the bottom. The gradient of this loss is just −δ·x, the linear regression update, with no Ŷ(1 − Ŷ) factor.</p>
   </aside>
 </section>
@@ -1035,11 +1041,12 @@
   </table>
   <ul class="bul" style="margin-top: 26px;">
     <li class="fragment">Confident and right: almost free. Confident and <span class="r">wrong</span>: expensive, with no upper limit</li>
-    <li class="fragment">The squared error never costs more than 1, however wrong the model is, so it pushes much less on bad mistakes</li>
+    <li class="fragment">The squared error levels off at 1: once the model is badly wrong the curve is almost flat, so its slope (the push to fix the mistake) is almost 0. The log loss keeps climbing, so its push stays strong</li>
   </ul>
   <aside class="notes">
     <p><b>Say:</b> read the first row: giving the right answer 99% costs almost nothing; 50/50 costs 0.69; giving it only 1% costs 4.6. The cost keeps growing as the probability heads to 0.</p>
-    <p><b>Clicks:</b> 1) the squared error for the same predictions. It can never exceed 1, so a confidently wrong model barely feels its mistake. 2–3) the two take-aways.</p>
+    <p><b>Clicks:</b> 1) the squared error for the same predictions. 2–3) the two take-aways.</p>
+    <p><b>Say:</b> it is not the size of the cost that matters for learning but its slope: the push gradient descent gets. The squared error flattens out near 1, so a confidently wrong model gets almost no push (that is the Ŷ(1 − Ŷ) factor). The log loss keeps rising steeply, so the push stays strong.</p>
     <p><b>Ask:</b> a spam filter is 99% sure an important email is spam, and it is wrong. Which loss would you want training it?</p>
   </aside>
 </section>
@@ -1093,9 +1100,9 @@
   <h2>Derivative of the Log Loss (3/3)</h2>
   <div class="rule"></div>
   <h3>Part 3: combine them</h3>
-  <div class="eqx" style="font-size: 28px;">
+  <div style="font-size: 28px;">
     \[ \frac{\partial LL_n}{\partial \mathbf{w}} = \color{#3274B5}{\frac{\partial LL_n}{\partial \hat{Y}}} \cdot \color{#A62B17}{\frac{\partial \hat{Y}}{\partial \mathbf{w}}} \]
-    <div class="fragment" data-fragment-index="1">\[ = \frac{\hat{Y} - Y}{\class{p-c}{\hat{Y}(1 - \hat{Y})}} \cdot \class{p-c}{\hat{Y}(1 - \hat{Y})} \cdot \mathbf{x} \]</div>
+    <div class="fragment eqx" data-fragment-index="1">\[ = \frac{\hat{Y} - Y}{\class{p-c}{\hat{Y}(1 - \hat{Y})}} \cdot \class{p-c}{\hat{Y}(1 - \hat{Y})} \cdot \mathbf{x} \]</div>
     <div class="fragment" data-fragment-index="3">\[ = (\hat{Y} - Y) \cdot \mathbf{x} = -(Y - \hat{Y}) \cdot \mathbf{x} = -\delta \cdot \mathbf{x}, \quad \text{where } \delta = Y - \hat{Y} \]</div>
   </div>
   <ol class="parts caption" style="font-size: 22px;">
@@ -1332,7 +1339,7 @@
       <li><span class="r">Logistic regression</span> weights are large:
         <ul>
           <li>larger weights → steeper sigmoid → more confident predictions</li>
-          <li>with no regularisation, the log-loss keeps falling as the weights grow, while the training points stay on the correct side. Our data is almost separable, so the weights grow until the solver stops</li>
+          <li>with no regularisation, the log-loss keeps falling as the weights grow. Apart from T1 and T8 (identical customers, one bought), a straight line separates our data, so the model parks T1 and T8 at exactly 0.5 and keeps making the other eight more confident: the weights grow until the solver stops</li>
           <li>so their size reflects when the solver stopped, not how “important” a feature is</li>
         </ul>
       </li>
@@ -1355,7 +1362,8 @@
     </div>
   </div>
   <aside class="notes">
-    <p><b>Say:</b> with the sigmoid, doubling every weight (bias included) keeps the same decisions but makes every prediction more confident. On data that is (almost) separable, more confidence always lowers the log-loss a little, so without a brake the weights keep growing, and the numbers you get depend on when the solver stops (the tol rows).</p>
+    <p><b>Say:</b> with the sigmoid, doubling every weight (bias included) keeps the same decisions but makes every prediction more confident. Here, apart from T1 and T8 (identical customers, one bought and one did not), a straight line separates the data. The model parks T1 and T8 at a score of exactly 0 (P = 0.5); bigger weights leave them there and make the other eight more confident and still correct, so the loss keeps falling. Without a brake the weights keep growing, and the numbers you get depend on when the solver stops (the tol rows).</p>
+    <p><b>Watch out:</b> this only happens because no point can be pushed onto the wrong side. If one were, more confidence would raise its loss and the weights would stop growing.</p>
     <p><b>Say:</b> regularisation is the brake: a penalty for large weights. In scikit-learn, C is the inverse of its strength: small C = strong brake = small weights. Too strong (C = 0.1) and accuracy drops to 60%: underfitting.</p>
   </aside>
 </section>
