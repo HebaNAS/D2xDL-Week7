@@ -569,18 +569,19 @@
   <div class="callout" style="font-size: 24px;">Effects pass along a chain, and the rates <b>multiply</b>. If 1 AED buys 0.27 USD and 1 USD buys 0.92 EUR, then 1 AED buys \(0.27 \times 0.92 \approx 0.25\) EUR.</div>
   <p style="margin-top: 16px;">If \(L\) depends on \(w\) only through some in-between quantity \(u\):</p>
   <div style="display: flex; align-items: center; justify-content: center; gap: 30px;">\[ \frac{dL}{dw} = \frac{dL}{du} \cdot \frac{du}{dw} \]<span class="in-words">(how \(L\) reacts to \(u\)) × (how \(u\) reacts to \(w\))</span></div>
-  <p class="fragment" style="margin-top: 6px;">Example from the last slide: \(L = u^2\) where \(u = 3 - w\) is the error.</p>
-  <div class="eqx fragment" style="font-size: 30px;">\[ \frac{dL}{dw} = \class{p-out}{\frac{dL}{du}} \cdot \class{p-in}{\frac{du}{dw}} = \class{p-out}{2u} \cdot \class{p-in}{(-1)} = \class{p-res}{-2(3 - w)} \]</div>
+  <p class="fragment" style="margin-top: 6px;">Example from the last slide: the in-between quantity is the error \(e = 3 - w\), and \(L = e^2\).</p>
+  <div class="eqx fragment" style="font-size: 30px;">\[ \frac{dL}{dw} = \class{p-out}{\frac{dL}{de}} \cdot \class{p-in}{\frac{de}{dw}} = \class{p-out}{2e} \cdot \class{p-in}{(-1)} = \class{p-res}{-2(3 - w)} \]</div>
   <ol class="parts caption">
-    <li class="fragment" data-part="p-out"><span class="k">\(\frac{dL}{du} = 2u\)</span><span>outer step: \(L = u^2\), and the slope of a square is \(2u\)</span></li>
-    <li class="fragment" data-part="p-in"><span class="k">\(\frac{du}{dw} = -1\)</span><span>inner step: \(u = 3 - w\) goes down by 1 when \(w\) goes up by 1</span></li>
+    <li class="fragment" data-part="p-out"><span class="k">\(\frac{dL}{de} = 2e\)</span><span>outer step: \(L = e^2\), and the slope of a square is \(2e\)</span></li>
+    <li class="fragment" data-part="p-in"><span class="k">\(\frac{de}{dw} = -1\)</span><span>inner step: the error \(e = 3 - w\) goes down by 1 when \(w\) goes up by 1</span></li>
     <li class="fragment" data-part="p-res"><span class="k">\(-2(3 - w)\)</span><span>multiply them: the same slope as on the last slide</span></li>
   </ol>
   <p class="in-words fragment" style="margin-top: 10px;">Every derivation today follows the chain from a weight to the loss and multiplies the steps.</p>
   <aside class="notes">
     <p><b>Say:</b> Most losses are a function of a function: the loss depends on the error, and the error depends on the weight. The chain rule says: multiply the rates along the chain.</p>
     <p><b>Analogy:</b> currency. Dirhams → dollars → euros. If each dirham buys 0.27 dollars and each dollar buys 0.92 euros, each dirham buys 0.27 × 0.92 ≈ 0.25 euros. You never need a direct dirham-to-euro rate; you multiply the two you have. (Round made-up numbers, not today’s rates.)</p>
-    <p><b>Clicks:</b> 1) the example: L = u², u = 3 − w. 2) the equation. 3) outer rate: dL/du = 2u. 4) inner rate: du/dw = −1. 5) multiply: −2(3 − w), the slope from the last slide. 6) the closing line.</p>
+    <p><b>Clicks:</b> 1) the example: the error e = 3 − w, and L = e². 2) the equation. 3) outer rate: dL/de = 2e. 4) inner rate: de/dw = −1. 5) multiply: −2(3 − w), the slope from the last slide. 6) the closing line.</p>
+    <p><b>Letters:</b> u in the general rule just means “any in-between quantity”; in the example it is the error, so we call it e. Lecture 2 uses the same letter and the same step: ∂L/∂g = ∂L/∂e · ∂e/∂g. Here e is the error, not the number e ≈ 2.718 that appears in the sigmoid later.</p>
     <p><b>Ask:</b> what is the chain from a weight to the loss in linear regression? (weight → prediction → error → squared error.)</p>
   </aside>
 </section>
