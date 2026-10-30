@@ -1,0 +1,352 @@
+/* Week 7 lecture decks (F20DL/F21DL), Dr Heba El-Shimy.
+   Look follows the original RISE slides: white slides, large bold dark titles, a short blue-to-red rule,
+   Heriot-Watt logo top right, blue and red highlights, "•" and "▸" bullets, photo background for section slides.
+   Slide size is 1366 x 768; reveal.js scales it to any screen or projector. */
+
+:root {
+  --ink: #222831;
+  --title: #333333;
+  --muted: #5b6676;
+  --line: #d9dee6;
+  --panel: #f5f7fa;
+  --hw-blue: #3274B5;     /* "blue" highlight on the original slides */
+  --hw-red: #A62B17;      /* "red" highlight on the original slides */
+  --algo: #7b2d8b;        /* \color{purple} used in the algorithm boxes */
+  --ok: #2e7d4f;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html, body { background: #ffffff; }
+
+.reveal {
+  font-family: var(--font-ui);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.reveal ::selection { background: rgba(50, 116, 181, .25); }
+
+/* ---------- slide frame ---------- */
+.reveal .slides { text-align: left; }
+.reveal .slides > section {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 26px 64px 58px 64px;
+}
+.reveal .slides > section.stack { padding: 0; }
+.reveal section > .logo {
+  position: absolute; top: 16px; right: 28px; height: 58px; width: auto; margin: 0;
+}
+.reveal .deck-footer {
+  position: absolute; left: 64px; bottom: 16px;
+  font-size: 15px; color: var(--muted); letter-spacing: .01em;
+}
+.reveal .slide-number {
+  background: transparent; color: var(--muted); font-family: var(--font-ui);
+  font-size: 15px; right: 96px; bottom: 16px;
+}
+.reveal .slide-number a { color: inherit; text-decoration: none; }
+.reveal .controls { color: var(--hw-blue); }
+.reveal .progress { color: var(--hw-blue); height: 4px; }
+
+/* ---------- type ---------- */
+.reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+  font-family: var(--font-ui); color: var(--title); text-transform: none; letter-spacing: -0.01em;
+  margin: 0; line-height: 1.15; text-wrap: balance;
+}
+.reveal h2 { font-size: 46px; font-weight: 700; padding-right: 150px; }
+.reveal h3 { font-size: 30px; font-weight: 650; margin: 0 0 8px; }
+.reveal .rule {
+  width: 42%; height: 3px; border-radius: 2px; margin: 12px 0 22px;
+  background: linear-gradient(to right, var(--hw-blue), var(--hw-red));
+}
+.reveal p { margin: 0 0 14px; }
+.reveal .b { color: var(--hw-blue); }
+.reveal .r { color: var(--hw-red); }
+.reveal .muted { color: var(--muted); }
+.reveal .small { font-size: 21px; }
+.reveal .tiny { font-size: 17px; }
+.reveal strong { font-weight: 650; }
+.reveal a { color: var(--hw-blue); text-decoration: underline; text-underline-offset: 3px; }
+.reveal code, .reveal .mono { font-family: var(--font-num); font-size: .85em; }
+
+/* bullets: "•" for first level and "▸" for second level, as on the original slides */
+.reveal ul.bul, .reveal ul.bul ul { list-style: none; margin: 0; padding: 0; display: block; }
+.reveal ul.bul > li { position: relative; padding-left: 30px; margin: 0 0 12px; }
+.reveal ul.bul > li::before { content: "•"; position: absolute; left: 4px; top: 0; color: var(--ink); }
+.reveal ul.bul ul { margin: 8px 0 0; }
+.reveal ul.bul ul > li { position: relative; padding-left: 30px; margin: 0 0 8px; font-size: .92em; }
+.reveal ul.bul ul > li::before { content: "▸"; position: absolute; left: 4px; top: 0; color: var(--muted); }
+.reveal ul.bul ul ul > li::before { content: "–"; }
+.reveal ul.tight > li { margin-bottom: 6px; }
+
+/* ---------- layout helpers ---------- */
+.reveal .cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.reveal .cols.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.reveal .cols.wide-right { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+.reveal .cols > * { min-width: 0; }
+.reveal .center { text-align: center; }
+.reveal .stack-v { display: flex; flex-direction: column; gap: 14px; }
+.reveal img.fig { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.reveal figure { margin: 0; }
+.reveal figcaption { font-size: 18px; color: var(--muted); margin-top: 8px; text-align: center; }
+.reveal .box {
+  background: var(--panel); border-radius: 12px; padding: 14px 18px;
+}
+.reveal .callout {
+  border-left: 4px solid var(--hw-blue); background: #eef4fb; padding: 10px 16px; border-radius: 0 10px 10px 0; margin: 12px 0;
+}
+.reveal .callout.warn { border-left-color: var(--hw-red); background: #fbeeeb; }
+.reveal .formula { font-size: 1em; }
+.reveal mjx-container[display="true"] { margin: .45em 0 !important; }
+
+/* ---------- algorithm box ---------- */
+.reveal .algo {
+  border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  padding: 6px 4px 8px; font-size: 25px; max-width: 1100px;
+}
+.reveal .algo .head { border-bottom: 1px solid var(--ink); padding: 2px 0 8px; margin-bottom: 6px; }
+.reveal .algo .head b { color: var(--algo); }
+.reveal .algo ol { list-style: none; margin: 0; padding: 0; counter-reset: line; }
+.reveal .algo li { counter-increment: line; display: flex; gap: 12px; padding: 2px 0; }
+.reveal .algo li::before {
+  content: counter(line) ":"; font-weight: 700; min-width: 34px; text-align: right; color: var(--ink);
+}
+.reveal .algo .i1 { padding-left: 34px; }
+.reveal .algo .i2 { padding-left: 68px; }
+.reveal .algo .i3 { padding-left: 102px; }
+.reveal .algo.dense { font-size: 18.5px; line-height: 1.32; }
+.reveal .algo.dense li { padding: 0; gap: 8px; }
+.reveal .algo.dense li::before { min-width: 30px; }
+.reveal .algo .cmt { color: var(--muted); font-style: italic; margin-left: auto; padding-left: 20px; white-space: nowrap; }
+.reveal .algo li.hl { background: #eef4fb; border-radius: 6px; }
+
+/* ---------- worked calculations ---------- */
+.reveal .calc { display: grid; grid-template-columns: 54px minmax(0, 1fr); column-gap: 14px; row-gap: 4px; align-items: center; }
+.reveal .calc .ln {
+  justify-self: end; font-family: var(--font-num); font-size: 18px; color: #fff; background: var(--muted);
+  border-radius: 6px; padding: 1px 8px; line-height: 1.5;
+}
+.reveal .calc .ln.l4 { background: var(--hw-blue); }
+.reveal .calc .ln.l5 { background: var(--algo); }
+.reveal .calc .ln.l6 { background: var(--hw-red); }
+.reveal .calc .ex { grid-column: 2; }
+.reveal .calc .full { grid-column: 1 / -1; }
+.reveal .legend-lines { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 18px; color: var(--muted); margin-top: 6px; }
+.reveal .legend-lines span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- tables ---------- */
+.reveal table.data {
+  border-collapse: collapse; font-size: 20px; margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.reveal table.data th, .reveal table.data td { border: 0; padding: 4px 14px; text-align: center; }
+.reveal table.data thead th { background: #dddddd; font-weight: 650; color: #222; }
+.reveal table.data tbody tr:nth-child(even) td { background: #f7f8fa; }
+.reveal table.data td.out, .reveal table.data th.out { background: #cccccc !important; }
+.reveal table.data td.name { text-align: left; font-weight: 600; }
+.reveal table.data td.num { font-family: var(--font-num); font-size: 18px; }
+.reveal table.data td.ok { color: var(--ok); font-weight: 650; }
+.reveal table.data td.bad { color: var(--hw-red); font-weight: 650; }
+.reveal table.data td.good-cell { background: #d9f2df !important; }
+.reveal table.data td.mid-cell { background: #fde3e7 !important; }
+.reveal table.data td.bad-cell { background: #f8c9c9 !important; }
+.reveal table.data tr.hl td { outline: 2px solid var(--hw-red); outline-offset: -2px; }
+.reveal table.compact th, .reveal table.compact td { padding: 2px 10px; font-size: 18px; }
+.reveal table.data td.num { white-space: nowrap; }
+.reveal table.emails td, .reveal table.emails th { padding: 8px 14px; font-size: 21px; }
+.reveal table.emails td.num { font-size: 20px; }
+
+/* ---------- section slides (photo background, white title) ---------- */
+.reveal .slides > section.section-slide { padding: 0; }
+.reveal section.section-slide .section-title {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  text-align: center;
+}
+.reveal section.section-slide h1 {
+  color: #ffffff; font-size: 68px; font-weight: 700; text-shadow: 0 2px 16px rgba(0,0,0,.35);
+}
+.reveal section.section-slide .deck-footer { color: rgba(255,255,255,.8); }
+.reveal .slide-background.section-bg .slide-background-content { filter: none; }
+
+/* ---------- title slide ---------- */
+.reveal .slides > section.title-slide { padding: 40px 64px 30px; }
+.reveal section.title-slide .title-block {
+  position: absolute; left: 0; right: 0; top: 118px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.reveal section.title-slide h1 { font-size: 76px; font-weight: 700; color: #000; margin-bottom: 18px; }
+.reveal section.title-slide .course { font-size: 36px; font-weight: 600; color: var(--title); }
+.reveal section.title-slide .author { font-size: 34px; font-weight: 600; color: var(--title); margin-top: 22px; }
+.reveal section.title-slide .basis { font-size: 26px; font-weight: 300; color: var(--title); }
+.reveal section.title-slide .assist { font-size: 18px; color: var(--muted); margin-top: 6px; }
+.reveal section.title-slide .copyright {
+  position: absolute; left: 64px; right: 64px; bottom: 26px; text-align: center;
+  font-size: 16px; line-height: 1.45; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px;
+}
+
+/* ---------- demo slides (interactive page filling the slide) ---------- */
+.reveal .slides > section.demo { padding: 0; }
+.reveal section.demo .demo-frame {
+  position: absolute; left: 0; top: 0; width: 1366px; height: 724px; border: 0; background: #ffffff;
+}
+.reveal section.demo .demo-open {
+  position: absolute; right: 210px; bottom: 12px; font-size: 15px; color: var(--hw-blue);
+}
+.reveal section.demo .deck-footer { bottom: 12px; }
+/* a demo used as a figure inside a normal slide */
+.reveal .demo-inline { display: block; border: 0; width: 100%; border-radius: 12px; background: #ffffff; box-shadow: 0 0 0 1px var(--line); }
+
+/* ---------- link card (video) ---------- */
+.reveal .link-card {
+  display: flex; align-items: center; gap: 22px; padding: 22px 26px; border: 1px solid var(--line); border-radius: 14px;
+  text-decoration: none; color: var(--ink); max-width: 760px;
+}
+.reveal .link-card:hover { border-color: var(--hw-blue); }
+.reveal .link-card .play {
+  flex: none; width: 72px; height: 72px; border-radius: 50%; background: var(--hw-red); display: grid; place-items: center;
+}
+.reveal .link-card .play svg { fill: #fff; margin-left: 6px; }
+.reveal .link-card .lc-title { font-size: 26px; font-weight: 650; }
+.reveal .link-card .lc-sub { font-size: 19px; color: var(--muted); }
+
+/* ---------- fragments: build lists in place without layout jumps ---------- */
+.reveal .fragment.fade-in-then-semi-out.visible:not(.current-fragment) { opacity: .45; }
+
+/* ---------- presenter tools: drawing buttons (bottom left, outside the slide) ---------- */
+.deck-tools {
+  position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 6px; z-index: 40; opacity: .35; transition: opacity .2s;
+}
+.deck-tools:hover, .deck-tools:focus-within { opacity: 1; }
+.deck-tools button {
+  width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: #ffffff; color: var(--ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.deck-tools button:hover { border-color: var(--hw-blue); color: var(--hw-blue); }
+.deck-tools button:focus-visible { outline: 2px solid var(--hw-blue); outline-offset: 2px; }
+.deck-tools svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* chalkboard plugin normally uses Font Awesome icons; draw simple ones instead (offline) */
+.chalkboard-button i, #previousboard i, #nextboard i { font-style: normal; }
+.fa-square::before { content: "■"; font-size: 22px; }
+.fa-chevron-up::before { content: "▲"; }
+.fa-chevron-down::before { content: "▼"; }
+
+/* ---------- print / PDF export (?print-pdf) ---------- */
+/* reveal.js sizes printed slides to their content; keep the full slide so the footer stays at the bottom */
+html.reveal-print .reveal .slides .pdf-page > section { height: 768px !important; min-height: 768px !important; top: 0 !important; }
+html.reveal-print .deck-tools { display: none !important; }
+html.reveal-print .reveal section.demo .demo-frame,
+html.reveal-print .reveal section.demo .demo-open { display: none; }
+html.reveal-print .reveal section.demo::after {
+  content: "Interactive demo: " attr(data-title) ". Open the slides in a browser to use it, or open it from the demos folder.";
+  position: absolute; left: 64px; right: 64px; top: 320px; font-size: 30px; color: var(--muted); text-align: center;
+}
+html.reveal-print .reveal .demo-inline { display: none; }
+@media print {
+  .deck-tools { display: none !important; }
+}
+
+/* ---------- step-by-step derivations: equation with a short reason ---------- */
+.reveal .deriv {
+  display: grid; grid-template-columns: minmax(0, 1fr) 340px; column-gap: 26px; row-gap: 12px;
+  align-items: center; font-size: 25px; margin-top: 12px;
+}
+.reveal .deriv .why {
+  font-size: 18px; color: var(--muted); font-style: italic; border-left: 3px solid var(--line); padding-left: 12px;
+}
+.reveal .deriv.wide { grid-template-columns: minmax(0, 1fr); row-gap: 4px; font-size: 24px; }
+.reveal .deriv.wide .eq { margin-top: 14px; }
+.reveal .deriv.wide .why { margin-left: 28px; }
+.reveal .deriv.wide .why:empty { display: none; }
+
+/* ---------- teaching aids for derivations ---------- */
+/* "Where we're heading": the result a derivation ends with, shown before it starts */
+.reveal .goal {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  border: 2px solid #c9d9ec; border-radius: 12px; padding: 6px 18px; margin: 10px 0 14px; background: #ffffff;
+}
+.reveal .goal .tag {
+  font-size: 15px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--hw-blue); white-space: nowrap;
+}
+.reveal .goal .where { font-size: 18px; color: var(--muted); }
+/* toolbox: the few facts a derivation uses, one card each */
+.reveal .toolbox { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; margin-top: 18px; }
+.reveal .toolbox .tool { background: var(--panel); border-radius: 12px; padding: 10px 18px 12px; display: flex; flex-direction: column; gap: 2px; }
+.reveal .toolbox .tool .name { font-size: 18px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.reveal .toolbox .tool .fact { font-size: 25px; }
+.reveal .toolbox .tool .use { font-size: 18px; color: var(--muted); }
+.reveal .toolbox .tool.span2 { grid-column: 1 / -1; }
+/* quick check: questions first, answers on click */
+.reveal .checks { display: flex; flex-direction: column; gap: 26px; margin-top: 26px; }
+.reveal .checks .q { font-size: 28px; display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 10px; }
+.reveal .checks .q .n {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--hw-blue); color: #fff; font-size: 19px; font-weight: 700;
+  display: grid; place-items: center; margin-top: 3px;
+}
+.reveal .checks .ans {
+  grid-column: 2; margin-top: 10px; font-size: 23px; color: var(--ink);
+  border-left: 4px solid var(--ok); background: #eef7f1; padding: 8px 14px; border-radius: 0 10px 10px 0;
+}
+.reveal .checks .ans b { color: var(--ok); }
+.reveal .check-tag { font-size: 20px; color: var(--muted); margin-top: 4px; }
+
+/* ---------- equation parts, one click at a time ----------
+   .eqx wraps an equation (or diagram) whose parts are marked \class{p-...}{...}.
+   While a part's label is the current click, the equation turns grey and that part lights up. */
+.reveal .eqx mjx-container, .reveal .eqx svg.diagram { transition: color .25s ease; }
+.reveal section.focus .eqx mjx-container, .reveal section.focus .eqx svg.diagram { color: #c2c9d3; }
+.reveal section.focus .eqx .lit { color: var(--hw-red); }
+.reveal section.focus .eqx svg.diagram .lit { color: var(--hw-red); }
+/* labels: a list that builds up (.parts) or one caption at a time (.parts.caption) */
+.reveal ol.parts { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 22px; }
+.reveal ol.parts > li { display: grid; grid-template-columns: minmax(70px, auto) minmax(0, 1fr); column-gap: 14px; align-items: baseline; color: var(--muted); }
+.reveal ol.parts > li.current-fragment { color: var(--ink); }
+.reveal ol.parts > li > .k { justify-self: end; font-weight: 700; color: var(--hw-red); white-space: nowrap; }
+.reveal ol.parts > li.fragment.visible:not(.current-fragment) > .k { color: var(--muted); }
+.reveal ol.parts.caption { display: grid; margin-top: 12px; background: #f6f2f1; border-radius: 10px; }
+/* every caption sits in the same grid cell, so the box is as tall as the longest one */
+.reveal ol.parts.caption > li { grid-area: 1 / 1; padding: 10px 16px; color: var(--ink); }
+.reveal ol.parts.caption > li.fragment.visible:not(.current-fragment) { opacity: 0; visibility: hidden; }
+.reveal ol.parts.caption > li > .k { color: var(--hw-red) !important; }
+.reveal ol.parts.caption:not(:has(> li.visible)) { background: transparent; }
+.reveal .in-words { font-size: 21px; color: var(--muted); }
+.reveal .in-words b { color: var(--ink); }
+html.reveal-print .reveal ol.parts.caption { display: none; }
+
+/* ---------- symbols in plain words ---------- */
+.reveal .symbols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 36px; font-size: 20px; margin-top: 14px; }
+.reveal .symbols > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 14px; align-items: baseline; }
+.reveal .symbols .s { justify-self: end; font-size: 24px; color: var(--hw-blue); }
+
+/* ---------- hand-drawn SVG diagrams ---------- */
+.reveal svg.diagram { width: 100%; height: auto; overflow: visible; color: var(--ink); font-family: var(--font-ui); }
+.reveal svg.diagram .axis { stroke: #8a94a3; stroke-width: 1.5; }
+.reveal svg.diagram .tick text { font-size: 15px; fill: var(--muted); text-anchor: middle; }
+.reveal svg.diagram .tick.left text { text-anchor: end; }
+.reveal svg.diagram .lab { font-size: 17px; fill: currentColor; }
+.reveal svg.diagram .lab.end { text-anchor: end; }
+.reveal svg.diagram .curve { fill: none; stroke: var(--ink); stroke-width: 3; }
+.reveal svg.diagram .minpt { fill: var(--ok); }
+.reveal svg.diagram .tan { stroke-width: 3; stroke-dasharray: 7 5; }
+.reveal svg.diagram .tan.neg, .reveal svg.diagram .arrow.neg { stroke: var(--hw-blue); }
+.reveal svg.diagram .tan.pos, .reveal svg.diagram .arrow.pos { stroke: var(--hw-red); }
+.reveal svg.diagram .dot.neg, .reveal svg.diagram .neg-fill { fill: var(--hw-blue); }
+.reveal svg.diagram .dot.pos, .reveal svg.diagram .pos-fill { fill: var(--hw-red); }
+.reveal svg.diagram .lab.neg { fill: var(--hw-blue); font-weight: 700; }
+.reveal svg.diagram .lab.pos { fill: var(--hw-red); font-weight: 700; }
+.reveal svg.diagram .arrow { stroke-width: 3; fill: none; }
+.reveal ol.parts.caption:not(:has(> li.current-fragment)) { background: transparent; }
+.reveal table.data.big td.num { font-size: 24px; }
+
+/* network diagram */
+.reveal svg.diagram.net .edge { stroke: currentColor; stroke-width: 2; }
+.reveal svg.diagram.net .node { fill: #ffffff; stroke: currentColor; stroke-width: 2.5; }
+.reveal svg.diagram.net .lab { font-size: 21px; }
+.reveal svg.diagram.net .lab.mid { text-anchor: middle; }
+.reveal svg.diagram.net .lab.small { font-size: 15px; }
+.reveal svg.diagram.net .sub { font-size: 14px; }
+.reveal section.focus .eqx svg.diagram .lit .node { stroke-width: 3.5; }
+.reveal section.focus .eqx svg.diagram line.lit { stroke-width: 3.5; }

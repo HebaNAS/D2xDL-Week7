@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sigmoid Explorer</title>
+<script>
+  // Theme before first paint: ?theme=light|dark wins. Otherwise, inside a notebook or slide
+  // (an iframe), use light to match the white page; opened on its own, follow the system theme.
+  (function () {
+    try {
+      var t = new URLSearchParams(location.search).get('theme');
+      if (t !== 'light' && t !== 'dark') {
+        var framed = true;
+        try { framed = window.self !== window.top; } catch (e) { /* cross-origin: treat as framed */ }
+        t = framed ? 'light' : null;
+      }
+      if (t) document.documentElement.dataset.theme = t;
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+<script>if (location.hash === '#deck') document.documentElement.classList.add('in-deck');</script>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
+  --pos: #3274b5;   /* positive class (+1) and positive weights: HWU blue used on the slides */
+  --neg: #a62b17;   /* negative class (-1) and negative weights: the slides' red */
+  --unit1: #1b8a7a; --unit2: #c7841a;  /* hidden unit 1 / 2 lines (XOR demo) */
+  --ink-btn: #1f2a37; --ink-btn-fg: #ffffff; --focus: #3274b5;
+  --note-bg: #eef2f7;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-math: "Cambria Math", "STIX Two Math", "Times New Roman", Times, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.m { font-family: var(--font-math); font-style: italic; }
+.mv { font-family: var(--font-math); font-style: italic; font-weight: 700; }
+sup { font-size: .68em; line-height: 0; }
+
+.app {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px;
+  height: 100vh; height: 100dvh;
+  padding-block: 10px 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Header */
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 6px 20px; flex-wrap: wrap; }
+h1 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.2; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.sub .m { color: var(--fg); font-size: 15.5px; }
+.formula { display: flex; flex-wrap: wrap; gap: 2px 18px; font-family: var(--font-math); font-size: 16.5px; line-height: 1.3; }
+.formula > span { white-space: nowrap; }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 316px; gap: 16px; min-height: 0; }
+.plots { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.card { display: flex; flex-direction: column; gap: 3px; margin: 0; background: var(--panel); border-radius: 12px;
+  padding: 7px 10px 6px; min-height: 0; min-width: 0; flex: 1 1 auto; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 10px; flex-wrap: wrap; }
+.lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.lbl .m { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: var(--fg); }
+.lbl .nt { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--fg); font-weight: 500; }
+.hint { font-size: 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; color: var(--muted); align-items: center; min-height: 17px; }
+.legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend svg, .check svg { display: block; overflow: visible; flex: none; }
+.legend .m { font-size: 13.5px; color: var(--fg); }
+.cv-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.cv-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#cv { cursor: ew-resize; touch-action: pan-y; }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1px 2px 2px; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec + .sec { border-top: 1px solid var(--line); padding-top: 9px; }
+.status { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.3; min-height: 38px; font-weight: 550; }
+.status .badge { flex: none; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--bg); background: var(--pos); margin-top: 0; font-family: var(--font-ui); }
+.status[data-kind="flat"] .badge, .status[data-kind="off"] .badge { background: var(--unit2); }
+.status[data-kind="flip"] .badge { background: var(--neg); }
+.status[data-kind="steep"] .badge { background: var(--unit1); }
+.status[data-kind="gentle"] .badge { background: var(--muted); }
+button { font: inherit; font-size: 13px; height: 30px; padding: 0 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); white-space: nowrap; }
+button:hover { border-color: var(--muted); }
+.readouts { display: grid; grid-template-columns: auto 1fr auto 1fr; column-gap: 8px; row-gap: 2px; align-items: baseline; font-size: 13px; }
+.readouts .k { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.readouts .k .m { color: var(--fg); font-size: 14.5px; }
+.readouts .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; padding-right: 8px; white-space: nowrap; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.row button { height: 28px; }
+.check { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; cursor: pointer; color: var(--fg); text-transform: none; letter-spacing: 0; min-height: 22px; }
+.check input { accent-color: var(--pos); width: 15px; height: 15px; margin: 0; flex: none; }
+.check .m { font-size: 14px; }
+.sliders { display: flex; flex-direction: column; gap: 6px; }
+.srow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 52px; align-items: center; column-gap: 8px; height: 26px; }
+.srow > label { font-family: var(--font-math); font-style: italic; font-size: 17px; line-height: 1; }
+.srow output { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; text-align: right; }
+input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 18px; cursor: pointer; }
+.chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.chip { height: 28px; padding: 0 4px; font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 3px; border-radius: 14px; }
+.chip .m { font-size: 14px; }
+.chip[aria-pressed="true"] { border-color: var(--fg); background: var(--note-bg); font-weight: 600; }
+.pred { display: inline-flex; align-items: center; gap: 5px; font-weight: 650; white-space: nowrap; font-family: var(--font-ui); }
+.pred[data-cls="1"] { color: var(--pos); }
+.pred[data-cls="0"] { color: var(--neg); }
+.pred svg { display: block; flex: none; }
+.small-note { font-size: 12.5px; color: var(--muted); margin: 0; line-height: 1.45; border-top: 1px solid var(--line); padding-top: 8px; }
+.small-note .m, .small-note .mv { color: var(--fg); font-size: 14px; }
+.small-note strong { color: var(--fg); font-weight: 600; }
+.small-note .nw { white-space: nowrap; }
+
+/* One-line readout: shown only in the compact (slide figure) layout */
+.line-readout { display: none; align-items: baseline; gap: 4px 14px; font-size: 13px; white-space: nowrap; overflow: hidden; color: var(--muted); }
+.line-readout .m { color: var(--fg); font-size: 14.5px; }
+.line-readout .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--fg); }
+
+footer { font-size: 12px; color: var(--muted); }
+html.in-deck footer { display: none; } /* the slides already carry a footer */
+
+/* Phone / narrow: single column, page scrolls vertically */
+@media (max-width: 899.98px) {
+  .app { display: flex; flex-direction: column; height: auto; min-height: 100vh; gap: 14px; padding-block: 12px 14px; }
+  .main { display: flex; flex-direction: column; gap: 16px; }
+  .cv-wrap { flex: none; aspect-ratio: 5 / 4; width: 100%; }
+  .controls { overflow: visible; }
+}
+
+/* Compact: a figure on half a slide (e.g. 620 x 470). Plot, the w and b sliders and one readout line; no scrolling. */
+@media (min-width: 500px) and (max-width: 759.98px) and (max-height: 559.98px) {
+  .app { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100vh; height: 100dvh; min-height: 0;
+    gap: 6px; padding-block: 8px 6px; }
+  .sub, footer, .card-head, .legend, .sec-status, .preset-row, .chips, .sec-curve, .sec-probe, .sec-show, .small-note { display: none; }
+  h1 { font-size: 18px; }
+  .formula { font-size: 15px; gap: 2px 14px; }
+  .formula .f-model { display: none; }
+  .main { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 6px; }
+  .card { padding: 4px 6px 2px; }
+  .cv-wrap { flex: 1 1 auto; aspect-ratio: auto; }
+  .controls { overflow: visible; gap: 4px; padding: 0 2px; }
+  .controls .sec-sliders { gap: 3px; border-top: 0; padding-top: 0; }
+  .sliders { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 22px; }
+  .srow { grid-template-columns: 18px minmax(0, 1fr) 40px; height: 24px; }
+  .line-readout { display: flex; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <h1>Sigmoid Explorer</h1>
+      <p class="sub">Drag <span class="m">w</span> and <span class="m">b</span> and watch σ(<span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span>): <span class="m">w</span> sets how steep the curve is, <span class="m">b</span> slides where it crosses 0.5.</p>
+    </div>
+    <div class="formula" aria-label="Model">
+      <span class="f-model"><span class="m">P</span>(<span class="m">Ŷ</span>(<span class="mv">x</span>)|<span class="mv">x</span>) = σ(<span class="mv">w</span>ᵀ·<span class="mv">x</span>) = σ(<span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span>)</span>
+      <span>σ(<span class="m">z</span>) = 1 / (1 + <span class="m">e</span><sup>−<span class="m">z</span></sup>)</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="plots" aria-label="Plot">
+      <figure class="card" id="cardPlot">
+        <figcaption class="card-head">
+          <span class="lbl">Predicted probability <span class="nt">σ(<span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span>)</span></span>
+          <span class="hint">Drag on the plot to move the probe</span>
+        </figcaption>
+        <div class="legend" aria-hidden="true">
+          <span><svg width="20" height="6" viewBox="0 0 20 6"><line x1="0" y1="3" x2="20" y2="3" style="stroke:var(--pos)" stroke-width="3.5" stroke-linecap="round"/></svg><span>σ(<span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span>)</span></span>
+          <span><svg width="20" height="6" viewBox="0 0 20 6"><line x1="0" y1="3" x2="20" y2="3" style="stroke:var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/></svg><span>σ = 0.5 and <span class="m">x</span>*</span></span>
+          <span><svg width="20" height="8" viewBox="0 0 20 8"><line x1="0" y1="7" x2="20" y2="1" style="stroke:var(--fg);stroke-opacity:.55" stroke-width="1.5"/></svg><span>tangent at <span class="m">x</span>*, slope <span class="m">w</span>/4</span></span>
+          <span><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" style="fill:var(--pos);stroke:var(--fg)" stroke-width="1"/></svg><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.8" y="1.8" width="8.4" height="8.4" style="fill:var(--neg);stroke:var(--fg)" stroke-width="1"/></svg><span>probe: predict 1 / predict 0</span></span>
+          <span><svg width="26" height="9" viewBox="0 0 26 9"><defs><linearGradient id="bandG" x1="0" x2="1"><stop offset="0" style="stop-color:var(--neg);stop-opacity:.32"/><stop offset=".5" style="stop-color:var(--neg);stop-opacity:.06"/><stop offset=".5" style="stop-color:var(--pos);stop-opacity:.06"/><stop offset="1" style="stop-color:var(--pos);stop-opacity:.32"/></linearGradient></defs><rect x="0" y="0" width="26" height="9" rx="2" fill="url(#bandG)"/></svg><span>decision band, darker = more confident</span></span>
+        </div>
+        <div class="cv-wrap"><canvas id="cv" role="img" aria-label="Sigmoid curve of w times x plus b over x from minus 6 to 6, with the 0.5 threshold, the decision point x star and a draggable probe"></canvas></div>
+      </figure>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="sec sec-status">
+        <div class="status" id="status" data-kind="normal" aria-live="polite"><span class="badge" id="statusBadge" aria-hidden="true">•</span><span id="statusTxt">Ready</span></div>
+      </div>
+
+      <div class="sec sec-sliders">
+        <div class="sliders">
+          <div class="srow">
+            <label for="w">w</label>
+            <input type="range" id="w" min="-5" max="5" step="0.1" value="1" aria-describedby="wVal">
+            <output id="wVal" for="w">1.0</output>
+          </div>
+          <div class="srow">
+            <label for="b">b</label>
+            <input type="range" id="b" min="-8" max="8" step="0.1" value="0" aria-describedby="bVal">
+            <output id="bVal" for="b">0.0</output>
+          </div>
+        </div>
+        <div class="row preset-row">
+          <span class="lbl" id="presetLbl">Weight presets</span>
+          <button type="button" id="btnReset">Reset</button>
+        </div>
+        <div class="chips" role="group" aria-labelledby="presetLbl">
+          <button type="button" class="chip" id="presetW05" data-w="0.5" aria-pressed="false"><span class="m">w</span> = 0.5</button>
+          <button type="button" class="chip" id="presetW1" data-w="1" aria-pressed="false"><span class="m">w</span> = 1</button>
+          <button type="button" class="chip" id="presetW2" data-w="2" aria-pressed="false"><span class="m">w</span> = 2</button>
+          <button type="button" class="chip" id="presetW5" data-w="5" aria-pressed="false"><span class="m">w</span> = 5</button>
+          <button type="button" class="chip" id="presetWm1" data-w="-1" aria-pressed="false" title="A negative weight flips the curve"><span class="m">w</span> = −1</button>
+        </div>
+        <div class="line-readout" id="lineReadout"></div>
+      </div>
+
+      <div class="sec sec-curve">
+        <span class="lbl">Decision point</span>
+        <div class="readouts" aria-label="Decision point">
+          <span class="k"><span class="m">x</span>* = −<span class="m">b</span>/<span class="m">w</span></span><span class="v" id="rXs">0.00</span>
+          <span class="k">slope at <span class="m">x</span>* = <span class="m">w</span>/4</span><span class="v" id="rSlope">0.25</span>
+          <span class="k">Δ<span class="m">x</span> for 0.1 → 0.9</span><span class="v" id="rWidth">4.39</span>
+          <span class="k">σ(<span class="m">b</span>) at <span class="m">x</span> = 0</span><span class="v" id="rSb">0.500</span>
+        </div>
+      </div>
+
+      <div class="sec sec-probe">
+        <div class="row" style="min-height:0"><span class="lbl">Probe</span><span class="hint">or drag on the plot</span></div>
+        <div class="srow">
+          <label for="probeX">x</label>
+          <input type="range" id="probeX" min="-6" max="6" step="0.1" value="1" aria-describedby="probeXVal">
+          <output id="probeXVal" for="probeX">1.00</output>
+        </div>
+        <div class="readouts" aria-label="Probe values" aria-live="off">
+          <span class="k"><span class="m">z</span> = <span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span></span><span class="v" id="rZ">1.00</span>
+          <span class="k">σ(<span class="m">z</span>)</span><span class="v" id="rSig">0.731</span>
+          <span class="k">threshold 0.5</span><span class="v" style="grid-column: span 3; text-align: left"><span class="pred" id="rPred" data-cls="1"></span></span>
+        </div>
+      </div>
+
+      <div class="sec sec-show">
+        <span class="lbl">Show</span>
+        <label class="check" for="showRaw"><input type="checkbox" id="showRaw"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--unit2)" stroke-width="2"/></svg><span>Show raw score <span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span></span></label>
+        <label class="check" for="showGhosts"><input type="checkbox" id="showGhosts"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--fg);stroke-opacity:.35" stroke-width="1.5"/></svg><span>Compare weight scales σ(<span class="m">s</span>·<span class="m">x</span>)</span></label>
+        <label class="check" for="showDeriv"><input type="checkbox" id="showDeriv"><svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><path d="M0 9.5 C5 9.5 6 1 9 1 C12 1 13 9.5 18 9.5 Z" style="fill:var(--unit1);fill-opacity:.2;stroke:var(--unit1)" stroke-width="1.2"/></svg><span>Show derivative σ(<span class="m">z</span>)(1 − σ(<span class="m">z</span>))</span></label>
+      </div>
+
+      <p class="small-note"><strong>Larger |<span class="m">w</span>| → steeper curve → more confident predictions. <span class="m">b</span> shifts the curve: <span class="nw"><span class="m">x</span>* = −<span class="m">b</span>/<span class="m">w</span></span>.</strong> With one feature, <span class="nw"><span class="mv">w</span>ᵀ·<span class="mv">x</span> = <span class="m">w</span>·<span class="m">x</span> + <span class="m">b</span></span>, where <span class="m">b</span> is the bias weight.</p>
+    </aside>
+  </main>
+
+  <footer>F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= Model (pure functions) ================= */
+const XR = [-6, 6], YR = [-0.15, 1.15];          // plot window
+const W_RANGE = [-5, 5], B_RANGE = [-8, 8];
+const DEFAULTS = { w: 1, b: 0, px: 1 };
+const SCALES = [0.5, 1, 2, 5];                    // the notebook's weight scales
+const LN9x2 = 2 * Math.log(9);                    // σ goes 0.1 → 0.9 while z moves by 2 ln 9 ≈ 4.394
+
+// Numerically stable σ(z) = 1 / (1 + e^(−z))
+function sigmoid(z) {
+  if (z >= 0) return 1 / (1 + Math.exp(-z));
+  const e = Math.exp(z);
+  return e / (1 + e);
+}
+const dsig = z => { const s = sigmoid(z); return s * (1 - s); };   // σ'(z) = σ(z)(1 − σ(z))
+// Decision point x* = −b/w, where w·x + b = 0 and σ = 0.5. None when w = 0.
+function threshold(w, b) { return w === 0 ? null : -b / w + 0; }
+// Slope of σ(w·x + b) with respect to x: w·σ(z)(1 − σ(z)). At x* this is w·σ(0)(1 − σ(0)) = w/4.
+const slopeAt = (w, b, x) => w * dsig(w * x + b);
+const width90 = w => (w === 0 ? Infinity : LN9x2 / Math.abs(w));
+
+/* ================= State ================= */
+const S = { w: DEFAULTS.w, b: DEFAULTS.b, px: DEFAULTS.px, raw: false, ghosts: false, deriv: false, tween: null, dragging: false };
+const clamp = (v, r) => Math.max(r[0], Math.min(r[1], v));
+const r1 = v => Math.round(v * 10) / 10 + 0;      // + 0 turns −0 into 0
+const r2 = v => Math.round(v * 100) / 100 + 0;
+
+/* ================= Formatting ================= */
+const minus = s => s.replace(/-/g, '−');
+function fix(v, d) {
+  if (!Number.isFinite(v)) return v > 0 ? '∞' : '−∞';
+  let s = v.toFixed(d);
+  if (/^-0(\.0+)?$/.test(s)) s = s.slice(1);
+  return minus(s);
+}
+
+/* ================= Theme ================= */
+let C = {};
+function parseColor(str) {
+  str = (str || '').trim();
+  if (str[0] === '#') {
+    let h = str.slice(1);
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h.slice(0, 6), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const m = str.match(/[\d.]+/g);
+  return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n);
+  C = {
+    bg: parseColor(g('--bg')), panel: parseColor(g('--panel')), fg: parseColor(g('--fg')), muted: parseColor(g('--muted')),
+    line: parseColor(g('--line')), pos: parseColor(g('--pos')), neg: parseColor(g('--neg')), unit1: parseColor(g('--unit1')),
+    unit2: parseColor(g('--unit2')),
+    fontUi: g('--font-ui').trim() || 'sans-serif', fontNum: g('--font-num').trim() || 'monospace', fontMath: g('--font-math').trim() || 'serif'
+  };
+  C.dark = (C.bg[0] + C.bg[1] + C.bg[2]) < 300;
+}
+
+/* ================= Canvas ================= */
+const cv = document.getElementById('cv');
+const P = { cv, ctx: cv.getContext('2d'), w: 1, h: 1, dpr: 1, pr: { x: 0, y: 0, w: 1, h: 1 } };
+function sizePlot() {
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  P.w = Math.max(1, r.width); P.h = Math.max(1, r.height); P.dpr = dpr;
+  const W = Math.max(1, Math.round(P.w * dpr)), H = Math.max(1, Math.round(P.h * dpr));
+  if (cv.width !== W) cv.width = W;
+  if (cv.height !== H) cv.height = H;
+  const m = { l: 50, r: 10, t: 6, b: 34 };
+  P.pr = { x: m.l, y: m.t, w: Math.max(10, P.w - m.l - m.r), h: Math.max(10, P.h - m.t - m.b) };
+}
+const X = x => P.pr.x + (x - XR[0]) / (XR[1] - XR[0]) * P.pr.w;
+const Y = y => P.pr.y + (YR[1] - y) / (YR[1] - YR[0]) * P.pr.h;
+const xOf = px => XR[0] + (px - P.pr.x) / P.pr.w * (XR[1] - XR[0]);
+function font(px, kind = 'ui', style = '') { return `${style} ${px}px ${kind === 'num' ? C.fontNum : kind === 'math' ? C.fontMath : C.fontUi}`.trim(); }
+
+// Rich label made of plain and maths (italic serif) pieces: [{t, math, color, bold}]
+function partFont(p, size) { return p.math ? font(size + 2, 'math', 'italic') : font(size, 'ui', p.bold ? '650' : ''); }
+function richWidth(ctx, parts, size = 12) {
+  let w = 0; for (const p of parts) { ctx.font = partFont(p, size); w += ctx.measureText(p.t).width; } return w;
+}
+function richText(ctx, parts, x, y, align = 'left', opt = {}) {
+  const size = opt.size || 12, total = richWidth(ctx, parts, size);
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  ctx.textAlign = 'left';
+  for (const p of parts) {
+    ctx.font = partFont(p, size);
+    if (opt.halo) { ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = rgba(C.panel, 0.92); ctx.strokeText(p.t, cx, y); }
+    ctx.fillStyle = p.color || opt.color || rgba(C.fg, 1);
+    ctx.fillText(p.t, cx, y);
+    cx += ctx.measureText(p.t).width;
+  }
+  return total;
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+}
+// A small boxed label (pill) with rich text, kept inside the plot area.
+function pill(ctx, parts, cx, top, align = 'center', size = 12) {
+  const pr = P.pr, tw = richWidth(ctx, parts, size), w = tw + 14, h = size + 9;
+  let x = align === 'center' ? cx - w / 2 : align === 'right' ? cx - w : cx;
+  x = Math.max(pr.x + 2, Math.min(pr.x + pr.w - w - 2, x));
+  roundRectPath(ctx, x + 0.5, top + 0.5, w - 1, h - 1, 5);
+  ctx.fillStyle = rgba(C.bg, 1); ctx.fill(); ctx.strokeStyle = rgba(C.line, 1); ctx.lineWidth = 1; ctx.stroke();
+  ctx.textBaseline = 'middle';
+  richText(ctx, parts, x + 7, top + h / 2 + 0.5, 'left', { size });
+  ctx.textBaseline = 'alphabetic';
+  return { x, y: top, w, h };
+}
+function classGlyph(ctx, cls, x, y, r) {
+  ctx.beginPath();
+  if (cls === 1) ctx.arc(x, y, r, 0, 2 * Math.PI); else ctx.rect(x - r * 0.88, y - r * 0.88, r * 1.76, r * 1.76);
+}
+// Clip y = a + m·x to the plot window; returns [x1, y1, x2, y2] or null.
+function clipLine(a, m) {
+  let x1 = XR[0], x2 = XR[1];
+  if (Math.abs(m) > 1e-12) {
+    const xa = (YR[0] - a) / m, xb = (YR[1] - a) / m;
+    x1 = Math.max(x1, Math.min(xa, xb)); x2 = Math.min(x2, Math.max(xa, xb));
+    if (x1 > x2) return null;
+  } else if (a < YR[0] || a > YR[1]) return null;
+  return [x1, a + m * x1, x2, a + m * x2];
+}
+function strokeFn(ctx, f, step = 1) {
+  const pr = P.pr;
+  ctx.beginPath();
+  for (let px = pr.x, i = 0; px <= pr.x + pr.w + 0.01; px += step, i++) {
+    const py = Y(f(xOf(px)));
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+}
+
+function draw() {
+  const ctx = P.ctx, pr = P.pr, w = S.w, b = S.b;
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.clearRect(0, 0, P.w, P.h);
+  const small = pr.w < 600 || pr.h < 330;
+  const xs = threshold(w, b);
+  const xsIn = xs != null && xs >= XR[0] && xs <= XR[1];
+
+  // ---- grid & axes
+  ctx.lineWidth = 1; ctx.font = font(12); ctx.fillStyle = rgba(C.muted, 1); ctx.textBaseline = 'middle';
+  const unitPx = pr.w / (XR[1] - XR[0]);
+  const lblEvery = unitPx >= 34 ? 1 : 2;
+  for (let x = XR[0]; x <= XR[1]; x++) {
+    const px = Math.round(X(x)) + 0.5;
+    ctx.strokeStyle = rgba(C.line, x === 0 ? 1 : 0.75);
+    ctx.beginPath(); ctx.moveTo(px, pr.y); ctx.lineTo(px, pr.y + pr.h); ctx.stroke();
+    if (x % lblEvery === 0) { ctx.textAlign = 'center'; ctx.fillText(minus(String(x)), px, pr.y + pr.h + 10); }
+  }
+  const yTicks = pr.h >= 250 ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.5, 1];
+  for (const y of [0, 0.25, 0.5, 0.75, 1]) {
+    const py = Math.round(Y(y)) + 0.5;
+    ctx.strokeStyle = y === 0 || y === 1 ? rgba(C.muted, 0.55) : rgba(C.line, 1);
+    ctx.beginPath(); ctx.moveTo(pr.x, py); ctx.lineTo(pr.x + pr.w, py); ctx.stroke();
+    if (yTicks.includes(y)) { ctx.textAlign = 'right'; ctx.fillText(String(y), pr.x - 6, py); }
+  }
+  ctx.textBaseline = 'alphabetic';
+  richText(ctx, [{ t: 'x', math: true }, { t: '  feature value' }], pr.x + pr.w / 2, P.h - 4, 'center', { color: rgba(C.muted, 1) });
+  ctx.save(); ctx.translate(13, pr.y + pr.h / 2); ctx.rotate(-Math.PI / 2);
+  richText(ctx, [{ t: 'σ(' }, { t: 'w', math: true }, { t: '·' }, { t: 'x', math: true }, { t: ' + ' }, { t: 'b', math: true }, { t: ')' }], 0, 2, 'center', { color: rgba(C.muted, 1) });
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(pr.x, pr.y, pr.w, pr.h); ctx.clip();
+
+  // ---- decision band just below σ = 0: class colour, alpha grows with confidence |2σ − 1|
+  const bandTop = Y(-0.03), bandBot = Y(-0.12), bandH = bandBot - bandTop;
+  for (let px = Math.floor(pr.x); px < pr.x + pr.w; px++) {
+    const s = sigmoid(w * xOf(px + 0.5) + b), cls = s >= 0.5;
+    ctx.fillStyle = rgba(cls ? C.pos : C.neg, (C.dark ? 0.08 : 0.06) + 0.26 * Math.abs(2 * s - 1));
+    ctx.fillRect(px, bandTop, 1.02, bandH);
+  }
+  // band labels in the middle of each region
+  const regions = [];
+  if (w === 0) regions.push([XR[0], XR[1], sigmoid(b) >= 0.5 ? 1 : 0]);
+  else {
+    const cut = clamp(xs, XR), leftCls = w > 0 ? 0 : 1;
+    if (cut > XR[0]) regions.push([XR[0], cut, leftCls]);
+    if (cut < XR[1]) regions.push([cut, XR[1], 1 - leftCls]);
+  }
+  ctx.textBaseline = 'middle';
+  for (const [a, c, cls] of regions) {
+    const pxw = X(c) - X(a), mid = (X(a) + X(c)) / 2, txt = 'predict ' + cls;
+    ctx.font = font(11.5, 'ui', '650');
+    const tw = ctx.measureText(txt).width + 14;
+    if (pxw < tw + 10) continue;
+    const ty = bandTop + bandH / 2;
+    const col = cls ? C.pos : C.neg;
+    classGlyph(ctx, cls, mid - tw / 2 + 4, ty, 4); ctx.fillStyle = rgba(col, 1); ctx.fill();
+    ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.textAlign = 'left'; ctx.fillStyle = rgba(C.fg, 1); ctx.fillText(txt, mid - tw / 2 + 12, ty + 0.5);
+  }
+  ctx.textBaseline = 'alphabetic';
+
+  // ---- derivative bump σ(z)(1 − σ(z)) under the curve
+  if (S.deriv) {
+    strokeFn(ctx, x => dsig(w * x + b));
+    ctx.strokeStyle = rgba(C.unit1, 0.9); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.lineTo(pr.x + pr.w, Y(0)); ctx.lineTo(pr.x, Y(0)); ctx.closePath();
+    ctx.fillStyle = rgba(C.unit1, C.dark ? 0.2 : 0.16); ctx.fill();
+  }
+
+  // ---- ghost curves σ(s·x) for the notebook's weight scales
+  if (S.ghosts) {
+    ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(C.fg, C.dark ? 0.34 : 0.3);
+    for (const s of SCALES) { strokeFn(ctx, x => sigmoid(s * x)); ctx.stroke(); }
+  }
+
+  // ---- raw score line w·x + b (not squashed)
+  let rawSeg = null;
+  if (S.raw) {
+    rawSeg = clipLine(b, w);
+    if (rawSeg) {
+      ctx.strokeStyle = rgba(C.unit2, 1); ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(X(rawSeg[0]), Y(rawSeg[1])); ctx.lineTo(X(rawSeg[2]), Y(rawSeg[3])); ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
+  }
+
+  // ---- σ = 0.5 threshold and x* = −b/w
+  ctx.setLineDash([5, 4]); ctx.strokeStyle = rgba(C.muted, 0.95); ctx.lineWidth = 1.25;
+  const y5 = Math.round(Y(0.5)) + 0.5;
+  ctx.beginPath(); ctx.moveTo(pr.x, y5); ctx.lineTo(pr.x + pr.w, y5); ctx.stroke();
+  if (xsIn) {
+    const pxs = Math.round(X(xs)) + 0.5;
+    ctx.beginPath(); ctx.moveTo(pxs, pr.y); ctx.lineTo(pxs, bandTop - 2); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // ---- tangent at x*: slope w/4
+  if (xsIn && Math.abs(w) >= 0.05) {
+    const dx = 1.4 / Math.abs(w);
+    ctx.strokeStyle = rgba(C.fg, C.dark ? 0.6 : 0.55); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(X(xs - dx), Y(0.5 - w / 4 * dx)); ctx.lineTo(X(xs + dx), Y(0.5 + w / 4 * dx)); ctx.stroke();
+  }
+
+  // ---- probe hairline
+  const pxp = X(S.px), zp = w * S.px + b, sp = sigmoid(zp), clsP = sp >= 0.5 ? 1 : 0;
+  ctx.strokeStyle = rgba(C.fg, S.dragging ? 0.7 : 0.45); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(Math.round(pxp) + 0.5, pr.y); ctx.lineTo(Math.round(pxp) + 0.5, pr.y + pr.h); ctx.stroke();
+
+  // ---- main curve σ(w·x + b)
+  strokeFn(ctx, x => sigmoid(w * x + b), 0.5);
+  ctx.strokeStyle = rgba(C.pos, 1); ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  // ---- markers on the extra curves at the probe
+  if (S.deriv) {
+    ctx.beginPath(); ctx.arc(pxp, Y(dsig(zp)), 4, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.unit1, 1); ctx.fill();
+    ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  if (S.raw && zp >= YR[0] && zp <= YR[1]) {
+    ctx.beginPath(); ctx.arc(pxp, Y(zp), 4, 0, 2 * Math.PI); ctx.fillStyle = rgba(C.unit2, 1); ctx.fill();
+    ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  ctx.restore();
+
+  // ---- labels that sit on top of the curves. Each one records its box so the probe tag can avoid it.
+  const occ = [];
+  const label = (parts, x, y, align, opt) => {
+    ctx.textBaseline = 'middle';
+    const tw = richText(ctx, parts, x, y, align, opt), sz = opt.size || 12;
+    const lx = align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x;
+    occ.push({ x: lx - 2, y: y - sz / 2 - 3, w: tw + 4, h: sz + 6 });
+    ctx.textBaseline = 'alphabetic';
+  };
+  // ghost labels where each σ(s·x) reaches 0.95 (x = ln 19 / s), as in the notebook legend
+  if (S.ghosts) {
+    for (const s of SCALES) {
+      const x95 = Math.log(19) / s, left = X(x95) + 7 > pr.x + pr.w - 40;
+      label([{ t: 's', math: true }, { t: ' = ' + s }], left ? X(x95) - 6 : X(x95) + 6, Y(0.95) + (left ? -2 : 7), left ? 'right' : 'left',
+        { size: 11, halo: true, color: rgba(C.muted, 1) });
+    }
+  }
+  // derivative peak
+  if (S.deriv && xsIn && !small) {
+    const right = X(xs) + 110 < pr.x + pr.w;
+    label([{ t: 'peak 0.25 at ' }, { t: 'x', math: true }, { t: '*' }], right ? X(xs) + 8 : X(xs) - 8, Y(0.25) - 9, right ? 'left' : 'right',
+      { size: 11.5, halo: true, color: rgba(C.unit1, 1) });
+  }
+  // raw score note: where the line leaves the plot it keeps going
+  if (S.raw) {
+    const parts = (d, tail) => [{ t: d + ' ' }, { t: 'w', math: true }, { t: '·' }, { t: 'x', math: true }, { t: ' + ' }, { t: 'b', math: true }, { t: tail || ' is not bounded to [0, 1]' }];
+    const opt = { size: small ? 11 : 12, halo: true, color: rgba(C.unit2, 1) };
+    if (rawSeg) {
+      const ends = [[rawSeg[0], rawSeg[1]], [rawSeg[2], rawSeg[3]]];
+      const ex = ends.find(e => e[1] >= YR[1] - 1e-9) || ends.find(e => e[1] <= YR[0] + 1e-9);
+      if (ex) {
+        const up = ex[1] >= YR[1] - 1e-9, tw = richWidth(ctx, parts('↑'), opt.size);
+        const ty = up ? pr.y + 36 : bandTop - 26;
+        let tx = X(ex[0]) + 8, al = 'left';
+        if (tx + tw > pr.x + pr.w - 4) { tx = X(ex[0]) - 8; al = 'right'; }
+        if (al === 'right' && tx - tw < pr.x + 4) { tx = pr.x + 4; al = 'left'; }
+        label(parts(up ? '↑' : '↓'), tx, ty, al, opt);
+      } else {
+        label(parts('→'), pr.x + pr.w - 6, Y(rawSeg[3]) - 12, 'right', opt);
+      }
+    } else {
+      const above = b > YR[1];
+      label(parts(above ? '↑' : '↓', (above ? ' is above the plot' : ' is below the plot') + ': not bounded to [0, 1]'),
+        pr.x + pr.w - 6, above ? pr.y + 36 : bandTop - 26, 'right', opt);
+    }
+  }
+  // threshold label
+  if (!small) label([{ t: 'threshold σ = 0.5' }], pr.x + pr.w - 6, y5 - 11, 'right', { size: 11.5, halo: true, color: rgba(C.muted, 1) });
+  // x* pill (or the flat message, or an off-plot pointer)
+  const pillTop = pr.y + 4;
+  let pb;
+  if (w === 0) {
+    pb = pill(ctx, [{ t: 'flat: σ = σ(' }, { t: 'b', math: true }, { t: ') everywhere' }], pr.x + pr.w / 2, pillTop);
+  } else if (xsIn) {
+    pb = pill(ctx, [{ t: 'x', math: true }, { t: '* = ' + fix(xs, 2) }], X(xs), pillTop);
+  } else {
+    const leftSide = xs < XR[0];
+    pb = pill(ctx, [{ t: leftSide ? '← ' : '' }, { t: 'x', math: true }, { t: '* = ' + fix(xs, 2) + ' (off the plot)' + (leftSide ? '' : ' →') }],
+      leftSide ? pr.x + 2 : pr.x + pr.w - 2, pillTop, leftSide ? 'left' : 'right');
+  }
+  occ.push(pb);
+
+  // ---- probe: dot on the curve, handle on the x axis, value tag
+  const py = Y(sp), col = clsP ? C.pos : C.neg;
+  classGlyph(ctx, clsP, pxp, py, 7.6); ctx.fillStyle = rgba(C.bg, 1); ctx.fill();
+  classGlyph(ctx, clsP, pxp, py, 6); ctx.fillStyle = rgba(col, 1); ctx.fill();
+  ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 1; ctx.stroke();
+  // handle: a small triangle sitting on the x axis
+  const hy = pr.y + pr.h;
+  ctx.beginPath(); ctx.moveTo(pxp, hy - 9); ctx.lineTo(pxp - 6, hy + 1); ctx.lineTo(pxp + 6, hy + 1); ctx.closePath();
+  ctx.fillStyle = rgba(C.fg, 1); ctx.fill(); ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 1; ctx.stroke();
+  // tag: try the four corners around the dot and take the one that covers the fewest other labels
+  const tagParts = [{ t: 'σ(' }, { t: 'z', math: true }, { t: ') = ' + fix(sp, 3) + '  ' }, { t: 'predict ' + clsP, color: rgba(col, 1), bold: true }];
+  const tagW = richWidth(ctx, tagParts, 12) + 14, tagH = 21;
+  const dot = { x: pxp - 9, y: py - 9, w: 18, h: 18 };
+  const overlap = (a, c) => Math.max(0, Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x)) * Math.max(0, Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y));
+  let best = null;
+  [[14, -tagH - 8], [-14 - tagW, -tagH - 8], [14, 10], [-14 - tagW, 10]].forEach(([dx, dy], k) => {
+    const r = {
+      x: Math.max(pr.x + 2, Math.min(pr.x + pr.w - tagW - 2, pxp + dx)),
+      y: Math.max(pr.y + 2, Math.min(bandTop - 2 - tagH, py + dy)), w: tagW, h: tagH
+    };
+    let score = k * 0.5 + 40 * overlap(r, dot);
+    for (const o of occ) score += overlap(r, o);
+    if (!best || score < best.score) best = { r, score };
+  });
+  pill(ctx, tagParts, best.r.x, best.r.y, 'left', 12);
+}
+
+/* ================= Status & readouts ================= */
+const $ = id => document.getElementById(id);
+const els = {
+  w: $('w'), wVal: $('wVal'), b: $('b'), bVal: $('bVal'), probe: $('probeX'), probeVal: $('probeXVal'),
+  raw: $('showRaw'), ghosts: $('showGhosts'), deriv: $('showDeriv'), reset: $('btnReset'),
+  rXs: $('rXs'), rSlope: $('rSlope'), rWidth: $('rWidth'), rSb: $('rSb'), rZ: $('rZ'), rSig: $('rSig'), rPred: $('rPred'),
+  line: $('lineReadout'), status: $('status'), statusTxt: $('statusTxt'), badge: $('statusBadge'),
+  chips: Array.from(document.querySelectorAll('.chip'))
+};
+function classify(w, b) {
+  const xs = threshold(w, b), dw = fix(width90(w), 2);
+  if (w === 0) return ['flat', '!', `Flat: w\u00a0=\u00a00, so σ\u00a0=\u00a0σ(b)\u00a0=\u00a0${fix(sigmoid(b), 3)} for every x and x has no effect`];
+  if (xs < XR[0] || xs > XR[1]) {
+    const cls = sigmoid(w * 0 + b) >= 0.5 ? 1 : 0;
+    return ['off', '!', `x*\u00a0=\u00a0${fix(xs, 2)} is off the plot, so every x shown gets predict ${cls}`];
+  }
+  if (w < 0) return ['flip', '−', `Flipped: w < 0, so σ falls as x grows and larger x gives predict 0`];
+  if (Math.abs(w) >= 3) return ['steep', '↑', `Steep: σ goes from 0.1 to 0.9 within Δx\u00a0=\u00a0${dw}, so predictions are confident`];
+  if (Math.abs(w) <= 0.6) return ['gentle', '~', `Gentle: σ needs Δx\u00a0=\u00a0${dw} to go from 0.1 to 0.9, so it stays unsure`];
+  return ['normal', '•', `σ goes from 0.1 to 0.9 over Δx\u00a0=\u00a0${dw} around x*\u00a0=\u00a0${fix(xs, 2)}`];
+}
+const GLYPH = {
+  1: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor"/></svg>',
+  0: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="1.4" y="1.4" width="7.2" height="7.2" fill="currentColor"/></svg>'
+};
+let lastStatus = '';
+function updateReadouts() {
+  const w = S.w, b = S.b, xs = threshold(w, b);
+  els.wVal.textContent = fix(w, 1); els.bVal.textContent = fix(b, 1); els.probeVal.textContent = fix(S.px, 2);
+  els.rXs.textContent = xs == null ? 'none' : fix(xs, 2);
+  els.rSlope.textContent = fix(w / 4, 3);
+  els.rWidth.textContent = w === 0 ? '∞' : fix(width90(w), 2);
+  els.rSb.textContent = fix(sigmoid(b), 3);
+  const z = w * S.px + b, s = sigmoid(z), cls = s >= 0.5 ? 1 : 0;
+  els.rZ.textContent = fix(z, 2); els.rSig.textContent = fix(s, 3);
+  els.rPred.dataset.cls = String(cls); els.rPred.innerHTML = GLYPH[cls] + 'predict ' + cls;
+  for (const c of els.chips) c.setAttribute('aria-pressed', Math.abs(+c.dataset.w - w) < 1e-9 ? 'true' : 'false');
+  const m = t => `<span class="m">${t}</span>`, n = t => `<span class="num">${t}</span>`;
+  els.line.innerHTML =
+    `<span>${m('x')}* = ${n(xs == null ? 'none' : fix(xs, 2))}</span>` +
+    `<span>slope ${m('w')}/4 = ${n(fix(w / 4, 3))}</span>` +
+    `<span>${m('x')} = ${n(fix(S.px, 2))}, ${m('z')} = ${n(fix(z, 2))}, σ(${m('z')}) = ${n(fix(s, 3))}</span>` +
+    `<span class="pred" data-cls="${cls}">${GLYPH[cls]}predict ${cls}</span>`;
+  const [kind, badge, txt] = classify(r1(w), r1(b));
+  if (txt !== lastStatus) {
+    els.status.dataset.kind = kind; els.badge.textContent = badge;
+    const safe = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    els.statusTxt.innerHTML = safe.replace(/\b([wbxz])\b/g, '<span class="m">$1</span>');
+    lastStatus = txt;
+  }
+}
+
+/* ================= Updates ================= */
+let raf = 0;
+function render() { draw(); updateReadouts(); }
+function markDirty() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); }
+function setWB(w, b, fromSlider) {
+  S.w = r1(clamp(+w, W_RANGE)); S.b = r1(clamp(+b, B_RANGE));
+  if (!fromSlider) { els.w.value = S.w; els.b.value = S.b; }
+  markDirty();
+}
+function setProbe(x, fromSlider) {
+  S.px = r2(clamp(+x, XR));
+  if (!fromSlider) els.probe.value = S.px;
+  markDirty();
+}
+const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+// Short glide to a preset so students see the curve change shape (instant with reduced motion).
+function glideTo(w, b, px) {
+  const to = { w, b, px: px == null ? S.px : px };
+  if (reduceMotion.matches) { S.tween = null; setWB(to.w, to.b); setProbe(to.px); return; }
+  S.tween = { from: { w: S.w, b: S.b, px: S.px }, to, t0: performance.now() };
+  requestAnimationFrame(stepGlide);
+}
+function stepGlide(t) {
+  const T = S.tween; if (!T) return;
+  const u = Math.min(1, Math.max(0, (t - T.t0) / 380)), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+  if (u >= 1) { S.tween = null; setWB(T.to.w, T.to.b); setProbe(T.to.px); return; }
+  S.w = T.from.w + (T.to.w - T.from.w) * e; S.b = T.from.b + (T.to.b - T.from.b) * e; S.px = T.from.px + (T.to.px - T.from.px) * e;
+  if (Math.abs(S.w) < 1e-9) S.w = 0;
+  els.w.value = S.w; els.b.value = S.b; els.probe.value = S.px;
+  render();
+  requestAnimationFrame(stepGlide);
+}
+const stopGlide = () => { S.tween = null; };
+
+/* ================= Events ================= */
+els.w.addEventListener('input', () => { stopGlide(); setWB(+els.w.value, S.b, true); });
+els.b.addEventListener('input', () => { stopGlide(); setWB(S.w, +els.b.value, true); });
+els.probe.addEventListener('input', () => { stopGlide(); setProbe(+els.probe.value, true); });
+for (const c of els.chips) c.addEventListener('click', () => glideTo(+c.dataset.w, S.b));
+els.reset.addEventListener('click', () => glideTo(DEFAULTS.w, DEFAULTS.b, DEFAULTS.px));
+els.raw.addEventListener('change', () => { S.raw = els.raw.checked; markDirty(); });
+els.ghosts.addEventListener('change', () => { S.ghosts = els.ghosts.checked; markDirty(); });
+els.deriv.addEventListener('change', () => { S.deriv = els.deriv.checked; markDirty(); });
+
+// Drag anywhere on the plot to move the probe along x.
+function probeFromEvent(ev) {
+  const r = cv.getBoundingClientRect();
+  return xOf(ev.clientX - r.left);
+}
+cv.addEventListener('pointerdown', ev => {
+  if (ev.button !== undefined && ev.button !== 0) return;
+  stopGlide(); S.dragging = true;
+  try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+  setProbe(probeFromEvent(ev));
+});
+cv.addEventListener('pointermove', ev => { if (S.dragging) setProbe(probeFromEvent(ev)); });
+const endDrag = () => { if (S.dragging) { S.dragging = false; markDirty(); } };
+cv.addEventListener('pointerup', endDrag);
+cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('lostpointercapture', endDrag);
+
+// Resize & theme
+const ro = new ResizeObserver(() => { sizePlot(); render(); });
+ro.observe(cv.parentElement);
+function onTheme() { readTheme(); markDirty(); }
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', onTheme); else if (mq.addListener) mq.addListener(onTheme);
+}
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ================= Init ================= */
+readTheme();
+setWB(DEFAULTS.w, DEFAULTS.b);
+setProbe(DEFAULTS.px);
+sizePlot();
+render();
+
+/* ================= Test hooks ================= */
+const COMPACT_MQ = '(min-width: 500px) and (max-width: 759.98px) and (max-height: 559.98px)';
+function layout() {
+  if (window.matchMedia && window.matchMedia(COMPACT_MQ).matches) return 'compact';
+  return window.innerWidth < 900 ? 'narrow' : 'full';
+}
+window.__demo = {
+  sigmoid: z => sigmoid(z),
+  threshold: (w, b) => threshold(w, b),
+  slope: (w, b, x) => slopeAt(w, b, x),
+  set: (w, b) => { stopGlide(); setWB(w, b); render(); return window.__demo.state(); },
+  setProbe: x => { stopGlide(); setProbe(x); render(); return window.__demo.state(); },
+  state: () => {
+    const xs = threshold(S.w, S.b), z = S.w * S.px + S.b, s = sigmoid(z);
+    return {
+      w: S.w, b: S.b, xStar: xs, slopeAtXStar: xs == null ? 0 : slopeAt(S.w, S.b, xs), width90: width90(S.w),
+      probe: { x: S.px, z, sigma: s, predict: s >= 0.5 ? 1 : 0 },
+      show: { raw: S.raw, ghosts: S.ghosts, deriv: S.deriv },
+      status: els.statusTxt.textContent, layout: layout()
+    };
+  }
+};
+})();
+</script>
+<script>
+  // Inside a slide deck: send presenter-remote keys (PageDown/PageUp) and arrow keys to the deck,
+  // except while a slider, menu or text box has focus (arrows adjust those).
+  (function () {
+    if (window.parent === window) return;
+    window.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var t = e.target, tag = t && t.tagName ? t.tagName.toUpperCase() : '';
+      var inControl = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+      var dir = null;
+      if (e.key === 'PageDown') dir = 'next';
+      else if (e.key === 'PageUp') dir = 'prev';
+      else if (!inControl && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) dir = 'next';
+      else if (!inControl && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) dir = 'prev';
+      if (!dir) return;
+      e.preventDefault();
+      try { window.parent.postMessage({ type: 'deck-nav', dir: dir }, '*'); } catch (err) { /* ignore */ }
+    }, true);
+  })();
+</script>
+</body>
+</html>

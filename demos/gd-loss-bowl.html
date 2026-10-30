@@ -19,6 +19,7 @@
     } catch (e) { /* ignore */ }
   })();
 </script>
+<script>if (location.hash === '#deck') document.documentElement.classList.add('in-deck');</script>
 <style>
 :root {
   --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
@@ -140,6 +141,14 @@ input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 18
 .small-note sub { line-height: 0; }
 
 footer { font-size: 12px; color: var(--muted); }
+html.in-deck footer { display: none; } /* the slides already carry a footer */
+
+/* Short screens (e.g. inside a 724px-tall slide): drop the explanatory note so the controls fit */
+@media (min-width: 900px) and (max-height: 745px) {
+  #modeNote { display: none; }
+  .controls { gap: 7px; }
+  .sec + .sec { padding-top: 7px; }
+}
 
 /* Phone / narrow */
 @media (max-width: 899px) {
@@ -1108,6 +1117,26 @@ window.__demo = {
   status: () => classify()
 };
 })();
+</script>
+<script>
+  // Inside a slide deck: send presenter-remote keys (PageDown/PageUp) and arrow keys to the deck,
+  // except while a slider, menu or text box has focus (arrows adjust those).
+  (function () {
+    if (window.parent === window) return;
+    window.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var t = e.target, tag = t && t.tagName ? t.tagName.toUpperCase() : '';
+      var inControl = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+      var dir = null;
+      if (e.key === 'PageDown') dir = 'next';
+      else if (e.key === 'PageUp') dir = 'prev';
+      else if (!inControl && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) dir = 'next';
+      else if (!inControl && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) dir = 'prev';
+      if (!dir) return;
+      e.preventDefault();
+      try { window.parent.postMessage({ type: 'deck-nav', dir: dir }, '*'); } catch (err) { /* ignore */ }
+    }, true);
+  })();
 </script>
 </body>
 </html>

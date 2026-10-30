@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Week 7 Materials</title>
+<style>
+  /* One narrow column: lectures first, then demos, then notebooks. Same palette as the slides. */
+  :root {
+    --bg: #ffffff; --panel: #f5f7fa; --fg: #222831; --muted: #5b6676; --line: #d9dee6;
+    --blue: #3274B5; --red: #A62B17;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440; --blue: #6fa8e0; --red: #e07a62; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440; --blue: #6fa8e0; --red: #e07a62; color-scheme: dark }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 16px; line-height: 1.5; }
+  .wrap {
+    max-width: 760px; margin: 0 auto; display: grid; gap: 30px;
+    padding-block: 40px 32px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  header { display: grid; gap: 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font-size: 32px; line-height: 1.2; text-wrap: balance; }
+  .rule { height: 3px; width: 42%; border-radius: 2px; background: linear-gradient(to right, var(--blue), var(--red)); }
+  header p { margin: 0; color: var(--muted); max-width: 62ch; }
+  h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  a.item {
+    display: grid; gap: 2px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    color: inherit; text-decoration: none;
+  }
+  a.item:hover { border-color: var(--blue); }
+  a.item:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .name { font-weight: 650; color: var(--blue); font-size: 17px; }
+  .what { color: var(--muted); font-size: 15px; }
+  footer { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</span>
+    <h1>Linear Regression and Neural Networks</h1>
+    <div class="rule" aria-hidden="true"></div>
+    <p>Lecture slides with live demos, the demos on their own, and the notebooks. Everything runs in the browser.</p>
+  </header>
+
+  <section>
+    <h2>Lecture slides</h2>
+    <ul>
+      <li><a class="item" href="slides/linear-regression.html"><span class="name">Lecture 1: Linear Regression</span><span class="what">Linear regression, gradient descent, the closed form, logistic regression and the log-loss.</span></a></li>
+      <li><a class="item" href="slides/neural-networks.html"><span class="name">Lecture 2: Neural Networks</span><span class="what">The XOR problem, multi-layer perceptrons, backpropagation and a worked example.</span></a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Interactive demos</h2>
+    <ul>
+      <li><a class="item" href="demos/gd-loss-bowl.html"><span class="name">Gradient Descent Bowl</span><span class="what">Learning rate, online vs batch updates, and the closed-form solution.</span></a></li>
+      <li><a class="item" href="demos/sigmoid-explorer.html"><span class="name">Sigmoid Explorer</span><span class="what">How the weight and bias shape the sigmoid.</span></a></li>
+      <li><a class="item" href="demos/linear-vs-logistic.html"><span class="name">Linear vs Logistic Fit</span><span class="what">Why linear regression makes a poor classifier.</span></a></li>
+      <li><a class="item" href="demos/sigmoid-losses.html"><span class="name">Squared vs Log Loss</span><span class="what">Why the log-loss learns faster when the model is confidently wrong.</span></a></li>
+      <li><a class="item" href="demos/xor-hidden-layer.html"><span class="name">XOR Hidden Space</span><span class="what">How a hidden layer makes XOR separable.</span></a></li>
+      <li><a class="item" href="demos/mlp-playground.html"><span class="name">MLP Playground</span><span class="what">Train a two-layer network: hidden units, activations, initialisation, learning rate.</span></a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Notebooks (run in your browser on Binder)</h2>
+    <ul>
+      <li><a class="item" href="https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FLinearRegression.ipynb"><span class="name">LinearRegression.ipynb</span><span class="what">All Lecture 1 examples, ready to change and re-run.</span></a></li>
+      <li><a class="item" href="https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FPerceptron.ipynb"><span class="name">Perceptron.ipynb</span><span class="what">Hyperplanes, the perceptron algorithm and surrogate losses.</span></a></li>
+      <li><a class="item" href="https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FNeuralNetworks.ipynb"><span class="name">NeuralNetworks.ipynb</span><span class="what">XOR, multi-layer perceptrons and backpropagation.</span></a></li>
+    </ul>
+  </section>
+
+  <footer>Dr. Heba El-Shimy ©2026 Heriot-Watt University</footer>
+</div>
+</body>
+</html>

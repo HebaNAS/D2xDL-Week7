@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neural Networks Lecture</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/reveal/reset.css">
+<link rel="stylesheet" href="vendor/reveal/reveal.css">
+<link rel="stylesheet" href="vendor/chalkboard/style.css">
+<link rel="stylesheet" href="assets/deck.css">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ================================================================ 1. Title -->
+<section class="title-slide" data-title="Title">
+  <img class="logo" src="../images/logo.png" alt="Heriot-Watt University">
+  <div class="title-block">
+    <h1>Neural Networks</h1>
+    <div class="course">F20DL/F21DL</div>
+    <div class="course">Data Mining &amp; Machine Learning</div>
+    <div class="author">Dr. Heba El-Shimy</div>
+    <div class="basis">Based on F20/21DL Slides on Canvas</div>
+    <div class="assist">Code development was assisted by Claude.ai</div>
+  </div>
+  <div class="copyright">
+    © 2026 Heriot-Watt University. All rights reserved.<br>
+    This material has been created by staff of Heriot-Watt University and is protected by copyright.
+  </div>
+  <aside class="notes">
+    <p><b>Keys:</b> → / Space / clicker = next, ← = back, Esc or O = overview, S = this speaker view, F = full screen, . = black screen, C = draw on the slide, B = whiteboard, Alt+click = zoom, ? = all keys. After clicking inside a demo, the clicker and arrow keys still change slides.</p>
+    <p><b>How the maths slides work:</b> on an equation or diagram, each click greys it out and lights up one part in red, with its meaning in words beside or under it. Talk through the lit part, then click. The last click on each maths slide shows everything again.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 2. Compare with other algorithms -->
+<section>
+  <h2>Compare with other Algorithms</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 29px; margin-top: 30px;">
+    <li>Decision Trees, kNN
+      <ul>
+        <li><span class="b">Non-linear</span> decision boundaries</li>
+        <li>Eager/Lazy learning</li>
+      </ul>
+    </li>
+    <li>Perceptron, Linear Models, Naive Bayes
+      <ul>
+        <li><span class="b">Linear</span> decision boundaries</li>
+        <li>Error-Driven learning (<span class="b">Gradient Descent</span>)</li>
+      </ul>
+    </li>
+    <li><span class="r">Neural Networks</span>
+      <ul>
+        <li><span class="b">Non-linear</span> decision boundaries</li>
+        <li>Error-Driven learning (<span class="b">Gradient Descent</span> + Chain Rule)</li>
+      </ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> where neural networks sit. Like decision trees and kNN they can draw curved (non-linear) boundaries; like the perceptron and linear models they learn by gradient descent on an error. The one new ingredient for training is the chain rule.</p>
+    <p><b>Note for you:</b> Naive Bayes is fitted by counting frequencies, not by gradient descent; it belongs with the linear-boundary models only.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 3. Outline -->
+<section>
+  <h2>Outline</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 32px; margin-top: 30px;">
+    <li>What is the <span class="b">XOR Problem</span>?</li>
+    <li><span class="b">Multi-Layer Perceptron</span>
+      <ul>
+        <li>Hidden layers</li>
+        <li>Output layer</li>
+        <li>Activation functions</li>
+      </ul>
+    </li>
+    <li>Why are Neural Networks so <span class="b">powerful</span>?</li>
+    <li><span class="r">Back-propagation</span> training algorithm</li>
+    <li>Practical issues</li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> we start with a tiny problem a single perceptron cannot solve (XOR), build a network that can, see why such networks are so flexible, and then learn how to train them: backpropagation, worked through by hand on the customer data from Lecture 1.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 4. Section: XOR -->
+<section class="section-slide">
+  <div class="section-title"><h1>The XOR Problem</h1></div>
+</section>
+
+<!-- ================================================================ 5. Boolean algebra -->
+<section>
+  <h2>Boolean Algebra</h2>
+  <div class="rule"></div>
+  <div style="display: flex; justify-content: space-around; margin-top: 50px;">
+    <div class="stack-v" style="align-items: center;">
+      <h3>AND</h3>
+      <table class="data" style="font-size: 28px;">
+        <thead><tr><th>A</th><th>B</th><th class="out">A·B</th></tr></thead>
+        <tbody><tr><td>1</td><td>1</td><td class="out">1</td></tr><tr><td>0</td><td>0</td><td class="out">0</td></tr><tr><td>1</td><td>0</td><td class="out">0</td></tr><tr><td>0</td><td>1</td><td class="out">0</td></tr></tbody>
+      </table>
+    </div>
+    <div class="stack-v" style="align-items: center;">
+      <h3>OR</h3>
+      <table class="data" style="font-size: 28px;">
+        <thead><tr><th>A</th><th>B</th><th class="out">A+B</th></tr></thead>
+        <tbody><tr><td>1</td><td>1</td><td class="out">1</td></tr><tr><td>0</td><td>0</td><td class="out">0</td></tr><tr><td>1</td><td>0</td><td class="out">1</td></tr><tr><td>0</td><td>1</td><td class="out">1</td></tr></tbody>
+      </table>
+    </div>
+    <div class="stack-v" style="align-items: center;">
+      <h3>XOR</h3>
+      <table class="data" style="font-size: 28px;">
+        <thead><tr><th>A</th><th>B</th><th class="out">A ⊕ B</th></tr></thead>
+        <tbody><tr><td>1</td><td>1</td><td class="out">0</td></tr><tr><td>0</td><td>0</td><td class="out">0</td></tr><tr><td>1</td><td>0</td><td class="out">1</td></tr><tr><td>0</td><td>1</td><td class="out">1</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> AND is 1 only when both inputs are 1. OR is 1 when at least one is 1. XOR, “exclusive or”, is 1 when exactly one is 1: the inputs differ.</p>
+    <p><b>Ask:</b> an everyday XOR? (A light on a staircase with a switch at the top and at the bottom: flipping either switch changes the light.)</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 6. XOR as a classification problem -->
+<section>
+  <h2>XOR Problem</h2>
+  <div class="rule"></div>
+  <div style="display: flex; justify-content: center; align-items: center; gap: 70px; margin-top: 50px;">
+    <div class="stack-v" style="align-items: center;">
+      <h3>XOR</h3>
+      <table class="data" style="font-size: 28px;">
+        <thead><tr><th>A</th><th>B</th><th class="out">A ⊕ B</th></tr></thead>
+        <tbody><tr><td>1</td><td>1</td><td class="out">0</td></tr><tr><td>0</td><td>0</td><td class="out">0</td></tr><tr><td>1</td><td>0</td><td class="out">1</td></tr><tr><td>0</td><td>1</td><td class="out">1</td></tr></tbody>
+      </table>
+    </div>
+    <img src="../images/arrow.png" alt="becomes" style="width: 80px; margin-top: 50px;">
+    <div class="stack-v" style="align-items: center;">
+      <h3>Classification data</h3>
+      <table class="data" style="font-size: 28px;">
+        <thead><tr><th>\(x_1\)</th><th>\(x_2\)</th><th class="out">\(y\)</th></tr></thead>
+        <tbody><tr><td>1</td><td>1</td><td class="out">−</td></tr><tr><td>−1</td><td>−1</td><td class="out">−</td></tr><tr><td>1</td><td>−1</td><td class="out">+</td></tr><tr><td>−1</td><td>1</td><td class="out">+</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> turn XOR into a classification problem. Inputs become −1/+1 instead of 0/1 (convenient for tanh, which is centred on 0); the class is + when exactly one input is +1.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 7. Linearly inseparable -->
+<section>
+  <h2>XOR: Linearly Inseparable</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/nn-xor-single-line.png" alt="Left: the four XOR points, +1 at (−1,1) and (1,−1), −1 at (1,1) and (−1,−1). Right: the line x1 + x2 + 1 = 0 gets three right and leaves (1,1) on the wrong side." style="max-height: 500px;">
+    <figcaption>Blue circles are \(+1\), red squares are \(-1\). Wherever we draw one straight line, at least one point ends up on the wrong side.</figcaption>
+  </figure>
+  <aside class="notes">
+    <p><b>Say:</b> plot the four points. Blue circles (+) sit on one diagonal, red squares (−) on the other.</p>
+    <p><b>Ask before showing the right panel:</b> place a single straight line that separates the classes (draw with C). Any line gets at most 3 of 4 right. A perceptron is exactly one line, so it cannot learn XOR.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 8. Section: MLP -->
+<section class="section-slide">
+  <div class="section-title"><h1>Neural Networks:</h1><h1>Multi-layer Perceptrons</h1></div>
+</section>
+
+<!-- ================================================================ 9. Recap perceptron -->
+<section>
+  <h2>Recap: Perceptron</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center;">
+    <ul class="bul" style="font-size: 30px;">
+      <li>Perceptron: single <span class="b">neuron</span></li>
+      <li>Receives <span class="b">input</span> from D-many neurons</li>
+      <li>Each input has a <span class="b">weight</span></li>
+      <li>Cell <span class="r">sums</span> up weighted input</li>
+      <li>Neuron <span class="r">“fires”</span> if sum &gt; 0</li>
+    </ul>
+    <figure><img class="fig" src="../images/bio-inspired.png" alt="A biological neuron with dendrites, cell body and axon, above a perceptron: inputs, a weighted sum and a step function" style="max-height: 540px;"></figure>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> a perceptron is one artificial neuron: a weighted sum of its inputs, and it “fires” if the sum is above 0. The inspiration is biological: dendrites bring signals in, the cell body adds them up, the axon sends the result on.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 10. MLPs -->
+<section>
+  <h2>Neural Networks: Multi-layer Perceptrons</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 30px; margin-top: 30px;">
+    <li>We can think of neural networks as <span class="r">combination</span> of <span class="b">multiple perceptrons</span>
+      <ul><li><span class="b">Multilayer perceptron (MLP)</span></li></ul>
+    </li>
+    <li>Why would we want to do that?
+      <ul>
+        <li>Discover more <span class="r">complex</span> (a.k.a. non-linear) <span class="b">decision boundaries</span></li>
+        <li>Learn <span class="b">combinations of features</span></li>
+      </ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> stack perceptrons. A layer of hidden units, each one a perceptron-like line, feeds an output unit that combines them. Combining several lines lets the network draw bent boundaries, and the hidden units learn useful combinations of features by themselves.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 11. Design a 2-layer MLP -->
+<section>
+  <h2>Let’s design a 2-layer MLP</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); align-items: center;">
+    <ul class="bul eqx" style="font-size: 26px;">
+      <li>Layer-2: \(\hat{y} = g(\mathbf{v} \cdot \mathbf{h})\)</li>
+      <li>Layer-1: \(h_i = f(\mathbf{w}_i \cdot \mathbf{x})\)</li>
+      <li>\(f, g\) are called activation/link functions
+        <ul>
+          <li><span class="r">hyperbolic tangent (\(\tanh\))</span></li>
+          <li><span class="b">Sigmoid \(\sigma(x) = \frac{1}{e^{-x} + 1}\)</span></li>
+          <li>Rectified Linear Unit (ReLU)</li>
+          <li>Identity (usually not in Layer-1)</li>
+        </ul>
+      </li>
+      <li>Set \(f = \tanh,\ g = \mathit{identity}\)</li>
+      <li>\(\hat{y} = \class{p-sum}{\sum_i} \class{p-v}{v_i} \class{p-tanh}{\tanh(\class{p-dot}{\mathbf{w}_i \cdot \mathbf{x}})} = \mathbf{v} \cdot \tanh(\mathbf{W} \cdot \mathbf{x})\)</li>
+    </ul>
+    <div class="stack-v" style="gap: 0;">
+      <figure><img class="fig" src="../images/mlp1.png" alt="A two-layer network: four inputs, two hidden units f with weights w, one output unit g with weights v1 and v2" style="max-height: 430px;"></figure>
+      <ol class="parts caption" style="font-size: 20px;">
+        <li class="fragment" data-part="p-dot"><span class="k">\(\mathbf{w}_i \cdot \mathbf{x}\)</span><span>hidden unit \(i\)’s weighted sum of the inputs: a perceptron’s score</span></li>
+        <li class="fragment" data-part="p-tanh"><span class="k">\(\tanh(\ldots)\)</span><span>squashed into \((-1, 1)\): this is the hidden unit’s output \(h_i\)</span></li>
+        <li class="fragment" data-part="p-v"><span class="k">\(v_i\)</span><span>how much the output listens to hidden unit \(i\)</span></li>
+        <li class="fragment" data-part="p-sum"><span class="k">\(\sum_i\)</span><span>add over the hidden units: the output is a weighted sum of their outputs</span></li>
+        <li class="fragment"><span class="k">in words</span><span>weighted sums, squashed by tanh, then a weighted sum of those</span></li>
+      </ol>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Clicks:</b> the caption under the picture reads the last equation from the inside out: 1) weighted sum, 2) tanh, 3) the output weight v_i, 4) the sum over hidden units, 5) the whole thing in words.</p>
+    <p><b>Say:</b> two layers. Layer 1: each hidden unit i takes a weighted sum of the inputs, w_i·x, and passes it through an activation f. Layer 2: the output takes a weighted sum of the hidden outputs with weights v and passes it through g. We choose f = tanh and g = identity (no squashing at the output).</p>
+    <p><b>Say:</b> the last line writes all hidden units at once: tanh(W·x) is the list of hidden outputs, and v· that list is the output.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 11b. Forward pass labelled -->
+<section>
+  <h2>One Forward Pass, Labelled</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: 600px minmax(0, 1fr); gap: 30px; align-items: center;">
+    <div class="eqx">
+      <svg class="diagram net" viewBox="0 0 640 330" role="img" aria-label="A network with inputs x1, x2, x3, two tanh hidden units h1 and h2, and an output y-hat; the error e = y − y-hat gives the loss L.">
+      <line x1="82" y1="70" x2="270" y2="110" class="edge p-w1"/>
+      <line x1="82" y1="170" x2="270" y2="110" class="edge p-w1"/>
+      <line x1="82" y1="270" x2="270" y2="110" class="edge p-w1"/>
+      <line x1="330" y1="110" x2="450" y2="162" class="edge p-v"/>
+      <line x1="82" y1="70" x2="270" y2="230" class="edge p-u2"/>
+      <line x1="82" y1="170" x2="270" y2="230" class="edge p-u2"/>
+      <line x1="82" y1="270" x2="270" y2="230" class="edge p-u2"/>
+      <line x1="330" y1="230" x2="450" y2="178" class="edge p-v"/>
+      <text x="175" y="62" class="lab p-w1">w<tspan class="sub" dy="5">1</tspan></text>
+      <text x="175" y="300" class="lab p-u2">w<tspan class="sub" dy="5">2</tspan></text>
+      <text x="395" y="122" class="lab p-v">v<tspan class="sub" dy="5">1</tspan></text>
+      <text x="395" y="236" class="lab p-v">v<tspan class="sub" dy="5">2</tspan></text>
+      <g class="p-x"><circle cx="60" cy="70" r="22" class="node in"/><text x="60" y="76" class="lab mid">x<tspan class="sub" dy="5">1</tspan></text></g>
+      <g class="p-x"><circle cx="60" cy="170" r="22" class="node in"/><text x="60" y="176" class="lab mid">x<tspan class="sub" dy="5">2</tspan></text></g>
+      <g class="p-x"><circle cx="60" cy="270" r="22" class="node in"/><text x="60" y="276" class="lab mid">x<tspan class="sub" dy="5">3</tspan></text></g>
+      <g class="p-h1"><circle cx="300" cy="110" r="30" class="node hid"/><text x="300" y="115" class="lab mid small">tanh</text></g>
+      <text x="300" y="68" class="lab mid p-a1">a<tspan class="sub" dy="5">1</tspan><tspan dy="-5"> = w</tspan><tspan class="sub" dy="5">1</tspan><tspan dy="-5">·x</tspan></text>
+      <text x="340" y="88" class="lab p-h1 ">h<tspan class="sub" dy="5">1</tspan></text>
+      <g class="p-u2"><circle cx="300" cy="230" r="30" class="node hid"/><text x="300" y="235" class="lab mid small">tanh</text></g>
+      <text x="300" y="284" class="lab mid p-u2">a<tspan class="sub" dy="5">2</tspan><tspan dy="-5"> = w</tspan><tspan class="sub" dy="5">2</tspan><tspan dy="-5">·x</tspan></text>
+      <text x="340" y="264" class="lab p-u2 ">h<tspan class="sub" dy="5">2</tspan></text>
+      <g class="p-y"><circle cx="480" cy="170" r="30" class="node outn"/><text x="480" y="177" class="lab mid">ŷ</text></g>
+      <g class="p-e"><line x1="510" y1="170" x2="542" y2="170" class="edge"/><text x="548" y="166" class="lab">e = y − ŷ</text><text x="548" y="192" class="lab">L = ½ e²</text></g>
+      </svg>
+    </div>
+    <ol class="parts" style="font-size: 21px; gap: 8px;">
+      <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}\)</span><span>the inputs: one example, e.g. a customer’s three services</span></li>
+      <li class="fragment" data-part="p-w1"><span class="k">\(\mathbf{w}_1\)</span><span>the weights into hidden unit 1, one per input</span></li>
+      <li class="fragment" data-part="p-a1"><span class="k">\(a_1\)</span><span>unit 1’s weighted sum \(\mathbf{w}_1 \cdot \mathbf{x}\), like a perceptron’s score</span></li>
+      <li class="fragment" data-part="p-h1"><span class="k">\(h_1\)</span><span>\(\tanh(a_1)\): squashed into \((-1, 1)\), the unit’s output</span></li>
+      <li class="fragment" data-part="p-u2"><span class="k">unit 2</span><span>the same, with its own weights \(\mathbf{w}_2\)</span></li>
+      <li class="fragment" data-part="p-v"><span class="k">\(v_1, v_2\)</span><span>how much the output listens to each hidden unit</span></li>
+      <li class="fragment" data-part="p-y"><span class="k">\(\hat{y}\)</span><span>\(v_1 h_1 + v_2 h_2\): the output</span></li>
+      <li class="fragment" data-part="p-e"><span class="k">\(e, L\)</span><span>the error \(y - \hat{y}\) and the loss \(\frac{1}{2}e^2\) for this example</span></li>
+      <li class="fragment"><span class="k">bias</span><span>in practice a constant 1 joins \(\mathbf{x}\) and \(\mathbf{h}\), so each unit gets one extra weight</span></li>
+    </ol>
+  </div>
+  <aside class="notes">
+    <p><b>Why this slide:</b> every later slide uses these names. Here they are on one picture, in the order the computation happens.</p>
+    <p><b>Clicks:</b> 1) the inputs x. 2) the weights into hidden unit 1. 3) a₁, its weighted sum. 4) h₁ = tanh(a₁), its output. 5) unit 2 does the same with its own weights. 6) the output weights v₁, v₂. 7) the output ŷ = v₁h₁ + v₂h₂. 8) the error e = y − ŷ and the loss ½e². 9) the bias note.</p>
+    <p><b>Say:</b> forward means left to right: inputs → weighted sums → tanh → weighted sum → output → error. Backpropagation will run right to left along the same picture.</p>
+    <p><b>Watch out:</b> a_i is the weighted sum before tanh; h_i is after tanh. Keep the two apart: the gradient needs both.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 12. Activation functions -->
+<section>
+  <h2>Activation Functions</h2>
+  <div class="rule"></div>
+  <div class="cols even" style="align-items: center;">
+    <ul class="bul" style="font-size: 28px;">
+      <li>Activation functions are usually <span class="b">non-linear</span> functions</li>
+      <li>Surrogates to <span style="color: #306F1D;">non-linear</span> as in the perceptron</li>
+      <li>BUT they are <span class="b">differentiable</span>!
+        <ul>
+          <li><span class="r">hyperbolic tangent \((-1, 1)\)</span></li>
+          <li><span class="b">Sigmoid \((0, 1)\)</span></li>
+        </ul>
+      </li>
+    </ul>
+    <figure><img class="fig" src="../images/activations.png" alt="The sign step function, the sigmoid between 0 and 1, and tanh between −1 and 1" style="max-height: 460px;"></figure>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> the perceptron used the sign function (green in the plot): a hard step. It has no useful slope: flat everywhere except a jump at 0, so gradient descent gets no direction from it. tanh and the sigmoid are smooth versions of the step, so they have a slope everywhere.</p>
+    <p><b>Refresher:</b> tanh goes from −1 to 1 and the sigmoid from 0 to 1, but they are the same shape: tanh(a) = 2σ(2a) − 1. The slope of tanh is 1 − tanh², largest (1) at 0 and close to 0 far from 0.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 13. Solving XOR by hand -->
+<section>
+  <h2>Solving XOR by Hand</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 36px;">
+    <div class="stack-v eqx" style="font-size: 25px;">
+      <p>Two tanh hidden units and an identity output, with hand-picked weights:</p>
+      <div>Hidden unit 1 \(\approx\) <span class="b">OR</span>: \[ h_1 = \tanh(\class{p-or}{5x_1 + 5x_2 + 5}) \]</div>
+      <div>Hidden unit 2 \(\approx\) <span class="b">AND</span>: \[ h_2 = \tanh(\class{p-and}{5x_1 + 5x_2 - 5}) \]</div>
+      <div>Output, “OR and not AND”: \[ \hat{y} = \class{p-out}{h_1 - h_2 - 1}, \quad \text{predict } \mathrm{sign}(\hat{y}) \]</div>
+    </div>
+    <div class="stack-v">
+      <table class="data" style="font-size: 23px;">
+        <thead><tr><th>\(x_1\)</th><th>\(x_2\)</th><th>\(h_1\)</th><th>\(h_2\)</th><th>\(\hat{y}\)</th><th class="out">target</th></tr></thead>
+        <tbody>
+          <tr class="fragment" data-fragment-index="4"><td>−1</td><td>−1</td><td class="num">−1.00</td><td class="num">−1.00</td><td class="num">−1.00</td><td class="out">−1</td></tr>
+          <tr class="fragment" data-fragment-index="5"><td>−1</td><td>+1</td><td class="num">+1.00</td><td class="num">−1.00</td><td class="num">+1.00</td><td class="out">+1</td></tr>
+          <tr class="fragment" data-fragment-index="6"><td>+1</td><td>−1</td><td class="num">+1.00</td><td class="num">−1.00</td><td class="num">+1.00</td><td class="out">+1</td></tr>
+          <tr class="fragment" data-fragment-index="7"><td>+1</td><td>+1</td><td class="num">+1.00</td><td class="num">+1.00</td><td class="num">−1.00</td><td class="out">−1</td></tr>
+        </tbody>
+      </table>
+      <p class="small muted">\(\tanh(5) \approx 0.9999\), so each hidden unit is almost a ±1 switch.</p>
+      <ol class="parts caption" style="font-size: 20px; min-height: 92px;">
+        <li class="fragment" data-fragment-index="1" data-part="p-or"><span class="k">OR</span><span>\(5x_1 + 5x_2 + 5\) is negative only when both inputs are \(-1\) (it is \(-5\)), so \(h_1 \approx +1\) unless both are off</span></li>
+        <li class="fragment" data-fragment-index="2" data-part="p-and"><span class="k">AND</span><span>\(5x_1 + 5x_2 - 5\) is positive only when both inputs are \(+1\) (it is \(+5\)), so \(h_2 \approx +1\) only when both are on</span></li>
+        <li class="fragment" data-fragment-index="3" data-part="p-out"><span class="k">XOR</span><span>\(h_1 - h_2 - 1 = +1\) when OR is on and AND is off (\(1 + 1 - 1\)); otherwise \(-1\)</span></li>
+      </ol>
+      <div class="callout fragment" data-fragment-index="8">Each hidden unit is one line, like a perceptron. The output unit combines the two lines.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1–3) read the three equations; 4–7) one table row per input; 8) the take-away.</p>
+    <p><b>Click 1 (OR):</b> 5x₁ + 5x₂ + 5 is −5 for (−1, −1), +5 for one +1 and one −1, +15 for (1, 1). tanh turns these into about −1, +1, +1: “on unless both are off”, OR.</p>
+    <p><b>Click 2 (AND):</b> 5x₁ + 5x₂ − 5 is +5 only for (1, 1), otherwise −5 or −15. So h₂ ≈ +1 only when both are on: AND.</p>
+    <p><b>Click 3 (XOR):</b> h₁ − h₂ − 1. OR on, AND off: 1 − (−1) − 1 = +1. Both off: −1 − (−1) − 1 = −1. Both on: 1 − 1 − 1 = −1.</p>
+    <p><b>Ask for each row before clicking:</b> what are h₁ and h₂? They only need the sign of the bracket.</p>
+    <p><b>Say:</b> the middle two rows land on the same hidden point (+1, −1); that is the next slide. Students can change these weights in the NeuralNetworks notebook and re-run.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 14. Hidden space -->
+<section>
+  <h2>How the Hidden Layer Solves XOR</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/nn-xor-hidden-space.png" alt="Left: input space with two parallel lines, h1 = 0 and h2 = 0, giving a band-shaped region. Right: hidden space where the points sit at corners and the line h1 − h2 − 1 = 0 separates them." style="max-height: 530px;">
+    <figcaption>The output unit only sees \((h_1, h_2)\). The inputs \((-1, 1)\) and \((1, -1)\) both map to the hidden point \((1, -1)\), and one straight line separates the classes.</figcaption>
+  </figure>
+  <aside class="notes">
+    <p><b>Say:</b> left: each hidden unit draws one line, h₁ = 0 (teal) and h₂ = 0 (orange). The blue band between them is where the network says +.</p>
+    <p><b>Say:</b> right: instead of plotting each input at (x₁, x₂), plot it at its hidden values (h₁, h₂). The two + inputs land on the same point, and now one straight line separates + from −. That is what a hidden layer does: it moves the data to a space where the problem becomes linear.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 15. DEMO XOR hidden space -->
+<section class="demo" data-demo="../demos/xor-hidden-layer.html" data-title="XOR Hidden Space">
+  <aside class="notes">
+    A sequence that works:
+    1) “Solved: OR and not AND” shows the weights from the last slide.
+    2) Drag a hidden-unit slider and watch its line move on the left and the points move on the right.
+    3) “Random start”, then Play: training finds its own solution.
+    4) Untick “Use biases”: (1,1) and (−1,−1) are forced to opposite sides, so one is always wrong.
+    5) Switch the hidden activation to identity: hidden space becomes a stretched copy of input space, and XOR stays unsolved.
+  </aside>
+</section>
+
+<!-- ================================================================ 16. Function approximation -->
+<section>
+  <h2>Function Approximation with Neural Networks</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 26px;">
+    <li><span class="b">Problem formulation</span>
+      <ul>
+        <li>Set of possible instances \(X\)
+          <ul><li><span class="r">Each instance \(\mathbf{x} \in X\) is a feature vector \(\mathbf{x} = [x_1, \ldots, x_D]\)</span></li></ul>
+        </li>
+        <li>Unknown target function \(f: X \rightarrow Y\)
+          <ul><li><span class="r">\(Y\) is binary valued \(\{-1, +1\}\)</span></li></ul>
+        </li>
+        <li>Set of function hypotheses \(H = \{h \mid h: X \rightarrow Y\}\)
+          <ul><li><span class="r">???</span></li></ul>
+        </li>
+      </ul>
+    </li>
+    <li><span class="b">Input</span>
+      <ul><li>Training examples \(\{(\mathbf{x}^{(1)}, y^{(1)}), \ldots, (\mathbf{x}^{(N)}, y^{(N)})\}\) of unknown target function \(f\)</li></ul>
+    </li>
+    <li><span class="b">Output</span>
+      <ul><li>Hypothesis \(h \in H\) that best approximates function \(f\)</li></ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> the general learning set-up: examples x with labels from some unknown function f; we choose a hypothesis h from a set H that matches f as well as possible on the training data.</p>
+    <p><b>Ask:</b> what is H for a neural network? (Every function the network can compute with this architecture: one function for each setting of the weights W and v.) The next slide says how big that set is.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 17. Universal approximation -->
+<section>
+  <h2>Two-Layer Networks are Universal Function Approximators</h2>
+  <div class="rule"></div>
+  <div class="box" style="font-size: 27px; margin-top: 40px; padding: 20px 26px;">
+    <p><b>Theorem:</b> Let \(F\) be a continuous function on a closed, bounded subset of \(D\)-dimensional space, and let \(\epsilon &gt; 0\). Then there exists a two-layer neural network \(\hat{F}\) (sigmoid or tanh hidden units with biases, linear output) with a finite number of hidden units that approximates \(F\) arbitrarily well. Namely, for all \(\mathbf{x}\) in the domain of \(F\),
+      \[ |F(\mathbf{x}) - \hat{F}(\mathbf{x})| &lt; \epsilon \]</p>
+  </div>
+  <p style="font-size: 30px; margin-top: 30px;">… or put simply, with enough hidden units, two-layer networks can <span class="r">approximate</span> any continuous function on a bounded region!</p>
+  <aside class="notes">
+    <p><b>Say in plain words:</b> give a two-layer network enough hidden units and it can match any unbroken (continuous) curve, one you could draw without lifting the pen, even with corners, as closely as you like over a limited range. Picture each tanh unit as a smooth step; with enough steps of the right heights in the right places you can trace any curve, like building a hill from bricks.</p>
+    <p><b>Say:</b> the theorem says such a network exists. It does not say how many hidden units we need, or that gradient descent will find the weights.</p>
+    <p><b>The conditions matter:</b> the function must be continuous, the region closed and bounded, and the hidden units need biases (the XOR slides later show that a tanh network without biases cannot output any constant except 0: its output at −x is always minus its output at x).</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 18. Design question -->
+<section>
+  <h2>Design Question</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 30px; margin-top: 30px;">
+    <li>How many <span class="b">hidden units</span>? How many <span class="b">layers</span>?
+      <ul>
+        <li>Inductive bias / Regularisation</li>
+        <li><span class="r">More hidden units</span> yield more <span class="b">complex functions</span>
+          <ul><li>Overfitting</li></ul>
+        </li>
+        <li><span class="r">Fewer hidden units</span> requires <span class="b">fewer examples</span> to train</li>
+      </ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> the number of hidden units K is a choice we make (a hyperparameter). More units: more flexible, but they can memorise noise (overfitting) and need more data. Fewer units: simpler functions that need fewer examples. In practice, try a few values and compare them on validation data.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 19. Section: backprop -->
+<section class="section-slide">
+  <div class="section-title"><h1>Training Neural Networks:</h1><h1>Backpropagation</h1></div>
+</section>
+
+<!-- ================================================================ 20. Training neural networks -->
+<section>
+  <h2>Training Neural Networks</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: center;">
+    <figure><img class="fig" src="../images/mlp4.png" alt="A two-layer network with blue arrows pointing down from the output to the hidden layer" style="max-height: 560px;"></figure>
+    <div class="stack-v" style="font-size: 34px;">
+      <p>Backpropagation algorithm =</p>
+      <p><span class="b">Gradient descent</span> + <span class="r">Chain rule</span></p>
+      <ul class="bul small" style="font-size: 23px; margin-top: 20px;">
+        <li><b>Forward:</b> compute \(\mathbf{h}\) and \(\hat{y}\), layer by layer</li>
+        <li><b>Backward:</b> pass the error back down, layer by layer (the arrows), to get every weight’s gradient</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> training is gradient descent, as in Lecture 1. The new difficulty: the hidden weights affect the loss only indirectly, through the hidden units and then the output. The chain rule handles that. Computing the slopes layer by layer, from the output back towards the inputs (the blue arrows), is called backpropagation.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 21. Training objective -->
+<section>
+  <h2>What’s our training objective?</h2>
+  <div class="rule"></div>
+  <ul class="bul eqx" style="font-size: 26px;">
+    <li>We will consider the following <span class="b">objective</span>
+      \[ \min_{\mathbf{W}, \mathbf{v}} L(\mathbf{W}, \mathbf{v}) = \class{p-min}{\min_{\mathbf{W}, \mathbf{v}}} \class{p-sum}{\sum_n} \class{p-half}{\frac{1}{2}} \Big( \class{p-y}{y_n} - \class{p-yhat}{\sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x}_n)} \Big)^2
+      \quad \text{where} \quad \hat{y}_n = \sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x}_n) \]
+      <ul>
+        <li>i.e., our goal is to find parameters \(\mathbf{W}, \mathbf{v}\) that <span class="r">minimise</span> <span class="b">squared error</span></li>
+        <li><span class="b">\(N\) examples with \(\mathbf{x}_n, y_n\)</span></li>
+      </ul>
+    </li>
+    <li>Other objectives are possible (exponential, logistic, etc.)</li>
+    <li>Weight regularisation</li>
+  </ul>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-min"><span class="k">\(\min_{\mathbf{W}, \mathbf{v}}\)</span><span>find the hidden weights \(\mathbf{W}\) and output weights \(\mathbf{v}\) that make the rest as small as possible</span></li>
+    <li class="fragment" data-part="p-yhat"><span class="k">\(\sum_i v_i f(\ldots)\)</span><span>the network’s prediction \(\hat{y}_n\): the hidden outputs, weighted by \(\mathbf{v}\)</span></li>
+    <li class="fragment" data-part="p-y p-yhat"><span class="k">\(y_n - \hat{y}_n\)</span><span>the error on example \(n\), squared as in Lecture 1</span></li>
+    <li class="fragment" data-part="p-half"><span class="k">\(\frac{1}{2}\)</span><span>a convenience: it cancels the 2 that appears when we take the slope of the square</span></li>
+    <li class="fragment" data-part="p-sum"><span class="k">\(\sum_n\)</span><span>add over all \(N\) training examples</span></li>
+    <li class="fragment"><span class="k">so</span><span>the same squared error as Lecture 1, with the network as the predictor</span></li>
+  </ol>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1) min over W and v. 2) the network’s prediction. 3) the error. 4) the ½. 5) the sum over examples. 6) the whole objective again.</p>
+    <p><b>Say:</b> the same squared error as Lecture 1. The only change is what ŷ is: before, a weighted sum of the inputs; now, a weighted sum of the hidden outputs, which are themselves tanh of weighted sums of the inputs.</p>
+    <p><b>For the ½:</b> it changes nothing about where the minimum is. It is there so that, when we take the slope of the square, the 2 from the square cancels it and the formulas come out clean.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 22. Recap GD -->
+<section>
+  <h2>Recap: General Gradient Descent Algorithm</h2>
+  <div class="rule"></div>
+  <div class="algo" style="font-size: 22px; max-width: none;">
+    <div class="head"><b>Algorithm:</b> GRADIENT DESCENT(\(L(\mathbf{w}, b; \mathbf{D}), \mathbf{D}, maxIter, \eta_1, \ldots, \eta_k\))</div>
+    <ol>
+      <li><span>\(\mathbf{w}^{(0)} \leftarrow \langle 0, 0, \ldots, 0 \rangle,\ b^{(0)} \leftarrow 0\)</span><span class="cmt">// initialise the weights vector and bias</span></li>
+      <li><span><b>for</b> \(k = 1 \ldots maxIter\) <b>do</b></span></li>
+      <li><span class="i1">\(\mathbf{g}^{(k)} \leftarrow \nabla_{\mathbf{w}, b} L(\mathbf{w}, b; \mathbf{D})\big|_{\mathbf{w}^{(k-1)}, b^{(k-1)}}\)</span><span class="cmt">// gradient (slope of the loss) at the current point</span></li>
+      <li class="hl"><span class="i1">\(\mathbf{w}^{(k)} \leftarrow \mathbf{w}^{(k-1)} - \eta^{(k)} \mathbf{g}^{(k)}\)</span><span class="cmt">// step down the gradient</span></li>
+      <li class="hl"><span class="i1">\(b^{(k)} \leftarrow b^{(k-1)} - \eta^{(k)} \frac{\partial L}{\partial b}\)</span><span class="cmt">// update the bias the same way</span></li>
+      <li><span><b>end for</b></span></li>
+      <li><span><b>return</b> \(\mathbf{w}^{(k)}, b^{(k)}\)</span></li>
+    </ol>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 30px; font-size: 18px; margin-top: 18px;">
+    <div><b>Greek letters</b><br>\(\eta\) (eta): learning rate, the step size<br>\(\nabla\) (nabla): gradient, the vector of partial derivatives<br>\(\partial\): partial derivative</div>
+    <div><b>Notation</b><br>\(\mathbf{w}^{(k)}\): value of \(\mathbf{w}\) at iteration \(k\)<br>\(\langle 0, \ldots, 0 \rangle\): vector of zeros<br>\(\leftarrow\): assignment<br>\(\big|_{\mathbf{w}^{(k-1)}, b^{(k-1)}}\): evaluated at the previous values</div>
+    <div><b>Variables</b><br>\(\mathbf{w}, b\): weights and bias we optimise<br>\(L\): loss, the prediction error<br>\(\mathbf{D}\): the training data<br>\(\mathbf{g}\): gradient, the update direction<br>\(k\): iteration number</div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> the general recipe from Lecture 1: start somewhere, compute the slope of the loss at the current weights, step against it, repeat. The legend below defines every symbol on the slide.</p>
+    <p><b>Say:</b> the only new part for a network is line 3: we need the slope for every weight, in both layers. Backprop is how we compute it.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 23. Toolbox -->
+<section>
+  <h2>Backprop Toolbox: Five Facts</h2>
+  <div class="rule"></div>
+  <p class="muted" style="font-size: 23px;">The next slides use only these. Keep them in view while we derive the gradients.</p>
+  <div class="toolbox">
+    <div class="tool span2">
+      <span class="name">1 · Chain rule</span>
+      <span class="fact">If \(L\) depends on \(w\) only through \(u\): \(\quad \dfrac{\partial L}{\partial w} = \dfrac{\partial L}{\partial u} \cdot \dfrac{\partial u}{\partial w}\)</span>
+      <span class="use">Used at every step: follow the path from the weight to the loss</span>
+    </div>
+    <div class="tool">
+      <span class="name">2 · Squared error</span>
+      <span class="fact">\(L = \frac{1}{2} e^2,\ e = y - \hat{y} \ \Rightarrow\ \dfrac{\partial L}{\partial \hat{y}} = -e\)</span>
+      <span class="use">The start of both gradients</span>
+    </div>
+    <div class="tool">
+      <span class="name">3 · Weighted sum</span>
+      <span class="fact">\(g = \sum_i v_i h_i \ \Rightarrow\ \dfrac{\partial g}{\partial v_i} = h_i,\ \ \dfrac{\partial g}{\partial h_i} = v_i\)</span>
+      <span class="use">Output weights, and passing the error back to \(h_i\)</span>
+    </div>
+    <div class="tool">
+      <span class="name">4 · Dot product</span>
+      <span class="fact">\(\dfrac{\partial (\mathbf{w}_i \cdot \mathbf{x})}{\partial \mathbf{w}_i} = \mathbf{x}\)</span>
+      <span class="use">Hidden weights (as in linear regression)</span>
+    </div>
+    <div class="tool">
+      <span class="name">5 · tanh</span>
+      <span class="fact">\(\tanh'(a) = 1 - \tanh^2(a)\)</span>
+      <span class="use">Going through the hidden activation</span>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> five facts, all from Lecture 1 except tanh’s slope. Facts 2 and 3 cover the output layer; facts 4 and 5 are needed for the hidden layer; fact 1 glues them together.</p>
+    <p><b>Tip:</b> copy these five onto the whiteboard (B) in a corner, then come back (B again) and point to each one when it is used. Most students who get lost in a derivation are missing one of these facts, not the logic.</p>
+    <p><b>Refresher on fact 5:</b> tanh’s slope can be written with tanh itself: 1 − tanh²(a). At a = 0 it is 1 (steepest); at a = 3 it is 1 − 0.995² ≈ 0.01 (flat).</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 23b. Chain rule along a path -->
+<section>
+  <h2>Backprop Is the Chain Rule Along a Path</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: 540px minmax(0, 1fr); gap: 24px; align-items: center;">
+    <div class="eqx">
+      <svg class="diagram net" viewBox="0 0 640 330" role="img" aria-label="A network with inputs x1, x2, x3, two tanh hidden units h1 and h2, and an output y-hat; the error e = y − y-hat gives the loss L.">
+      <line x1="82" y1="70" x2="270" y2="110" class="edge c-x"/>
+      <line x1="82" y1="170" x2="270" y2="110" class="edge c-x"/>
+      <line x1="82" y1="270" x2="270" y2="110" class="edge c-x"/>
+      <line x1="330" y1="110" x2="450" y2="162" class="edge c-v"/>
+      <line x1="82" y1="70" x2="270" y2="230" class="edge "/>
+      <line x1="82" y1="170" x2="270" y2="230" class="edge "/>
+      <line x1="82" y1="270" x2="270" y2="230" class="edge "/>
+      <line x1="330" y1="230" x2="450" y2="178" class="edge "/>
+      <text x="175" y="62" class="lab c-x">w<tspan class="sub" dy="5">1</tspan></text>
+      <text x="175" y="300" class="lab ">w<tspan class="sub" dy="5">2</tspan></text>
+      <text x="395" y="122" class="lab c-v">v<tspan class="sub" dy="5">1</tspan></text>
+      <text x="395" y="236" class="lab ">v<tspan class="sub" dy="5">2</tspan></text>
+      <g class="c-x"><circle cx="60" cy="70" r="22" class="node in"/><text x="60" y="76" class="lab mid">x<tspan class="sub" dy="5">1</tspan></text></g>
+      <g class="c-x"><circle cx="60" cy="170" r="22" class="node in"/><text x="60" y="176" class="lab mid">x<tspan class="sub" dy="5">2</tspan></text></g>
+      <g class="c-x"><circle cx="60" cy="270" r="22" class="node in"/><text x="60" y="276" class="lab mid">x<tspan class="sub" dy="5">3</tspan></text></g>
+      <g class="c-h"><circle cx="300" cy="110" r="30" class="node hid"/><text x="300" y="115" class="lab mid small">tanh</text></g>
+      <text x="300" y="68" class="lab mid c-h">a<tspan class="sub" dy="5">1</tspan><tspan dy="-5"> = w</tspan><tspan class="sub" dy="5">1</tspan><tspan dy="-5">·x</tspan></text>
+      <text x="340" y="88" class="lab c-h ">h<tspan class="sub" dy="5">1</tspan></text>
+      <g class=""><circle cx="300" cy="230" r="30" class="node hid"/><text x="300" y="235" class="lab mid small">tanh</text></g>
+      <text x="300" y="284" class="lab mid ">a<tspan class="sub" dy="5">2</tspan><tspan dy="-5"> = w</tspan><tspan class="sub" dy="5">2</tspan><tspan dy="-5">·x</tspan></text>
+      <text x="340" y="264" class="lab  ">h<tspan class="sub" dy="5">2</tspan></text>
+      <g class="c-e"><circle cx="480" cy="170" r="30" class="node outn"/><text x="480" y="177" class="lab mid">ŷ</text></g>
+      <g class="c-e"><line x1="510" y1="170" x2="542" y2="170" class="edge"/><text x="548" y="166" class="lab">e = y − ŷ</text><text x="548" y="192" class="lab">L = ½ e²</text></g>
+      </svg>
+    </div>
+    <div class="stack-v" style="font-size: 23px;">
+      <p>How does the loss change if we nudge a weight in \(\mathbf{w}_1\)? Follow the path from that weight to the loss, and multiply the rate at each step (fact 1).</p>
+      <ol class="parts caption" style="font-size: 21px; min-height: 96px;">
+        <li class="fragment" data-part="c-e"><span class="k">\(-e\)</span><span>how the loss reacts to the output (fact 2)</span></li>
+        <li class="fragment" data-part="c-v"><span class="k">\(v_1\)</span><span>how the output reacts to \(h_1\) (fact 3)</span></li>
+        <li class="fragment" data-part="c-h"><span class="k">\(1 - h_1^2\)</span><span>how \(h_1\) reacts to its weighted sum \(a_1\): the slope of tanh (fact 5)</span></li>
+        <li class="fragment" data-part="c-x"><span class="k">\(\mathbf{x}\)</span><span>how \(a_1 = \mathbf{w}_1 \cdot \mathbf{x}\) reacts to \(\mathbf{w}_1\) (fact 4)</span></li>
+        <li class="fragment" data-part="c-e c-v c-h c-x"><span class="k">T1</span><span>with the numbers from our worked example: \(-1.0446 \times (-0.0469) \times 0.9613 \times \mathbf{x} \approx 0.0471\,\mathbf{x}\)</span></li>
+        <li class="fragment"><span class="k">every weight</span><span>gets its gradient the same way: one path to the loss, one product</span></li>
+      </ol>
+    </div>
+  </div>
+  <div class="eqx" style="font-size: 26px; margin-top: 6px;">\[ \frac{\partial L}{\partial \mathbf{w}_1} =
+    \class{c-e}{\underbrace{\frac{\partial L}{\partial \hat{y}}}_{-e}} \cdot
+    \class{c-v}{\underbrace{\frac{\partial \hat{y}}{\partial h_1}}_{v_1}} \cdot
+    \class{c-h}{\underbrace{\frac{\partial h_1}{\partial a_1}}_{1 - h_1^2}} \cdot
+    \class{c-x}{\underbrace{\frac{\partial a_1}{\partial \mathbf{w}_1}}_{\mathbf{x}}} \]</div>
+  <aside class="notes">
+    <p><b>Why this slide:</b> the big picture before the formal derivation. The next eight slides only make each arrow on this path precise.</p>
+    <p><b>Say:</b> how does the loss change if we nudge one weight going into hidden unit 1? The nudge travels a path: it changes a₁, which changes h₁, which changes ŷ, which changes the error and the loss. The chain rule says: multiply the rate at each step.</p>
+    <p><b>Clicks</b> (backwards from the loss, which is why it is called backpropagation): 1) the loss reacts to the output with −e. 2) the output reacts to h₁ with v₁. 3) h₁ reacts to a₁ with tanh’s slope, 1 − h₁². 4) a₁ reacts to the weights with x. 5) the whole path, with the numbers for transaction T1 that we compute later. 6) every weight works the same way.</p>
+    <p><b>Say:</b> notice what each factor means: the error, how much the output listens to this unit, how responsive the unit is, and the input. If any of them is 0, this weight does not change.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 24. Gradient v (1/3) -->
+<section>
+  <h2>Two-layer NN: Gradient of output layer weights \(\mathbf{v}\) (1/3)</h2>
+  <div class="rule"></div>
+  <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{v}} = -e_n \cdot \mathbf{h}_n\)</span><span class="where">line 13 of the backprop algorithm: \(\mathbf{g} \leftarrow \mathbf{g} - e\,\mathbf{h}\)</span></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.5fr); gap: 24px;">
+    <div style="font-size: 24px;">
+      <p>The loss function:
+        \[ L(\mathbf{W}, \mathbf{v}) = \sum_n \frac{1}{2} \Big( y_n - \sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x}_n) \Big)^2 \]</p>
+      <p>Breaking this down, for each training example \(n\):</p>
+      <ul class="bul">
+        <li>the prediction: \(\hat{y}_n = \sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x}_n)\)</li>
+        <li>the error: \(e_n = y_n - \hat{y}_n\)</li>
+        <li>the loss: \(L = \frac{1}{2} e_n^2\)</li>
+      </ul>
+      <p>We want: how does the loss change when we change the output weight \(v_i\)? That is \(\dfrac{\partial L}{\partial v_i}\).</p>
+    </div>
+    <div class="stack-v" style="align-items: center;">
+      <img class="fig" src="../images/mlp5.png" alt="The network with an arrow at the output layer" style="max-height: 250px;">
+      <img class="fig" src="../images/sqloss.png" alt="The squared loss, a parabola" style="max-height: 200px;">
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say the destination first:</b> by the end of three slides we will have line 13 of the algorithm, g ← g − e·h.</p>
+    <p><b>Say:</b> the output layer is the easy one: v only touches the loss through ŷ. Break the loss down for one example: prediction, error, half the error squared. The question: how does the loss change when we change one output weight v_i?</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 25. Gradient v (2/3) -->
+<section>
+  <h2>Two-layer NN: Gradient of output layer weights \(\mathbf{v}\) (2/3)</h2>
+  <div class="rule"></div>
+  <div style="font-size: 24px;">We use \(g\) for the network output (the prediction). By the chain rule (fact 1):
+    \[ \frac{\partial L}{\partial v_i} = \color{#3274B5}{\frac{\partial L}{\partial g}} \cdot \color{#A62B17}{\frac{\partial g}{\partial v_i}} \]</div>
+  <div class="cols even" style="gap: 34px; margin-top: 4px;">
+    <div>
+      <h3><span class="b">Part 1:</span> how does the loss change with the prediction?</h3>
+      <div class="deriv wide" style="font-size: 23px;">
+        <div class="eq fragment">\(L = \frac{1}{2}(y_n - g)^2 = \frac{1}{2} e_n^2\)</div>
+        <div class="why"></div>
+        <div class="eq fragment">\(\displaystyle \frac{\partial L}{\partial g} = \frac{\partial L}{\partial e} \cdot \frac{\partial e}{\partial g} = (y_n - g) \cdot (-1)\)</div>
+        <div class="why fragment">chain rule again: \(e = y_n - g\), so \(\partial e / \partial g = -1\)</div>
+        <div class="eq fragment">\(\color{#3274B5}{\displaystyle \frac{\partial L}{\partial g} = -e_n}\)</div>
+        <div class="why fragment">fact 2</div>
+      </div>
+    </div>
+    <div>
+      <h3><span class="r">Part 2:</span> how does the prediction change with \(v_i\)?</h3>
+      <div class="deriv wide" style="font-size: 23px;">
+        <div class="eq fragment">\(g = \mathit{identity}\Big(\sum_i v_i \cdot h_{i,n}\Big)\)</div>
+        <div class="why"></div>
+        <div class="eq fragment">\(\phantom{g} = v_1 h_{1,n} + v_2 h_{2,n} + \ldots + v_K h_{K,n}\)</div>
+        <div class="why fragment">identity output: \(g\) is just the weighted sum</div>
+        <div class="eq fragment">\(\color{#A62B17}{\displaystyle \frac{\partial g}{\partial v_i} = h_{i,n}}\)</div>
+        <div class="why fragment">fact 3: only the \(v_i h_{i,n}\) term contains \(v_i\). The prediction changes by exactly \(h_{i,n}\) when \(v_i\) changes by 1.</div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Notation:</b> on these slides g means the network output (ŷ). In Algorithm 25, g is a different thing: the gradient for v. Say this out loud.</p>
+    <p><b>Clicks:</b> Part 1 (blue): 1) the loss as ½e². 2–3) the chain rule through e: the slope of ½e² is e, and e = y − g goes down by 1 when g goes up by 1. 4–5) result −e. Part 2 (red): 6) g as a weighted sum. 7–8) written out term by term. 9–10) only one term contains v_i, so its slope is h_{i,n}.</p>
+    <p><b>Ask for Part 2:</b> “which terms of the sum contain v_i?” (only v_i·h_i.)</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 26. Gradient v (3/3) -->
+<section>
+  <h2>Two-layer NN: Gradient of output layer weights \(\mathbf{v}\) (3/3)</h2>
+  <div class="rule"></div>
+  <div class="cols even" style="gap: 30px; font-size: 24px;">
+    <div>
+      <p><b>Putting it together:</b></p>
+      \[ \frac{\partial L}{\partial v_i} = \color{#3274B5}{-e_n} \cdot \color{#A62B17}{h_{i,n}} \]
+      <p>In vector form, with \(\mathbf{h}_n = [h_{1,n}, h_{2,n}, \ldots]\) the hidden activations for example \(n\):</p>
+      <div class="eqx">\[ \nabla_{\mathbf{v}} = \class{p-e}{-e_n} \cdot \class{p-h}{\mathbf{h}_n} \]</div>
+      <ol class="parts caption" style="font-size: 20px;">
+        <li class="fragment" data-fragment-index="1" data-part="p-e"><span class="k">\(-e_n\)</span><span>the error: no error, no update</span></li>
+        <li class="fragment" data-fragment-index="2" data-part="p-h"><span class="k">\(\mathbf{h}_n\)</span><span>the hidden outputs: a unit with a large output (near \(+1\) or \(-1\)) gets its outgoing weight changed most; a unit at 0 gets no change</span></li>
+      </ol>
+    </div>
+    <div class="fragment" data-fragment-index="3">
+      <p><b>The update rule*:</b></p>
+      <p>For a single example (online): \(\ \nabla_{\mathbf{v}} = -e_n \cdot \mathbf{h}_n\)</p>
+      <p>For all examples (batch): \(\ \nabla_{\mathbf{v}} = -\sum_n e_n \cdot \mathbf{h}_n\)</p>
+      \[ \mathbf{v} \leftarrow \mathbf{v} - \eta \cdot \nabla_{\mathbf{v}} \]
+      <p class="small muted">* Assuming a linear (identity) activation at the output unit, \(g = \mathit{identity}(\sum_i v_i \cdot h_{i,n})\)</p>
+    </div>
+  </div>
+  <div class="callout fragment" data-fragment-index="4" style="font-size: 23px;">Compare with linear regression in Lecture 1: \(\mathbf{w} \leftarrow \mathbf{w} + \eta \cdot \delta \cdot \mathbf{x}_n\). The \(\mathbf{v}\) update is the same rule with the hidden features \(\mathbf{h}_n\) in place of the inputs \(\mathbf{x}_n\): for fixed hidden weights, the output layer is linear regression on \(\mathbf{h}_n\).</div>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1) the error part. 2) the hidden outputs part. 3) the update rule, online and batch. 4) the comparison with Lecture 1.</p>
+    <p><b>Say:</b> multiply the two parts: −e·h_i. For all output weights at once: −e·h. Point back to line 13 (g ← g − e·h) and line 19 (v ← v − η·g) of the algorithm.</p>
+    <p><b>Say:</b> the minus signs cancel: v − η·(−e·h) = v + η·e·h. That is the Lecture 1 update, with the hidden outputs h in place of the inputs x.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 27. Quick check 1 -->
+<section>
+  <h2>Quick Check: Output Weights</h2>
+  <div class="rule"></div>
+  <p class="check-tag">One minute with your neighbour, then we compare answers.</p>
+  <div class="checks">
+    <div class="q"><span class="n">1</span><span>The network predicts example \(n\) perfectly. How much does \(\mathbf{v}\) change on this example?</span>
+      <div class="ans fragment"><b>Not at all.</b> \(e_n = 0\), so \(\nabla_{\mathbf{v}} = -e_n \mathbf{h}_n = \mathbf{0}\). Gradient descent only learns from errors.</div>
+    </div>
+    <div class="q"><span class="n">2</span><span>On example \(n\), hidden unit \(i\) outputs \(h_{i,n} = 0\). How much does its outgoing weight \(v_i\) change on this example?</span>
+      <div class="ans fragment"><b>Not at all.</b> Its gradient is \(-e_n h_{i,n} = 0\). \(v_i\) only learns from examples where unit \(i\) is active.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Give a minute, take two or three answers, then click to show each answer.</p>
+    <p><b>Q1:</b> e = 0, so −e·h = 0: perfect predictions teach nothing. <b>Q2:</b> −e·h_i = 0 for that example, so v_i does not change on it; it learns only from examples where unit i is active.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 28. Gradient w (1/4) -->
+<section>
+  <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\) (1/4)</h2>
+  <div class="rule"></div>
+  <div class="goal"><span class="tag">Where we’re heading</span><span>\(\nabla_{\mathbf{w}_i} = -e\, v_i \big(1 - \tanh^2(a_i)\big)\, \mathbf{x}\)</span><span class="where">line 15 of the backprop algorithm, with \(a_i = \mathbf{w}_i \cdot \mathbf{x}\)</span></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.45fr); gap: 24px;">
+    <div style="font-size: 24px;">
+      <p><b>The loss function</b> (one example):
+        \[ L(\mathbf{W}, \mathbf{v}) = \frac{1}{2} \Big( y - \sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x}) \Big)^2 = \frac{1}{2} e^2 \]
+        where the error is \(e = y - \sum_i v_i \cdot f(\mathbf{w}_i \cdot \mathbf{x})\).</p>
+      <p><b>The chain rule:</b>
+        \[ \frac{\partial L}{\partial \mathbf{w}_i} = \color{#3274B5}{\frac{\partial L}{\partial f_i}} \cdot \color{#A62B17}{\frac{\partial f_i}{\partial \mathbf{w}_i}} \]</p>
+      <p>In simple words: \(\mathbf{w}_i\) only reaches the loss through the activation \(h_i = f_i = f(\mathbf{w}_i \cdot \mathbf{x})\) of hidden unit \(i\), so we go through it.</p>
+    </div>
+    <figure><img class="fig" src="../images/mlp6.png" alt="The network with an arrow at the hidden layer" style="max-height: 400px;"></figure>
+  </div>
+  <aside class="notes">
+    <p><b>Say the destination:</b> line 15 of the algorithm. It looks long, but it is the path from the earlier slide: error × v_i × tanh’s slope × x.</p>
+    <p><b>Say:</b> a hidden weight w_i only reaches the loss through its hidden unit’s output, so the chain rule goes through f_i (= h_i).</p>
+    <p><b>Ask:</b> what is the path from w_i to the loss? (w_i → a_i → h_i → ŷ → e → L.)</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 29. Gradient w (2/4) -->
+<section>
+  <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\) (2/4)</h2>
+  <div class="rule"></div>
+  <div style="font-size: 24px;">\[ \frac{\partial L}{\partial \mathbf{w}_i} = \color{#3274B5}{\frac{\partial L}{\partial f_i}} \cdot \frac{\partial f_i}{\partial \mathbf{w}_i} \]</div>
+  <h3><span class="b">Part 1:</span> how does the loss change with the activation of hidden unit \(i\)?</h3>
+  <p style="font-size: 24px;">Let \(g = \sum_i v_i \cdot f_i\), so \(L = \frac{1}{2}(y - g)^2\).</p>
+  <div class="deriv" style="font-size: 24px;">
+    <div class="eq fragment">\(\displaystyle \frac{\partial L}{\partial f_i} = \frac{\partial L}{\partial g} \cdot \frac{\partial g}{\partial f_i}\)</div>
+    <div class="why fragment">chain rule: \(f_i\) reaches the loss through the output \(g\)</div>
+    <div class="eq fragment">\(\displaystyle \frac{\partial L}{\partial g} = -e\)</div>
+    <div class="why fragment">from the output layer slides (fact 2)</div>
+    <div class="eq fragment">\(g = v_1 f_1 + v_2 f_2 + \ldots + v_K f_K \ \Rightarrow\ \displaystyle \frac{\partial g}{\partial f_i} = v_i\)</div>
+    <div class="why fragment">fact 3, the other way round</div>
+    <div class="eq fragment">\(\color{#3274B5}{\displaystyle \frac{\partial L}{\partial f_i} = -e \cdot v_i}\)</div>
+    <div class="why fragment">the output error, sent back to unit \(i\) and scaled by its outgoing weight</div>
+  </div>
+  <aside class="notes">
+    <p><b>Clicks</b> (each step is two clicks, the line then its reason): 1–2) the chain rule through the output g. 3–4) ∂L/∂g = −e, already known from the output layer. 5–6) g is a weighted sum of the f’s, so ∂g/∂f_i = v_i. 7–8) the result −e·v_i.</p>
+    <p><b>Say:</b> this is the “back” in backpropagation: the error e at the output is passed back to each hidden unit, scaled by that unit’s outgoing weight v_i. A unit with a big v_i carries a big share of the blame.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 30. Gradient w (3/4) -->
+<section>
+  <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\) (3/4)</h2>
+  <div class="rule"></div>
+  <div style="font-size: 24px;">\[ \frac{\partial L}{\partial \mathbf{w}_i} = \frac{\partial L}{\partial f_i} \cdot \color{#A62B17}{\frac{\partial f_i}{\partial \mathbf{w}_i}} \]</div>
+  <h3><span class="r">Part 2:</span> how does the activation \(f_i\) change with the weights \(\mathbf{w}_i\)?</h3>
+  <div class="deriv" style="font-size: 25px;">
+    <div class="eq fragment">\(\displaystyle \frac{\partial f_i}{\partial \mathbf{w}_i} = \frac{\partial f(\mathbf{w}_i \cdot \mathbf{x})}{\partial \mathbf{w}_i} = f'(\mathbf{w}_i \cdot \mathbf{x}) \cdot \frac{\partial (\mathbf{w}_i \cdot \mathbf{x})}{\partial \mathbf{w}_i}\)</div>
+    <div class="why fragment">chain rule: outer function \(f\), inner function \(\mathbf{w}_i \cdot \mathbf{x}\)</div>
+    <div class="eq fragment">\(\color{#A62B17}{\displaystyle \frac{\partial f_i}{\partial \mathbf{w}_i} = f'(\mathbf{w}_i \cdot \mathbf{x})\, \mathbf{x}}\)</div>
+    <div class="why fragment">fact 4: the inner derivative is \(\mathbf{x}\)</div>
+  </div>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1–2) the chain rule again: outer function f (tanh), inner function w_i·x. 3–4) the inner slope is x (fact 4).</p>
+    <p><b>Ask:</b> which toolbox fact gives the x? It is the same x as in the linear regression gradient.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 31. Gradient w (4/4) -->
+<section>
+  <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\) (4/4)</h2>
+  <div class="rule"></div>
+  <div style="font-size: 25px;">
+    <p><b>Putting it together:</b></p>
+    \[ \nabla_{\mathbf{w}_i} = \color{#3274B5}{-e\, v_i} \cdot \color{#A62B17}{f'(\mathbf{w}_i \cdot \mathbf{x})\, \mathbf{x}} \]
+    <p class="fragment">For tanh, the gradient \(f'\) is (fact 5): \(\quad f'(\mathbf{w}_i \cdot \mathbf{x}) = 1 - \tanh^2(\mathbf{w}_i \cdot \mathbf{x})\)</p>
+    <div class="fragment eqx">
+      <p>With \(a_i = \mathbf{w}_i \cdot \mathbf{x}\) (line 8 of the algorithm) and \(h_i = \tanh(a_i)\) (line 9):</p>
+      \[ \nabla_{\mathbf{w}_i} = \class{p-e}{\underbrace{-e}_{\text{error}}} \cdot \class{p-v}{\underbrace{v_i}_{\text{how much the output uses } h_i}} \cdot \class{p-s}{\underbrace{\big(1 - \tanh^2(a_i)\big)}_{\text{slope of } h_i\text{, also } 1 - h_i^2}} \cdot \class{p-x}{\underbrace{\mathbf{x}}_{\text{input}}} \]
+    </div>
+  </div>
+  <ol class="parts caption">
+    <li class="fragment" data-part="p-e"><span class="k">\(-e\)</span><span>the output’s error: no error, no update</span></li>
+    <li class="fragment" data-part="p-v"><span class="k">\(v_i\)</span><span>how much the output listens to unit \(i\): if \(v_i \approx 0\), unit \(i\) gets almost no blame</span></li>
+    <li class="fragment" data-part="p-s"><span class="k">\(1 - h_i^2\)</span><span>how responsive unit \(i\) is: near 1 when \(a_i\) is near 0, near 0 when tanh is saturated (\(h_i \approx \pm 1\))</span></li>
+    <li class="fragment" data-part="p-x"><span class="k">\(\mathbf{x}\)</span><span>the inputs: a weight whose input is 0 does not change</span></li>
+    <li class="fragment"><span class="k">all four</span><span>error × outgoing weight × slope × input: the same path as on the chain-rule slide</span></li>
+  </ol>
+  <aside class="notes">
+    <p><b>Clicks:</b> 1) tanh’s slope (fact 5). 2) rewrite with a_i and h_i. Then the four factors one at a time: 3) the error, 4) v_i, 5) tanh’s slope, 6) x, 7) all four together.</p>
+    <p><b>Notation:</b> a_i is the weighted input w_i·x (line 8 of the algorithm), and h_i = tanh(a_i) is the activation (line 9). So 1 − tanh²(a_i) = 1 − h_i², which is how the code computes it.</p>
+    <p><b>Say:</b> same four factors as the path slide; the next slide turns them into intuition.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 32. Intuition -->
+<section>
+  <h2>Two-layer NN: Gradient of hidden unit weights \(\mathbf{w}_i\)</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 30px; margin-top: 30px;">
+    <li>Intuition
+      <ul>
+        <li><span class="b">Small</span> \(e\) \(\rightarrow\) <span class="r">small gradient</span></li>
+        <li>\(v_i\) <span class="b">small</span> \(\rightarrow\) output not sensitive to activation of \(h_i\) \(\rightarrow\) <span class="r">small gradient</span></li>
+        <li>\(v_i\) <span class="b">flips sign</span> \(\rightarrow\) <span class="r">gradient</span> should also <span class="r">flip sign</span></li>
+      </ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> each bullet is one factor of the gradient. Small error → small gradient (the −e). v_i small → the output barely listens to unit i, so unit i barely gets blamed (the v_i). v_i negative instead of positive → the unit pushes the output the other way, so its correction goes the other way too (the sign of v_i).</p>
+    <p><b>Add the fourth factor:</b> a saturated unit (h_i near ±1) has 1 − h_i² near 0 and learns slowly.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 33. Quick check 2 -->
+<section>
+  <h2>Quick Check: Hidden Weights</h2>
+  <div class="rule"></div>
+  <p class="check-tag">One minute with your neighbour, then we compare answers.</p>
+  <div class="checks">
+    <div class="q"><span class="n">1</span><span>A hidden unit has \(a_i = 5\), so \(h_i = \tanh(5) \approx 1\). How much do its weights \(\mathbf{w}_i\) move?</span>
+      <div class="ans fragment"><b>Almost not at all.</b> \(1 - \tanh^2(5) \approx 0.0002\). A saturated unit learns very slowly, the same problem as the sigmoid with the squared loss in Lecture 1.</div>
+    </div>
+    <div class="q"><span class="n">2</span><span>We start with every weight in \(\mathbf{W}\) and \(\mathbf{v}\) equal to 0. What do the gradients look like?</span>
+      <div class="ans fragment"><b>The hidden layer never moves.</b> \(\mathbf{h} = \tanh(\mathbf{0}) = \mathbf{0}\), so \(v_1, \ldots, v_K\) get \(-e\,h_i = 0\); and \(v_i = 0\), so every \(\nabla_{\mathbf{w}_i} = \mathbf{0}\). Only the output bias learns, so the network can only predict a constant (the mean). That is why we start from small random values.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Give a minute, take two or three answers, then click to show each answer.</p>
+    <p><b>Q1:</b> tanh(5) = 0.99991, so 1 − tanh²(5) ≈ 0.0002: the unit’s weights barely move. Same problem as the sigmoid with the squared loss in Lecture 1.</p>
+    <p><b>Q2:</b> with every weight 0, h = tanh(0) = 0, so the output weights v₁…v_K get −e·h_i = 0, and every hidden weight gets −e·v_i·… = 0 because v_i = 0. With biases, the output bias still gets −Σe, so the network learns the mean of y and nothing else. Leads into lines 1–2 of the algorithm (small random values) and “Issues with training”. In the MLP Playground, choose “Zeros” to show it live.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 34. Backprop algorithm -->
+<section>
+  <h2>Backprop for 2-layer Network</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1fr) 270px; gap: 20px;">
+    <div class="algo dense" style="max-width: none;">
+      <div class="head"><b>Algorithm 25</b> TWO LAYER NETWORK TRAIN(\(\mathbf{D}, \eta, K, MaxIter\))</div>
+      <ol>
+        <li><span>\(\mathbf{W} \leftarrow D \times K\) matrix of small random values</span><span class="cmt">// initialise input layer weights</span></li>
+        <li><span>\(\mathbf{v} \leftarrow K\)-vector of small random values</span><span class="cmt">// initialise output layer weights</span></li>
+        <li><span><b>for</b> \(iter = 1 \ldots MaxIter\) <b>do</b></span></li>
+        <li><span class="i1">\(\mathbf{G} \leftarrow D \times K\) matrix of zeros</span><span class="cmt">// initialise input layer gradient</span></li>
+        <li><span class="i1">\(\mathbf{g} \leftarrow K\)-vector of zeros</span><span class="cmt">// initialise output layer gradient</span></li>
+        <li><span class="i1"><b>for all</b> \((\mathbf{x}, y) \in \mathbf{D}\) <b>do</b></span></li>
+        <li><span class="i2"><b>for</b> \(i = 1\) to \(K\) <b>do</b></span></li>
+        <li><span class="i3">\(a_i \leftarrow \mathbf{w}_i \cdot \mathbf{x}\)</span></li>
+        <li><span class="i3">\(h_i \leftarrow \tanh(a_i)\)</span><span class="cmt">// compute activation of hidden unit \(i\)</span></li>
+        <li><span class="i2"><b>end for</b></span></li>
+        <li><span class="i2">\(\hat{y} \leftarrow \mathbf{v} \cdot \mathbf{h}\)</span><span class="cmt">// compute output unit</span></li>
+        <li><span class="i2">\(e \leftarrow y - \hat{y}\)</span><span class="cmt">// compute error</span></li>
+        <li class="hl"><span class="i2">\(\mathbf{g} \leftarrow \mathbf{g} - e\,\mathbf{h}\)</span><span class="cmt">// update gradient for output layer</span></li>
+        <li><span class="i2"><b>for</b> \(i = 1\) to \(K\) <b>do</b></span></li>
+        <li class="hl"><span class="i3">\(\mathbf{G}_i \leftarrow \mathbf{G}_i - e\, v_i \big(1 - \tanh^2(a_i)\big)\, \mathbf{x}\)</span><span class="cmt">// update gradient for input layer</span></li>
+        <li><span class="i2"><b>end for</b></span></li>
+        <li><span class="i1"><b>end for</b></span></li>
+        <li><span class="i1">\(\mathbf{W} \leftarrow \mathbf{W} - \eta\, \mathbf{G}\)</span><span class="cmt">// update input layer weights</span></li>
+        <li><span class="i1">\(\mathbf{v} \leftarrow \mathbf{v} - \eta\, \mathbf{g}\)</span><span class="cmt">// update output layer weights</span></li>
+        <li><span><b>end for</b></span></li>
+        <li><span><b>return</b> \(\mathbf{W}, \mathbf{v}\)</span></li>
+      </ol>
+    </div>
+    <div class="stack-v">
+      <img class="fig" src="../images/mlp7.png" alt="The two-layer network with tanh hidden units and a linear output" style="max-height: 300px;">
+      <p class="small muted" style="font-size: 17px;">Highlighted: the two gradients we just derived.</p>
+      <p class="small muted" style="font-size: 17px;">Biases: append a constant 1 to \(\mathbf{x}\) and to \(\mathbf{h}\), so each \(\mathbf{w}_i\) and \(\mathbf{v}\) gets one extra weight (the same trick as \(x_0 = 1\) in linear regression).</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Line by line:</b> 1–2) small random starting weights (not zeros: quick check 2). 3) repeat MaxIter times. 4–5) reset the gradient totals: G for the hidden weights (one column per hidden unit) and g for the output weights. Here g is the gradient, not the output. 6) loop over the examples. 7–10) forward pass through the hidden layer: weighted sum a_i, then h_i = tanh(a_i). 11) the output ŷ = v·h. 12) the error. 13) add this example’s output-weight gradient, −e·h, to g. 14–16) add this example’s hidden-weight gradient for each unit. 17) end of the loop over examples. 18–19) one update with the totals: batch learning. 21) return the weights.</p>
+    <p><b>Say:</b> lines 7–12 are the forward pass, lines 13–16 the backward pass. The highlighted lines are the two gradients we derived. Next we run lines 8–15 by hand on one customer.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 35. Section: worked example -->
+<section class="section-slide">
+  <div class="section-title"><h1>Worked-out Example</h1><h1>Customer Transactions</h1></div>
+</section>
+
+<!-- ================================================================ 36. Network set-up -->
+<section>
+  <h2>A Network for Our Customer Data</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 34px;">
+    <table class="data compact" style="font-size: 19px;">
+      <thead><tr><th>Transaction</th><th>Music DL?</th><th>Music Stream?</th><th>Online Games</th><th class="out">Output</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>0</td><td>1</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T2</td><td>1</td><td>0</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T4</td><td>1</td><td>0</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td>1</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td>1</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T7</td><td>0</td><td>0</td><td>1</td><td class="out">1</td></tr>
+        <tr><td class="name">T8</td><td>0</td><td>1</td><td>1</td><td class="out">0</td></tr>
+        <tr><td class="name">T9</td><td>1</td><td>1</td><td>0</td><td class="out">0</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td>1</td><td>1</td><td class="out">1</td></tr>
+      </tbody>
+    </table>
+    <div class="stack-v" style="font-size: 22px; gap: 10px;">
+      <ul class="bul" style="font-size: 22px;">
+        <li>Yes \(\rightarrow\) 1, No \(\rightarrow\) 0; Buys \(\rightarrow\) 1, Cancels \(\rightarrow\) 0</li>
+        <li>\(D = 3\) inputs, \(K = 2\) tanh hidden units, 1 identity output</li>
+        <li>Biases: a constant 1 appended to \(\mathbf{x}\) and to \(\mathbf{h}\)</li>
+        <li>\(\eta = 0.1\), 300 batch iterations (Algorithm 25)</li>
+      </ul>
+      <p>Small random starting weights:</p>
+      <div style="font-size: 20px;">\[ \mathbf{W}^{(0)} = \begin{bmatrix} 0.0497 & -0.0138 \\ 0.0648 & 0.1523 \\ -0.0234 & -0.0234 \\ 0.1579 & 0.0767 \end{bmatrix} \begin{matrix} \leftarrow \text{Music DL} \\ \leftarrow \text{Music Stream} \\ \leftarrow \text{Online Games} \\ \leftarrow \text{bias} \end{matrix} \]
+      \[ \mathbf{v}^{(0)} = [-0.0469,\ 0.0543,\ -0.0463] \quad (h_1, h_2, \text{bias}) \]</div>
+      <p class="small muted" style="font-size: 17px;">Column \(i\) of \(\mathbf{W}\) is \(\mathbf{w}_i\). Same data as Lecture 1; the notebook uses <span class="mono">np.random.seed(42)</span>.</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> same ten customers as Lecture 1. A network with 3 inputs, 2 tanh hidden units and an identity output. A constant 1 is added to the inputs and to the hidden outputs, so every unit has a bias weight. η = 0.1, 300 batch updates.</p>
+    <p><b>Read W:</b> 4 rows (Music DL, Music Stream, Online Games, bias) × 2 columns (hidden unit 1, hidden unit 2). Column i is w_i. v has three entries: for h₁, for h₂, and the output bias.</p>
+    <p><b>Why small random weights?</b> Small, so tanh starts in its steep middle where it learns fast; random, so the two hidden units start different and can learn different things.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 37. T1 forward -->
+<section>
+  <h2>One Example by Hand: T1 Forward Pass</h2>
+  <div class="rule"></div>
+  <p class="muted">\(\mathbf{x}_{T1} = [0, 1, 1, 1]\) (Music DL, Stream, Games, bias), \(\ y = 1\), weights \(\mathbf{W}^{(0)}, \mathbf{v}^{(0)}\) from the previous slide</p>
+  <div class="calc" style="font-size: 26px; row-gap: 18px; margin-top: 18px;">
+    <span class="ln l4 fragment" data-fragment-index="1">8</span>
+    <div class="ex fragment" data-fragment-index="1">\(a_1 = \mathbf{w}_1 \cdot \mathbf{x} = 0 \cdot 0.0497 + 0.0648 - 0.0234 + 0.1579 = 0.1993\)<br>\(a_2 = \mathbf{w}_2 \cdot \mathbf{x} = 0 \cdot (-0.0138) + 0.1523 - 0.0234 + 0.0767 = 0.2056\)</div>
+    <span class="ln l4 fragment" data-fragment-index="2">9</span>
+    <div class="ex fragment" data-fragment-index="2">\(\mathbf{h} = \tanh(\mathbf{a}) = [0.1967,\ 0.2028]\)</div>
+    <span class="ln l5 fragment" data-fragment-index="3">11</span>
+    <div class="ex fragment" data-fragment-index="3">\(\hat{y} = \mathbf{v} \cdot [\mathbf{h}, 1] = (-0.0469)(0.1967) + (0.0543)(0.2028) + (-0.0463)(1) = -0.0446\)</div>
+    <span class="ln l5 fragment" data-fragment-index="4">12</span>
+    <div class="ex fragment" data-fragment-index="4">\(e = y - \hat{y} = 1 - (-0.0446) = 1.0446\)</div>
+  </div>
+  <div class="callout fragment" data-fragment-index="5" style="margin-top: 26px;">With small weights, \(\tanh(a) \approx a\) and every prediction is close to 0. T1 is a Buy, so the error is about 1.</div>
+  <p class="small muted" style="margin-top: 14px;">Computed at full precision and rounded to 4 decimals, so the last digit can differ if you multiply the rounded numbers.</p>
+  <aside class="notes">
+    <p><b>Clicks:</b> line 8, line 9, line 11, line 12, then the take-away.</p>
+    <p><b>Line 8:</b> x = [0, 1, 1, 1], so we add rows 2–4 of each column of W and skip row 1 (Music DL is 0): a₁ = 0.0648 − 0.0234 + 0.1579 = 0.1993; a₂ = 0.1523 − 0.0234 + 0.0767 = 0.2056.</p>
+    <p><b>Line 9:</b> tanh of small numbers is almost the number itself (a little smaller): h = [0.1967, 0.2028].</p>
+    <p><b>Line 11:</b> ŷ = v₁h₁ + v₂h₂ + v_bias·1 = (−0.0469)(0.1967) + (0.0543)(0.2028) − 0.0463 ≈ −0.0092 + 0.0110 − 0.0463 ≈ −0.0446 (the rounded terms add to −0.0445; the slide uses full precision).</p>
+    <p><b>Line 12:</b> e = 1 − (−0.0446) = 1.0446. T1 is a Buy and the network says “about 0”, so the error is about 1.</p>
+    <p><b>Ask before line 12:</b> what is the error?</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 38. T1 backward -->
+<section>
+  <h2>One Example by Hand: T1 Backward Pass</h2>
+  <div class="rule"></div>
+  <p class="muted">\(e = 1.0446,\ \ \mathbf{h} = [0.1967,\ 0.2028],\ \ \mathbf{v} = [-0.0469,\ 0.0543,\ -0.0463],\ \ \mathbf{x} = [0, 1, 1, 1]\)</p>
+  <div class="calc" style="font-size: 25px; row-gap: 18px; margin-top: 18px;">
+    <span class="ln l6 fragment" data-fragment-index="1">13</span>
+    <div class="ex fragment" data-fragment-index="1">T1 adds \(-e\,[\mathbf{h}, 1] = -1.0446 \cdot [0.1967,\ 0.2028,\ 1] = [-0.2054,\ -0.2118,\ -1.0446]\) to \(\mathbf{g}\)</div>
+    <span class="ln l6 fragment" data-fragment-index="2">15</span>
+    <div class="ex fragment" data-fragment-index="2">\(i = 1\): T1 adds \(-e\, v_1 (1 - h_1^2)\, \mathbf{x} = -1.0446 \cdot (-0.0469) \cdot 0.9613 \cdot \mathbf{x} = 0.0471 \cdot [0, 1, 1, 1]\) to \(\mathbf{G}_1\)</div>
+    <span class="ln l6 fragment" data-fragment-index="3">15</span>
+    <div class="ex fragment" data-fragment-index="3">\(i = 2\): T1 adds \(-e\, v_2 (1 - h_2^2)\, \mathbf{x} = -1.0446 \cdot 0.0543 \cdot 0.9589 \cdot \mathbf{x} = -0.0543 \cdot [0, 1, 1, 1]\) to \(\mathbf{G}_2\)</div>
+  </div>
+  <div class="callout fragment" data-fragment-index="4" style="margin-top: 26px;">\(v_1\) is negative and \(v_2\) positive, so the two hidden units get gradients of opposite sign (“\(v_i\) flips sign”). Music DL is 0 for T1, so its weights get nothing from T1.</div>
+  <p class="small muted" style="margin-top: 14px;">This is batch training: these are T1’s contributions. The weights change only after all 10 transactions (lines 18–19). Computed at full precision and rounded to 4 decimals.</p>
+  <aside class="notes">
+    <p><b>Clicks:</b> line 13, line 15 for unit 1, line 15 for unit 2, then the take-away.</p>
+    <p><b>Line 13:</b> T1’s share of the output-weight gradient is −e × [h₁, h₂, 1] = −1.0446 × [0.1967, 0.2028, 1] = [−0.2054, −0.2118, −1.0446].</p>
+    <p><b>Line 15, unit 1:</b> −e × v₁ × (1 − h₁²) × x = −1.0446 × (−0.0469) × 0.9613 × x = +0.0471 × [0, 1, 1, 1]. Two negatives make a positive.</p>
+    <p><b>Line 15, unit 2:</b> −1.0446 × 0.0543 × 0.9589 × x ≈ −0.0543 × [0, 1, 1, 1] (with the rounded numbers you get −0.0544; the slide uses full precision).</p>
+    <p><b>Say:</b> 1 − h² is about 0.96 for both units: they are far from saturation, so the error flows back almost unchanged. v₁ and v₂ have opposite signs, so the two units are pushed in opposite directions. Point at each factor of line 15 as you read the numbers.</p>
+    <p><b>Remember:</b> nothing changes yet. This is batch training: we add up these shares over all 10 transactions, then update once.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 39. After the first update -->
+<section>
+  <h2>After the First Batch Update</h2>
+  <div class="rule"></div>
+  <p class="muted">All 10 transactions summed (lines 6–17), then \(\mathbf{W} \leftarrow \mathbf{W} - \eta\,\mathbf{G}\) and \(\mathbf{v} \leftarrow \mathbf{v} - \eta\,\mathbf{g}\) with \(\eta = 0.1\):</p>
+  <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr); column-gap: 20px; row-gap: 4px; font-size: 21px; margin-top: 8px; align-items: center;">
+    <p><b>Output layer</b></p>
+    <div style="line-height: 1.9;">\( \mathbf{g} = [-0.8554,\ -0.5535,\ -4.4804] \)<br>\( \mathbf{v}^{(1)} = \mathbf{v}^{(0)} - 0.1\,\mathbf{g} = [-0.0469,\ 0.0543,\ -0.0463] - 0.1\,\mathbf{g} = [0.0386,\ 0.1096,\ \color{#A62B17}{0.4017}] \)</div>
+    <p><b>Hidden layer</b></p>
+    <div>\[ \mathbf{G} = \begin{bmatrix} 0.1008 & -0.1200 \\ 0.1014 & -0.1185 \\ 0.1916 & -0.2253 \\ 0.2024 & -0.2380 \end{bmatrix} \ \Rightarrow\ \mathbf{W}^{(1)} = \mathbf{W}^{(0)} - 0.1\,\mathbf{G} = \begin{bmatrix} 0.0396 & -0.0018 \\ 0.0546 & 0.1642 \\ -0.0426 & -0.0009 \\ 0.1377 & 0.1005 \end{bmatrix} \]</div>
+  </div>
+  <div class="callout fragment" style="margin-top: 18px; font-size: 24px;">The output bias jumps from \(-0.046\) to \(0.402\). The hidden units’ contributions \(v_i h_i\) are still tiny (about 0.01) next to the bias input 1, so the quickest way to cut the loss is to predict about 0.4, the share of Buys (4 of 10), for every customer. The total loss falls from 2.21 to 1.22.</div>
+  <p class="small muted" style="margin-top: 10px;">Computed at full precision and rounded to 4 decimals.</p>
+  <aside class="notes">
+    <p><b>Say:</b> after adding up all ten transactions, g’s last entry (the output bias) is −4.4804: every customer’s error pushed it the same way, because the network predicted about 0 for everyone and 4 of them bought. So the bias jumps: −0.0463 − 0.1 × (−4.4804) = 0.4017.</p>
+    <p><b>Click:</b> the explanation. Predicting 0.4 for everyone is the best a constant can do: it is the share of Buys. The loss of that constant is ½(4 × 0.6² + 6 × 0.4²) = 1.2, the plateau at the start of the next slide’s curve.</p>
+    <p><b>Say:</b> the hidden weights moved much less (G entries around 0.1–0.2, times η = 0.1). Learning which customers differ comes later.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 40. Loss over iterations -->
+<section>
+  <h2>Training for 300 Iterations</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/nn-loss-curve.png" alt="Total loss over 300 iterations: a drop to a plateau at about 1.2, a fall to about 0.37 by iteration 30, a sharp jump to 1.36 at iteration 76, then a slow decline to 0.324" style="max-height: 470px;">
+    <figcaption>Total loss after each batch update. The notebook prints every 10th iteration, so only a small bump shows there (0.38 at 70, 0.43 at 80); the peak of 1.36 at iteration 76 falls between printed lines. Try \(\eta = 0.05\) (no jump, but slower) and \(\eta = 0.2\) (diverges) in the notebook.</figcaption>
+  </figure>
+  <aside class="notes">
+    <p><b>Say:</b> three phases. (1) A quick drop to about 1.2: predict the average. (2) A fast fall to about 0.37 by iteration 30: the hidden units start to matter. (3) Slow progress to 0.324.</p>
+    <p><b>The jump at 76:</b> the batch step is too large for a steep part of the loss surface, so one update overshoots and the loss jumps before settling again. Checked: with η = 0.05 there is no jump and the loss is 0.349 after 300 iterations (slower); with η = 0.2 the loss grows from the start and overflows. Same story as the learning-rate presets in Lecture 1.</p>
+    <p><b>Say:</b> the notebook prints every 10th iteration, so only a small bump (0.38 at 70, 0.43 at 80) shows in its output.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 41. Final predictions -->
+<section>
+  <h2>Final Predictions</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px;">
+    <table class="data" style="font-size: 21px;">
+      <thead><tr><th>Transaction</th><th>True</th><th>Predicted \(\hat{y}\)</th><th>\(\hat{y} &gt; 0.5\)</th><th>Correct?</th></tr></thead>
+      <tbody>
+        <tr><td class="name">T1</td><td>1</td><td class="num">0.6419</td><td>1</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T2</td><td>0</td><td class="num">0.1174</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T3</td><td>1</td><td class="num">1.0213</td><td>1</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T4</td><td>0</td><td class="num">0.1174</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T5</td><td>0</td><td class="num">−0.1081</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T6</td><td>0</td><td class="num">−0.1081</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T7</td><td>1</td><td class="num">0.8501</td><td>1</td><td class="ok">✓</td></tr>
+        <tr class="hl"><td class="name">T8</td><td>0</td><td class="num">0.6419</td><td>1</td><td class="bad">✗</td></tr>
+        <tr><td class="name">T9</td><td>0</td><td class="num">−0.0166</td><td>0</td><td class="ok">✓</td></tr>
+        <tr><td class="name">T10</td><td>1</td><td class="num">0.8201</td><td>1</td><td class="ok">✓</td></tr>
+      </tbody>
+    </table>
+    <div class="stack-v" style="font-size: 25px; padding-top: 10px;">
+      <p>Training accuracy: <b>90%</b> (9 of 10)</p>
+      <div class="callout">T1 and T8 have the same three features but different outputs, so they get the same prediction (0.6419). No model can get both right: 90% is the best possible here.</div>
+      <p class="small muted">Add the fourth feature, Board Games, and the data becomes separable (end of the Perceptron notebook).</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> 9 of 10 right. T1 and T8 get the same prediction, 0.6419, because they have the same three features; one bought and one did not, so no model can get both right: 90% is the best possible with these features.</p>
+    <p><b>Ask:</b> how could we do better? (More information: adding the fourth feature, Board Games, makes the data separable, as the end of the Perceptron notebook shows.)</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 42. Decision surface -->
+<section>
+  <h2>The Learned Decision Boundary</h2>
+  <div class="rule"></div>
+  <figure>
+    <img class="fig" src="assets/fig/nn-decision-surface.png" alt="Three 3-D plots of the cube of features. With the random starting weights there is no surface; after 150 and 300 batch updates a gently curved surface separates most Buys from Cancels." style="max-height: 470px;">
+    <figcaption>The surface where the network output is 0.5. With the random starting weights the output stays between −0.05 and −0.04, so there is no surface yet. With two hidden units and fairly small weights, the learned surface is only gently curved.</figcaption>
+  </figure>
+  <aside class="notes">
+    <p><b>Say:</b> three features means a 3-D space; each corner of the cube is one combination of services. The blue surface is where the network’s output is exactly 0.5: the boundary between “Buys” and “Cancels”.</p>
+    <p><b>Say:</b> at the start there is no surface: the output is about −0.05 everywhere. After training, a gently curved surface separates most Buys from Cancels. With only two hidden units and smallish weights, it is close to flat; more hidden units or bigger weights would allow more bending.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 43. XOR needs biases -->
+<section>
+  <h2>Back to XOR: Why We Need Biases</h2>
+  <div class="rule"></div>
+  <div class="cols" style="grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 28px; align-items: center;">
+    <figure><img class="fig" src="assets/fig/nn-xor-bias.png" alt="Loss over 300 iterations on XOR: with biases it falls to 0 by iteration 70; without biases it stays at 2" style="max-height: 420px;"></figure>
+    <ul class="bul" style="font-size: 23px;">
+      <li>Same network and algorithm, trained on XOR (±1 inputs)</li>
+      <li><span class="r">Without biases</span>, tanh is odd, so the whole network is: \(f(-\mathbf{x}) = -f(\mathbf{x})\). XOR needs \(f(1, 1) = f(-1, -1) = -1\), but the two must have opposite signs. Gradient descent settles at \(f = 0\) on all four points (loss 2).</li>
+      <li class="fragment"><span class="b">With biases</span>, 9 of 10 random starts solve XOR. The other one gets stuck: training is <span class="r">sensitive to initialisation</span>.</li>
+    </ul>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> back to XOR, trained with the same algorithm. With biases it reaches zero loss by about iteration 70. Without biases the loss is stuck at 2.</p>
+    <p><b>Why, in plain words:</b> tanh is “odd”: tanh(−a) = −tanh(a). Without biases, flipping the sign of every input flips every weighted sum, every hidden output and the final output: f(−x) = −f(x). (1, 1) and (−1, −1) are opposite inputs, so they get opposite outputs, but XOR needs both to be −1. The best compromise is 0 for every point, which gives loss ½ × 4 × 1² = 2.</p>
+    <p><b>Click:</b> with biases, 9 of 10 random starts solve XOR; one gets stuck. Leads into the next slide.</p>
+    <p>The XOR Hidden Space demo shows the same: untick “Use biases”.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 44. Issues with training -->
+<section>
+  <h2>Issues with training</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 29px; margin-top: 24px;">
+    <li><span class="r">Sensitive</span> to <span class="b">initialization</span>
+      <ul><li>Objective is <span class="r">non-convex</span>, many <span class="r">local optima</span></li></ul>
+    </li>
+    <li>In practice: start with <span class="b">random values</span> rather than zeros</li>
+    <li>Many other <span class="b">hyperparameters</span>
+      <ul>
+        <li>Number of hidden units</li>
+        <li>Number of hidden layers</li>
+        <li>Gradient descent learning rate</li>
+        <li>Stopping criterion</li>
+      </ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> the loss surface of a network is not one bowl but a landscape with many valleys (non-convex), so where you end up depends on where you start: that is the stuck XOR run. Starting from all zeros is worse: every hidden unit stays the same (quick check 2), so we start from small random values.</p>
+    <p><b>Say:</b> many choices are ours, not learned: the number of hidden units and layers, the learning rate, when to stop. They are tuned by trying values and checking on validation data.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 45. Online vs batch -->
+<section>
+  <h2>Online vs Batch Update</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 25px;">
+    <li><span class="b">Online</span> (aka Stochastic Gradient Descent)
+      <ul><li><span class="r">Update</span> parameters after <span class="b">forward-propagation</span> on every example</li></ul>
+    </li>
+    <li><span class="b">Batch</span> and <span class="b">Mini-batch</span>
+      <ul><li><span class="r">Update</span> parameters after <span class="b">forward-propagation</span> on all examples (batch, as in Algorithm 25) or on a small random subset (mini-batch SGD)</li></ul>
+    </li>
+    <li>Stochastic Gradient Descent Variants
+      <ul><li>Adam, AdaGrad</li></ul>
+    </li>
+    <li>Why?
+      <ul>
+        <li>More <span class="b">robust</span>
+          <ul>
+            <li>against <span class="b">noise</span> (irrelevant features)</li>
+            <li>can be seen as a form of <span class="b">regularisation</span></li>
+          </ul>
+        </li>
+        <li>More <span class="b">efficient</span> (10M examples and full batch? Nah…)</li>
+      </ul>
+    </li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> batch: add up the gradient over all examples, then take one step. Smooth, but each step costs a full pass over the data. Online (stochastic gradient descent): one step per example. Cheap and noisy, and the noise can help escape poor spots. Mini-batch: a small random group per step, the usual compromise.</p>
+    <p><b>Say:</b> Adam and AdaGrad adjust the step size for each weight automatically; they are the default choice in modern libraries.</p>
+    <p><b>Ask:</b> 10 million examples: why not full batch? (One step would need all 10 million examples first.) And why not pure online? (10 million tiny, noisy steps per pass, which modern hardware handles badly.) Hence mini-batches.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 46. DEMO MLP playground -->
+<section class="demo" data-demo="../demos/mlp-playground.html" data-title="MLP Playground">
+  <aside class="notes">
+    A sequence that works:
+    1) XOR corners with 2 hidden units, tanh: Play, then watch the boundary form.
+    2) Zeros initialisation: the hidden layer never moves; only the output bias learns, so the loss drops a little and stops (quick check 2).
+    3) Circles or Moons: try 2 hidden units, then 8.
+    4) Spiral: needs many more hidden units; compare the train and test results.
+    5) Raise the learning rate until the loss jumps, as at iteration 76 in our example.
+    6) Batch vs Online on the same data.
+  </aside>
+</section>
+
+<!-- ================================================================ 47. Summary -->
+<section>
+  <h2>Summary</h2>
+  <div class="rule"></div>
+  <ul class="bul" style="font-size: 25px;">
+    <li>A perceptron draws one line, so it cannot learn <span class="b">XOR</span>. A <span class="b">hidden layer</span> of tanh units moves the data to a space where one line works.</li>
+    <li>A two-layer network \(\hat{y} = \sum_i v_i \tanh(\mathbf{w}_i \cdot \mathbf{x})\) (with biases) can approximate any continuous function on a closed, bounded region, given enough hidden units; more units mean more complex functions and a risk of overfitting.</li>
+    <li><span class="r">Backpropagation</span> = gradient descent + chain rule
+      <ul>
+        <li>output weights: \(\nabla_{\mathbf{v}} = -e\,\mathbf{h}\), the Lecture 1 update with \(\mathbf{h}\) in place of \(\mathbf{x}\)</li>
+        <li>hidden weights: \(\nabla_{\mathbf{w}_i} = -e\, v_i (1 - h_i^2)\, \mathbf{x}\), the error sent back through \(v_i\) and the tanh slope</li>
+      </ul>
+    </li>
+    <li>In practice: the loss is non-convex, so results depend on the starting point. Start from small random (not zero) weights so the hidden units differ, keep the biases, and tune \(\eta\), \(K\) and batch vs online.</li>
+  </ul>
+  <aside class="notes">
+    <p><b>Say:</b> four take-aways. (1) One line cannot solve XOR; a hidden layer moves the data until one line can. (2) With enough hidden units, a two-layer network can approximate any continuous function on a bounded region. (3) Backprop is gradient descent plus the chain rule; each weight’s gradient is a product along its path to the loss: error × outgoing weight × tanh’s slope × input. (4) In practice: random starting weights, keep the biases, choose η and K carefully.</p>
+  </aside>
+</section>
+
+<!-- ================================================================ 48. Revise and experiment -->
+<section>
+  <h2>Revise and Experiment</h2>
+  <div class="rule"></div>
+  <div class="cols even">
+    <div class="stack-v">
+      <h3>Interactive demos</h3>
+      <ul class="bul">
+        <li><a href="../demos/xor-hidden-layer.html" target="_blank" rel="noopener">XOR Hidden Space</a>: move the hidden units, then turn the biases off</li>
+        <li><a href="../demos/mlp-playground.html" target="_blank" rel="noopener">MLP Playground</a>: hidden units, activation, initialisation, learning rate, batch vs online</li>
+      </ul>
+    </div>
+    <div class="stack-v">
+      <h3>The code</h3>
+      <ul class="bul">
+        <li><a href="https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FNeuralNetworks.ipynb" target="_blank" rel="noopener">NeuralNetworks.ipynb on Binder</a>: every example from this lecture</li>
+        <li><a href="https://mybinder.org/v2/gh/HebaNAS/D2xDL-Week7/HEAD?urlpath=%2Fdoc%2Ftree%2FPerceptron.ipynb" target="_blank" rel="noopener">Perceptron.ipynb on Binder</a>: the perceptron recap</li>
+        <li>Change \(K\), \(\eta\), <span class="mono">MaxIter</span>, <span class="mono">USE_BIAS</span> or the random seed and re-run the cells to see the effect</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes">
+    <p><b>Say:</b> suggested practice. In the XOR Hidden Space demo, untick the biases and explain why it fails. In the MLP Playground, try the Spiral data with 2 and then 8 hidden units. In the notebook, change η to 0.05 and 0.2 and compare the loss curves, and change the random seed to see the effect of initialisation.</p>
+  </aside>
+</section>
+
+</div>
+</div>
+
+<script src="vendor/reveal/reveal.js"></script>
+<script src="vendor/reveal/plugin/notes.js"></script>
+<script src="vendor/reveal/plugin/zoom.js"></script>
+<script src="vendor/chalkboard/plugin.js"></script>
+<script src="assets/deck.js"></script>
+</body>
+</html>

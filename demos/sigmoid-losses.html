@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Squared vs Log Loss</title>
+<script>
+  // Theme before first paint: ?theme=light|dark wins. Otherwise, inside a notebook or slide
+  // (an iframe), use light to match the white page; opened on its own, follow the system theme.
+  (function () {
+    try {
+      var t = new URLSearchParams(location.search).get('theme');
+      if (t !== 'light' && t !== 'dark') {
+        var framed = true;
+        try { framed = window.self !== window.top; } catch (e) { /* cross-origin: treat as framed */ }
+        t = framed ? 'light' : null;
+      }
+      if (t) document.documentElement.dataset.theme = t;
+    } catch (e) { /* ignore */ }
+  })();
+</script>
+<script>if (location.hash === '#deck') document.documentElement.classList.add('in-deck');</script>
+<style>
+:root {
+  --bg: #ffffff; --panel: #f5f7fa; --fg: #1f2a37; --muted: #5b6676; --line: #d9dee6;
+  --pos: #3274b5;   /* positive class (+1) and positive weights: HWU blue used on the slides */
+  --neg: #a62b17;   /* negative class (-1) and negative weights: the slides' red */
+  --unit1: #1b8a7a; --unit2: #c7841a;  /* hidden unit 1 / 2 lines (XOR demo) */
+  --ink-btn: #1f2a37; --ink-btn-fg: #ffffff; --focus: #3274b5;
+  --note-bg: #eef2f7;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-math: "Cambria Math", "STIX Two Math", "Times New Roman", Times, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161c; --panel: #1a2029; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3440;
+  --pos: #6fa8e0; --neg: #e07a62; --unit1: #3fc1ae; --unit2: #e3a845;
+  --ink-btn: #e6eaf0; --ink-btn-fg: #12161c; --focus: #6fa8e0; --note-bg: #1f2631; color-scheme: dark }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.35;
+  -webkit-text-size-adjust: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.m { font-family: var(--font-math); font-style: italic; }
+.sup { font-size: .64em; vertical-align: .5em; line-height: 0; font-style: normal; }
+sub { line-height: 0; }
+
+.app {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px;
+  height: 100vh; height: 100dvh;
+  padding-block: 10px 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Header */
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 6px 20px; flex-wrap: wrap; }
+h1 { font-size: 21px; font-weight: 650; margin: 0; line-height: 1.2; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.formula { display: grid; grid-template-columns: auto auto; gap: 1px 22px; font-family: var(--font-math); font-size: 16px; line-height: 1.32; }
+.formula > span { white-space: nowrap; }
+.formula .ind { padding-left: 20px; }
+.sw { display: inline-block; width: 14px; height: 0; border-top: 2.5px solid var(--unit2); vertical-align: middle; margin-right: 6px; position: relative; top: -1px; }
+.sw.lg { border-color: var(--pos); }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 316px; gap: 16px; min-height: 0; }
+.plots { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) 122px; gap: 10px; min-height: 0; min-width: 0; }
+.card { display: flex; flex-direction: column; gap: 3px; margin: 0; background: var(--panel); border-radius: 12px;
+  padding: 7px 10px 6px; min-height: 0; min-width: 0; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 14px; flex-wrap: wrap; }
+.lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.lbl .m { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: var(--fg); }
+.hint { font-size: 12px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; color: var(--muted); align-items: center; min-height: 17px; }
+.legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend svg { display: block; overflow: visible; flex: none; }
+.legend .m { font-size: 13.5px; color: var(--fg); }
+.cv-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.cv-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.drag { cursor: ew-resize; touch-action: pan-y; }
+
+/* Controls */
+.controls { display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1px 2px 2px; }
+.sec { display: flex; flex-direction: column; gap: 6px; }
+.sec + .sec { border-top: 1px solid var(--line); padding-top: 9px; }
+.status { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.3; min-height: 55px; font-weight: 550; }
+.status .badge { flex: none; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--bg); background: var(--pos); margin-top: 0; font-family: var(--font-ui); }
+.status[data-kind="bad"] .badge { background: var(--neg); }
+.status[data-kind="done"] .badge { background: var(--unit1); }
+.status[data-kind="osc"] .badge { background: var(--unit2); }
+.status[data-kind="idle"] .badge { background: var(--muted); }
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.btn-grid .wide { grid-column: 1 / -1; }
+button { font: inherit; font-size: 13px; height: 30px; padding: 0 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); white-space: nowrap; }
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--ink-btn); color: var(--ink-btn-fg); border-color: var(--ink-btn); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+button.primary svg { fill: currentColor; }
+.readouts { display: grid; grid-template-columns: auto 1fr auto 1fr; column-gap: 8px; row-gap: 1px; align-items: baseline; font-size: 13px; }
+.readouts .k, .tbl .k { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.readouts .k .m, .tbl .k .m { color: var(--fg); font-size: 14.5px; }
+.readouts .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; padding-right: 8px; white-space: nowrap; }
+.tbl { display: grid; grid-template-columns: minmax(0, 1fr) 86px 86px; column-gap: 8px; row-gap: 1px; align-items: baseline; font-size: 13px; }
+.tbl .h { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; white-space: nowrap; }
+.tbl .h svg { display: block; flex: none; overflow: visible; }
+.tbl .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.ratio { font-size: 13px; background: var(--note-bg); border-radius: 8px; padding: 4px 8px; min-height: 26px; display: flex; align-items: center; gap: 6px; }
+.ratio b { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 700; }
+.ratio.off { color: var(--muted); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.seg label { font-size: 13px; padding: 3px 12px; border-radius: 6px; cursor: pointer; user-select: none; }
+.seg label .m { font-size: 14.5px; }
+.seg input:checked + label { background: var(--ink-btn); color: var(--ink-btn-fg); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 1px; }
+.srow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 52px; align-items: center; column-gap: 8px; height: 26px; }
+.srow > label { font-family: var(--font-math); font-style: italic; font-size: 16px; line-height: 1; white-space: nowrap; }
+.srow.wide { grid-template-columns: 70px minmax(0, 1fr) 52px; }
+.srow output { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 12.5px; text-align: right; }
+input[type=range] { width: 100%; margin: 0; accent-color: var(--pos); height: 18px; cursor: pointer; }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.chip { height: 26px; padding: 0 6px; font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 13px;
+  font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.chip .m { font-size: 14px; }
+.chip[aria-pressed="true"] { border-color: var(--fg); background: var(--note-bg); font-weight: 600; }
+.small-note { font-size: 12.5px; color: var(--muted); margin: 0; line-height: 1.4; border-top: 1px solid var(--line); padding-top: 8px; }
+.small-note .m { color: var(--fg); font-size: 14px; }
+.small-note .nw { white-space: nowrap; }
+
+footer { font-size: 12px; color: var(--muted); }
+html.in-deck footer { display: none; } /* the slides already carry a footer */
+
+/* Phone / narrow */
+@media (max-width: 899px) {
+  .app { display: flex; flex-direction: column; height: auto; min-height: 100vh; gap: 14px; padding-block: 12px 14px; }
+  .formula { grid-template-columns: auto; font-size: 15.5px; }
+  .main { display: flex; flex-direction: column; gap: 16px; }
+  .plots { display: flex; flex-direction: column; gap: 14px; }
+  #cardLoss .cv-wrap, #cardGrad .cv-wrap { flex: none; aspect-ratio: 16 / 11; width: 100%; }
+  #cardRace .cv-wrap { flex: none; height: 96px; width: 100%; }
+  .controls { overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div>
+      <h1>Squared vs Log Loss</h1>
+      <p class="sub">A confidently wrong <span class="m">Ŷ</span> stalls squared loss. Log loss cancels the sigmoid slope and keeps learning.</p>
+    </div>
+    <div class="formula" aria-label="Losses and their gradients">
+      <span><span class="sw" aria-hidden="true"></span><span class="m">l</span><span class="sup">(sqr)</span> = (<span class="m">Y</span> − <span class="m">Ŷ</span>)²</span>
+      <span><span class="sw lg" aria-hidden="true"></span><span class="m">l</span><span class="sup">(log)</span> = −[<span class="m">Y</span> log <span class="m">Ŷ</span> + (1 − <span class="m">Y</span>) log(1 − <span class="m">Ŷ</span>)]</span>
+      <span class="ind">∇<sub class="m">w</sub> = −2<span class="m">δ Ŷ</span>(1 − <span class="m">Ŷ</span>) <span class="m">x</span></span>
+      <span class="ind">∇<sub class="m">w</sub> = −<span class="m">δ x</span></span>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="plots" aria-label="Plots">
+      <figure class="card" id="cardLoss">
+        <figcaption class="card-head">
+          <span class="lbl">Loss for one example</span>
+          <span class="legend" aria-hidden="true">
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--unit2)" stroke-width="2.5"/></svg><span>squared (<span class="m">Y</span> − <span class="m">Ŷ</span>)²</span></span>
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--pos)" stroke-width="2.5"/></svg><span>log loss</span></span>
+            <span><svg width="14" height="12" viewBox="0 0 14 12"><rect x="0.5" y="0.5" width="13" height="11" rx="2" style="fill:var(--neg);fill-opacity:.14;stroke:var(--neg);stroke-opacity:.5"/></svg><span>confidently wrong</span></span>
+            <span class="hint">Drag across the plots to move <span class="m">z</span></span>
+          </span>
+        </figcaption>
+        <div class="cv-wrap"><canvas id="cvLoss" class="drag" role="img" aria-label="Squared loss and log loss against z, with the z marker"></canvas></div>
+      </figure>
+      <figure class="card" id="cardGrad">
+        <figcaption class="card-head">
+          <span class="lbl">Gradient size |∂<span class="m">l</span>/∂<span class="m">z</span>|</span>
+          <span class="legend" aria-hidden="true">
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--unit2)" stroke-width="2.5"/></svg><span>squared 2|<span class="m">δ</span>|<span class="m">Ŷ</span>(1 − <span class="m">Ŷ</span>)</span></span>
+            <span><svg width="18" height="6" viewBox="0 0 18 6"><line x1="0" y1="3" x2="18" y2="3" style="stroke:var(--pos)" stroke-width="2.5"/></svg><span>log |<span class="m">δ</span>|</span></span>
+          </span>
+        </figcaption>
+        <div class="cv-wrap"><canvas id="cvGrad" class="drag" role="img" aria-label="Size of the squared-loss and log-loss gradients against z, with the z marker"></canvas></div>
+      </figure>
+      <figure class="card" id="cardRace">
+        <figcaption class="card-head">
+          <span class="lbl">Race: gradient descent on <span class="m">z</span>, same <span class="m">η</span></span>
+          <span class="legend" aria-hidden="true">
+            <span><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" style="fill:var(--unit2);stroke:var(--fg)" stroke-width="1"/></svg><span>squared</span></span>
+            <span><svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" style="fill:var(--pos);stroke:var(--fg)" stroke-width="1"/></svg><span>log</span></span>
+            <span><svg width="6" height="14" viewBox="0 0 6 14"><line x1="3" y1="0" x2="3" y2="14" style="stroke:var(--fg)" stroke-width="1.5" stroke-dasharray="3 2"/></svg><span>finish <span class="m">Ŷ</span> = 0.5</span></span>
+            <span>one tick per step</span>
+          </span>
+        </figcaption>
+        <div class="cv-wrap"><canvas id="cvRace" role="img" aria-label="Race lanes: gradient descent on z with squared loss and with log loss"></canvas></div>
+      </figure>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="sec">
+        <div class="status" id="status" data-kind="idle" aria-live="polite"><span class="badge" id="statusBadge" aria-hidden="true">•</span><span id="statusTxt">Ready</span></div>
+        <div class="row">
+          <span class="lbl" id="yLbl">Target <span class="m">Y</span></span>
+          <div class="seg" role="radiogroup" aria-labelledby="yLbl">
+            <input type="radio" name="target" id="target1" value="1" checked><label for="target1"><span class="m">Y</span> = 1</label>
+            <input type="radio" name="target" id="target0" value="0"><label for="target0"><span class="m">Y</span> = 0</label>
+          </div>
+        </div>
+        <div class="srow wide">
+          <label for="zIn"><span>z</span> = <span>w</span>ᵀ·<span>x</span></label>
+          <input type="range" id="zIn" min="-8" max="8" step="0.01" value="-4.5" aria-describedby="zVal">
+          <output id="zVal" for="zIn">−4.50</output>
+        </div>
+        <div class="readouts" aria-label="Values at the z marker">
+          <span class="k"><span class="m">Ŷ</span> = σ(<span class="m">z</span>)</span><span class="v" id="rYhat">0</span>
+          <span class="k"><span class="m">δ</span> = <span class="m">Y</span> − <span class="m">Ŷ</span></span><span class="v" id="rDelta">0</span>
+        </div>
+        <div class="tbl" aria-label="Loss and gradient at the z marker">
+          <span></span>
+          <span class="h"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="1" y="1" width="8" height="8" style="fill:var(--unit2);stroke:var(--fg)" stroke-width="1"/></svg>squared</span>
+          <span class="h"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4.2" style="fill:var(--pos);stroke:var(--fg)" stroke-width="1"/></svg>log</span>
+          <span class="k">loss <span class="m">l</span></span><span class="v" id="rLsq">0</span><span class="v" id="rLlog">0</span>
+          <span class="k">gradient ∂<span class="m">l</span>/∂<span class="m">z</span></span><span class="v" id="rGsq">0</span><span class="v" id="rGlog">0</span>
+        </div>
+        <div class="ratio" id="rRatio" aria-live="off"></div>
+      </div>
+
+      <div class="sec">
+        <span class="lbl">Race</span>
+        <div class="btn-grid">
+          <button type="button" class="primary wide" id="btnRun"></button>
+          <button type="button" id="btnPause" disabled>Pause</button>
+          <button type="button" id="btnStep">Step</button>
+          <button type="button" id="btnReset" disabled>Reset</button>
+        </div>
+        <div class="srow">
+          <label for="eta">η</label>
+          <input type="range" id="eta" min="0" max="1000" step="1" value="624" aria-describedby="etaVal">
+          <output id="etaVal" for="eta">0.50</output>
+        </div>
+        <div class="chips" role="group" aria-label="Learning-rate presets">
+          <button type="button" class="chip" id="eta01" data-eta="0.1" aria-pressed="false">0.1</button>
+          <button type="button" class="chip" id="eta05" data-eta="0.5" aria-pressed="false">0.5</button>
+          <button type="button" class="chip" id="eta1" data-eta="1" aria-pressed="false">1</button>
+          <button type="button" class="chip" id="eta2" data-eta="2" aria-pressed="false">2</button>
+        </div>
+        <div class="tbl" aria-label="Race progress">
+          <span></span>
+          <span class="h"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="1" y="1" width="8" height="8" style="fill:var(--unit2);stroke:var(--fg)" stroke-width="1"/></svg>squared</span>
+          <span class="h"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4.2" style="fill:var(--pos);stroke:var(--fg)" stroke-width="1"/></svg>log</span>
+          <span class="k">step</span><span class="v" id="kSq">0</span><span class="v" id="kLog">0</span>
+          <span class="k"><span class="m">Ŷ</span> now</span><span class="v" id="ySq">0</span><span class="v" id="yLog">0</span>
+          <span class="k" id="goalK">steps to <span class="m">Ŷ</span> ≥ 0.5</span><span class="v" id="dSq">not yet</span><span class="v" id="dLog">not yet</span>
+        </div>
+      </div>
+
+      <p class="small-note">One example with <span class="m">x</span> = 1, so <span class="m">z</span> = <span class="m">w</span> and ∇<sub class="m">w</sub> = ∂<span class="m">l</span>/∂<span class="m">z</span>. Squared loss keeps the sigmoid slope <span class="nw"><span class="m">Ŷ</span>(1 − <span class="m">Ŷ</span>)</span>, which is ≈ 0 near <span class="nw"><span class="m">Ŷ</span> = 0</span> or 1. Log loss cancels it, so its gradient −<span class="m">δ</span> stays large while <span class="m">Ŷ</span> is wrong.</p>
+    </aside>
+  </main>
+
+  <footer>F20DL/F21DL Data Mining &amp; Machine Learning · Week 7</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= Model (pure functions) ================= */
+// One example with x = 1, so z = wᵀ·x = w and ∂l/∂w = ∂l/∂z. Targets Y ∈ {1, 0}.
+const ZR = [-8, 8];
+const LOSS_MAX = 5, GRAD_MAX = 1.05;
+const CONF = 2;              // "confidently wrong": z < −2 when Y = 1, z > 2 when Y = 0
+const MAX_STEPS = 2000;
+const ETA_MIN = 0.05, ETA_MAX = 2;
+const RATE0 = 6, RATE_DOUBLE = 1.5, RATE_MAX = 400;   // race speed: 6 steps/s, doubling every 1.5 s, up to 400 steps/s
+
+function sigma(z) {
+  if (z >= 0) return 1 / (1 + Math.exp(-z));
+  const e = Math.exp(z); return e / (1 + e);
+}
+const softplus = a => Math.max(a, 0) + Math.log1p(Math.exp(-Math.abs(a)));
+const asY = Y => (+Y ? 1 : 0);
+// δ = Y − Ŷ, using 1 − σ(z) = σ(−z) so it stays accurate when Ŷ is close to 1
+const delta = (z, Y) => (asY(Y) === 1 ? sigma(-z) : -sigma(z));
+// l(sqr) = (Y − Ŷ)², l(log) = −[Y log Ŷ + (1 − Y) log(1 − Ŷ)] (written as softplus to avoid log 0)
+function losses(z, Y) {
+  Y = asY(Y);
+  const d = delta(z, Y);
+  return { sq: d * d, log: Y === 1 ? softplus(-z) : softplus(z) };
+}
+// Signed gradients ∂l/∂z (= ∇w with x = 1): squared −2δŶ(1 − Ŷ), log −δ
+function grads(z, Y) {
+  Y = asY(Y);
+  const p = sigma(z), q = sigma(-z), d = Y === 1 ? q : -p;
+  return { sq: -2 * d * p * q, log: -d };
+}
+const reached = (z, Y) => (asY(Y) === 1 ? z >= 0 : z <= 0);   // Ŷ on the correct side of 0.5
+function gdStep(z, Y, eta, kind) { const g = grads(z, Y); return z - eta * (kind === 'sq' ? g.sq : g.log); }
+// Plain gradient descent on z for each loss; steps needed to reach the correct side (null if not within maxSteps).
+function race(z0, Y, eta, maxSteps = MAX_STEPS) {
+  Y = asY(Y);
+  const out = {};
+  for (const kind of ['sq', 'log']) {
+    let z = z0, n = 0;
+    while (!reached(z, Y) && n < maxSteps) { z = gdStep(z, Y, eta, kind); n++; }
+    out[kind + 'Steps'] = reached(z, Y) ? n : null;
+    out[kind + 'Z'] = z;
+  }
+  return out;
+}
+
+/* ================= State ================= */
+const S = { Y: 1, z: -4.5, eta: 0.5, race: null, focus: 'z', dragging: null };
+const KINDS = ['sq', 'log'];
+const NAME = { sq: 'squared', log: 'log' };
+const raceStart = Y => (Y === 1 ? -6 : 6);
+function newRace() {
+  const z0 = raceStart(S.Y);
+  const R = { z0, Y: S.Y, eta: S.eta, k: 0, zs: { sq: [z0], log: [z0] }, done: { sq: null, log: null },
+    running: false, finished: false, t: 0, acc: 0, lastT: null };
+  for (const k of KINDS) if (reached(z0, S.Y)) R.done[k] = 0;
+  return R;
+}
+const curZ = (R, kind) => R.zs[kind][R.zs[kind].length - 1];
+function raceStep(R) {
+  if (R.finished) return;
+  R.k++;
+  for (const kind of KINDS) {
+    if (R.done[kind] != null) continue;
+    const arr = R.zs[kind], z = gdStep(arr[arr.length - 1], R.Y, R.eta, kind);
+    arr.push(z);
+    if (reached(z, R.Y)) R.done[kind] = arr.length - 1;
+  }
+  if ((R.done.sq != null && R.done.log != null) || R.k >= MAX_STEPS) { R.finished = true; R.running = false; }
+}
+
+/* ================= Formatting ================= */
+const minus = s => String(s).replace(/-/g, '−');
+function f3(v) {                       // status line: short numbers
+  const a = Math.abs(v);
+  if (a === 0) return '0';
+  if (a >= 0.001) return minus(v.toFixed(3));
+  if (a >= 0.0001) return minus(v.toFixed(4));
+  return (v < 0 ? '−' : '') + '< 0.0001';
+}
+function f4(v) {                       // readouts
+  if (!Number.isFinite(v)) return '∞';
+  const a = Math.abs(v);
+  if (a === 0 || a >= 0.001) return minus(v.toFixed(4));
+  const [m, e] = v.toExponential(1).split('e');
+  return minus(m) + 'e' + minus(e.replace('+', ''));
+}
+const fRatio = r => (r < 9.95 ? r.toFixed(1) : String(Math.round(r)));
+const fEta = e => String(+e.toPrecision(2));          // prose: 0.5, 0.05, 1, 2
+const fEtaOut = e => e.toPrecision(2);                // slider output: 0.50, 0.050, 1.0, 2.0
+const fz = z => minus((Math.abs(z) < 0.005 ? 0 : z).toFixed(2));
+const goalTxt = Y => (Y === 1 ? 'Ŷ ≥ 0.5' : 'Ŷ ≤ 0.5');
+
+/* ================= Status line ================= */
+function zStatus() {
+  const z = S.z, Y = S.Y, p = sigma(z), g = grads(z, Y), d = Math.abs(delta(z, Y));
+  const gs = Math.abs(g.sq), gl = Math.abs(g.log), r = 1 / (2 * p * sigma(-z));
+  const both = `squared loss gradient ${f3(gs)}, log loss gradient ${f3(gl)}`;
+  const wrongConf = Y === 1 ? z < -CONF : z > CONF;
+  if (wrongConf) return ['bad', `Ŷ = ${f3(p)}: confidently wrong. Squared loss gradient ${f3(gs)}, log loss gradient ${f3(gl)} (≈ ${fRatio(r)}× larger).`];
+  if (!reached(z, Y) || p === 0.5) return ['osc', `Ŷ = ${f3(p)}: wrong side, but not confident. Squared loss gradient ${f3(gs)}, log loss gradient ${f3(gl)} (${fRatio(r)}× larger).`];
+  if (d >= 0.05) return ['done', `Ŷ = ${f3(p)}: right side. Both gradients shrink as Ŷ approaches Y = ${Y}: ${both}.`];
+  return ['done', `Ŷ = ${f3(p)}: confidently right. Both gradients are close to 0, so there is little left to learn.`];
+}
+function raceStatus(R) {
+  const n = { sq: R.zs.sq.length - 1, log: R.zs.log.length - 1 };
+  const yh = { sq: sigma(curZ(R, 'sq')), log: sigma(curZ(R, 'log')) };
+  const goal = goalTxt(R.Y), eta = fEta(R.eta), pre = !R.running && !R.finished ? 'Paused. ' : '';
+  const ds = R.done.sq, dl = R.done.log;
+  if (R.finished) {
+    if (ds != null && dl != null) {
+      if (ds === dl) return ['done', `Both losses reached ${goal} in ${dl} steps at η = ${eta}.`];
+      const fast = dl <= ds ? 'log' : 'sq', slow = fast === 'log' ? 'sq' : 'log';
+      return ['done', `With η = ${eta}, log loss reached ${goal} in ${dl} steps and squared loss needed ${ds}` +
+        (fast === 'log' ? ` (≈ ${fRatio(ds / Math.max(1, dl))}× as many).` : '.') + (slow === 'log' ? ' Log loss was slower here.' : '')];
+    }
+    if (dl != null) return ['bad', `Log loss reached ${goal} in ${dl} steps. Squared loss: not reached in ${MAX_STEPS} steps (Ŷ = ${f3(yh.sq)}).`];
+    if (ds != null) return ['bad', `Squared loss reached ${goal} in ${ds} steps. Log loss: not reached in ${MAX_STEPS} steps.`];
+    return ['bad', `Neither loss reached ${goal} in ${MAX_STEPS} steps at η = ${eta}.`];
+  }
+  if (dl != null && ds == null) return ['go', `${pre}Log loss reached ${goal} in ${dl} steps. Squared loss is still at Ŷ = ${f3(yh.sq)} after ${n.sq} steps.`];
+  if (ds != null && dl == null) return ['go', `${pre}Squared loss reached ${goal} in ${ds} steps. Log loss is at Ŷ = ${f3(yh.log)} after ${n.log} steps.`];
+  return ['go', `${pre}Step ${R.k} (η = ${eta}): log loss has moved Ŷ to ${f3(yh.log)}, squared loss only to ${f3(yh.sq)}.`];
+}
+function classify() {
+  const R = S.race;
+  if (S.focus === 'race' && R && R.k > 0) return raceStatus(R);
+  return zStatus();
+}
+const BADGE = { bad: '!', done: '✓', osc: '~', idle: '•', go: '•' };
+
+/* ================= Theme ================= */
+let C = {};
+function parseColor(str) {
+  str = (str || '').trim();
+  if (str[0] === '#') {
+    let h = str.slice(1);
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h.slice(0, 6), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const m = str.match(/[\d.]+/g);
+  return m ? m.slice(0, 3).map(Number) : [128, 128, 128];
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = n => cs.getPropertyValue(n);
+  C = {
+    bg: parseColor(g('--bg')), panel: parseColor(g('--panel')), fg: parseColor(g('--fg')), muted: parseColor(g('--muted')),
+    line: parseColor(g('--line')), pos: parseColor(g('--pos')), neg: parseColor(g('--neg')), unit1: parseColor(g('--unit1')),
+    unit2: parseColor(g('--unit2')),
+    fontUi: g('--font-ui').trim() || 'sans-serif', fontNum: g('--font-num').trim() || 'monospace', fontMath: g('--font-math').trim() || 'serif'
+  };
+  C.dark = (C.bg[0] + C.bg[1] + C.bg[2]) < 300;
+  C.kind = { sq: C.unit2, log: C.pos };
+}
+
+/* ================= Canvas helpers ================= */
+function makePlot(id, margins) {
+  const cv = document.getElementById(id);
+  return { cv, ctx: cv.getContext('2d'), m: margins, w: 1, h: 1, dpr: 1, pr: { x: 0, y: 0, w: 1, h: 1 } };
+}
+// Same left/right margins on every plot so the z axis lines up through all three cards.
+const plots = {
+  loss: makePlot('cvLoss', { l: 58, r: 22, t: 10, b: 24 }),
+  grad: makePlot('cvGrad', { l: 58, r: 22, t: 6, b: 24 }),
+  race: makePlot('cvRace', { l: 58, r: 22, t: 2, b: 22 })
+};
+function sizePlot(P) {
+  const r = P.cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  P.w = Math.max(1, r.width); P.h = Math.max(1, r.height); P.dpr = dpr;
+  const W = Math.max(1, Math.round(P.w * dpr)), H = Math.max(1, Math.round(P.h * dpr));
+  if (P.cv.width !== W) P.cv.width = W;
+  if (P.cv.height !== H) P.cv.height = H;
+  P.pr = { x: P.m.l, y: P.m.t, w: Math.max(10, P.w - P.m.l - P.m.r), h: Math.max(10, P.h - P.m.t - P.m.b) };
+}
+function font(px, kind = 'ui', style = '') { return `${style} ${px}px ${kind === 'num' ? C.fontNum : kind === 'math' ? C.fontMath : C.fontUi}`.trim(); }
+// Draw a label made of plain and maths (italic serif) pieces.
+function richText(ctx, parts, x, y, align = 'center', size = 12, stroke = false) {
+  let total = 0;
+  const f = p => (p.math ? font(size + 2, 'math', 'italic') : font(size, 'ui', p.w || ''));
+  const widths = parts.map(p => { ctx.font = f(p); const w = ctx.measureText(p.t).width; total += w; return w; });
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  ctx.textAlign = 'left';
+  parts.forEach((p, i) => { ctx.font = f(p); stroke ? ctx.strokeText(p.t, cx, y) : ctx.fillText(p.t, cx, y); cx += widths[i]; });
+  return total;
+}
+function haloText(ctx, parts, x, y, align) {
+  ctx.save();
+  ctx.strokeStyle = rgba(C.panel, 0.9); ctx.lineWidth = 4; ctx.lineJoin = 'round';
+  richText(ctx, parts, x, y, align, 12, true);
+  ctx.restore();
+  ctx.fillStyle = rgba(C.fg, 0.85);
+  richText(ctx, parts, x, y, align);
+}
+const xOf = (P, z) => P.pr.x + (z - ZR[0]) / (ZR[1] - ZR[0]) * P.pr.w;
+const wrongRange = Y => (Y === 1 ? [ZR[0], -CONF] : [CONF, ZR[1]]);
+
+function shape(ctx, kind, x, y, r) {
+  ctx.beginPath();
+  if (kind === 'sq') { const s = r * 0.9; ctx.rect(x - s, y - s, 2 * s, 2 * s); }
+  else ctx.arc(x, y, r, 0, 2 * Math.PI);
+}
+function marker(ctx, kind, x, y, r, ring = 1.75) {
+  shape(ctx, kind, x, y, r + ring); ctx.fillStyle = rgba(C.bg, 1); ctx.fill();
+  shape(ctx, kind, x, y, r); ctx.fillStyle = rgba(C.kind[kind], 1); ctx.fill();
+  ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 1; ctx.stroke();
+}
+// Off-scale value: an upward triangle on the top edge.
+function upTri(ctx, kind, x, y, s) {
+  const path = () => { ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s, y + s * 0.8); ctx.lineTo(x - s, y + s * 0.8); ctx.closePath(); };
+  path(); ctx.strokeStyle = rgba(C.bg, 1); ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.stroke();
+  path(); ctx.fillStyle = rgba(C.kind[kind], 1); ctx.fill(); ctx.strokeStyle = rgba(C.fg, 1); ctx.lineWidth = 1; ctx.stroke();
+}
+
+function drawRegion(P) {
+  const ctx = P.ctx, pr = P.pr, [a, b] = wrongRange(S.Y);
+  const x0 = xOf(P, a), x1 = xOf(P, b);
+  ctx.fillStyle = rgba(C.neg, C.dark ? 0.13 : 0.075);
+  ctx.fillRect(x0, pr.y, x1 - x0, pr.h);
+  const xb = Math.round(xOf(P, S.Y === 1 ? -CONF : CONF)) + 0.5;
+  ctx.setLineDash([3, 3]); ctx.strokeStyle = rgba(C.neg, C.dark ? 0.55 : 0.45); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(xb, pr.y); ctx.lineTo(xb, pr.y + pr.h); ctx.stroke(); ctx.setLineDash([]);
+}
+function regionLabel(P, y) {
+  const ctx = P.ctx, pr = P.pr;
+  ctx.font = font(12, 'ui', '600'); ctx.fillStyle = rgba(C.neg, 1); ctx.textBaseline = 'alphabetic';
+  if (S.Y === 1) { ctx.textAlign = 'left'; ctx.fillText('confidently wrong', pr.x + 7, y); }
+  else { ctx.textAlign = 'right'; ctx.fillText('confidently wrong', pr.x + pr.w - 7, y); }
+}
+function drawZAxis(P, grid) {
+  const ctx = P.ctx, pr = P.pr;
+  ctx.lineWidth = 1; ctx.font = font(12); ctx.textBaseline = 'middle'; ctx.fillStyle = rgba(C.muted, 1);
+  for (let z = ZR[0]; z <= ZR[1]; z += 2) {
+    const px = Math.round(xOf(P, z)) + 0.5;
+    ctx.strokeStyle = rgba(C.line, 1);
+    if (grid) { ctx.beginPath(); ctx.moveTo(px, pr.y); ctx.lineTo(px, pr.y + pr.h); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(px, pr.y + pr.h); ctx.lineTo(px, pr.y + pr.h + 4); ctx.stroke(); }
+    ctx.textAlign = 'center'; ctx.fillText(minus(z), px, pr.y + pr.h + 12);
+  }
+  ctx.textBaseline = 'middle';
+  ctx.font = font(15, 'math', 'italic'); ctx.textAlign = 'left'; ctx.fillStyle = rgba(C.muted, 1);
+  ctx.fillText('z', pr.x + pr.w + 9, pr.y + pr.h + 11);
+  ctx.textBaseline = 'alphabetic';
+}
+// Decision boundary z = 0 (Ŷ = 0.5)
+function drawBoundary(P, label) {
+  const ctx = P.ctx, pr = P.pr, px = Math.round(xOf(P, 0)) + 0.5;
+  ctx.setLineDash([4, 3]); ctx.strokeStyle = rgba(C.muted, 0.7); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px, pr.y); ctx.lineTo(px, pr.y + pr.h); ctx.stroke(); ctx.setLineDash([]);
+  if (label) {
+    ctx.fillStyle = rgba(C.muted, 1); ctx.textBaseline = 'alphabetic';
+    richText(ctx, [{ t: 'Ŷ', math: true }, { t: ' = 0.5' }], S.Y === 1 ? px + 5 : px - 5, pr.y + 12, S.Y === 1 ? 'left' : 'right');
+  }
+}
+
+/* ---------- curve plots (loss and gradient size) ---------- */
+const lossFn = kind => z => losses(z, S.Y)[kind];
+const gradFn = kind => z => Math.abs(grads(z, S.Y)[kind]);
+function strokeFn(P, f, yMax, col) {
+  const ctx = P.ctx, pr = P.pr, n = Math.max(40, Math.ceil(pr.w));
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const z = ZR[0] + i / n * (ZR[1] - ZR[0]);
+    const y = Math.max(pr.y - 40, pr.y + (1 - f(z) / yMax) * pr.h);
+    const x = pr.x + i / n * pr.w;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.strokeStyle = rgba(col, 1); ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+}
+function drawCurves(P, which) {
+  const ctx = P.ctx, pr = P.pr, isLoss = which === 'loss';
+  const yMax = isLoss ? LOSS_MAX : GRAD_MAX, fn = isLoss ? lossFn : gradFn;
+  const Yp = v => pr.y + (1 - v / yMax) * pr.h;
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.clearRect(0, 0, P.w, P.h);
+  drawRegion(P);
+  // y grid
+  ctx.lineWidth = 1; ctx.font = font(12); ctx.textBaseline = 'middle'; ctx.fillStyle = rgba(C.muted, 1);
+  const yt = isLoss ? [0, 1, 2, 3, 4, 5] : [0, 0.25, 0.5, 0.75, 1];
+  for (const v of yt) {
+    const py = Math.round(Yp(v)) + 0.5;
+    ctx.strokeStyle = rgba(C.line, 1);
+    ctx.beginPath(); ctx.moveTo(pr.x, py); ctx.lineTo(pr.x + pr.w, py); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(String(v), pr.x - 6, py);
+  }
+  drawZAxis(P, true);
+  // y title
+  ctx.fillStyle = rgba(C.muted, 1);
+  ctx.save(); ctx.translate(13, pr.y + pr.h / 2); ctx.rotate(-Math.PI / 2);
+  if (isLoss) richText(ctx, [{ t: 'loss ' }, { t: 'l', math: true }], 0, 2);
+  else richText(ctx, [{ t: '|∂' }, { t: 'l', math: true }, { t: '/∂' }, { t: 'z', math: true }, { t: '|' }], 0, 2);
+  ctx.restore();
+  drawBoundary(P, isLoss);
+  // region label: below the squared plateau in the loss plot, mid-height in the gradient plot
+  regionLabel(P, isLoss ? pr.y + pr.h - 7 : Yp(0.55));
+
+  // curves
+  ctx.save(); ctx.beginPath(); ctx.rect(pr.x, pr.y - 1, pr.w, pr.h + 3); ctx.clip();
+  strokeFn(P, fn('sq'), yMax, C.unit2);
+  strokeFn(P, fn('log'), yMax, C.pos);
+  ctx.restore();
+
+  const right = S.Y === 0;   // side of the plot the "confidently wrong" region is on
+  const sgn = right ? 1 : -1;
+  if (isLoss) {
+    // log loss leaves the top of the plot: mark where it continues. Outside the exit point when there is room,
+    // otherwise just inside it, where the curve has dropped below the label.
+    const zx = sgn * Math.log(Math.exp(LOSS_MAX) - 1), px = xOf(P, zx);
+    ctx.font = font(12, 'ui', '600'); ctx.fillStyle = rgba(C.pos, 1); ctx.textBaseline = 'alphabetic';
+    const txt = '↑ continues', tw = ctx.measureText(txt).width;
+    const room = right ? pr.x + pr.w - 4 - (px + 6) : px - 6 - (pr.x + 4);
+    if (room >= tw) {
+      ctx.textAlign = right ? 'left' : 'right';
+      ctx.fillText(txt, right ? px + 6 : px - 6, pr.y + 12);
+    } else {
+      const lv = LOSS_MAX * (1 - 17 / pr.h);                       // loss value 17px below the top
+      const zi = sgn * Math.log(Math.exp(lv) - 1), pi = xOf(P, zi);
+      ctx.textAlign = right ? 'right' : 'left';
+      ctx.fillText(txt, right ? pi - 5 : pi + 5, pr.y + 12);
+    }
+  } else {
+    // annotate why the two gradients differ inside the region (with a halo so the z marker cannot hide them)
+    ctx.textBaseline = 'alphabetic';
+    const ax = right ? pr.x + pr.w - 7 : pr.x + 7, al = right ? 'right' : 'left';
+    haloText(ctx, [{ t: '|' }, { t: 'δ', math: true }, { t: '| ≈ 1' }], ax, Yp(0.99) + 17, al);
+    haloText(ctx, [{ t: 'Ŷ', math: true }, { t: '(1 − ' }, { t: 'Ŷ', math: true }, { t: ') ≈ 0' }], ax, Yp(0) - 7, al);
+  }
+
+  // race dots (the current z of each runner)
+  const R = S.race;
+  if (R) {
+    for (const kind of KINDS) {
+      const z = curZ(R, kind), v = fn(kind)(z), px = xOf(P, z);
+      if (v <= yMax) marker(ctx, kind, px, Yp(v), 6.5, 2);
+      else upTri(ctx, kind, px, pr.y + 7, 6.5);
+    }
+  }
+
+  // z marker
+  const mx = xOf(P, S.z);
+  ctx.strokeStyle = rgba(C.fg, 0.65); ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(mx, pr.y); ctx.lineTo(mx, pr.y + pr.h); ctx.stroke();
+  if (isLoss) {
+    ctx.beginPath(); ctx.moveTo(mx - 6, pr.y - 8); ctx.lineTo(mx + 6, pr.y - 8); ctx.lineTo(mx, pr.y - 1); ctx.closePath();
+    ctx.fillStyle = rgba(C.fg, 0.85); ctx.fill();
+  }
+  for (const kind of KINDS) {
+    const v = fn(kind)(S.z);
+    if (v <= yMax) marker(ctx, kind, mx, Yp(v), 4.2, 1.5);
+    else upTri(ctx, kind, mx, pr.y + 9, 4.5);
+  }
+}
+
+/* ---------- race lanes ---------- */
+function drawRace() {
+  const P = plots.race, ctx = P.ctx, pr = P.pr;
+  ctx.setTransform(P.dpr, 0, 0, P.dpr, 0, 0);
+  ctx.clearRect(0, 0, P.w, P.h);
+  drawRegion(P);
+  drawZAxis(P, true);
+  const R = S.race, z0 = R ? R.z0 : raceStart(S.Y), Y = S.Y;
+  const laneH = pr.h / 2;
+  // start line at z0, finish line at z = 0
+  const sx = Math.round(xOf(P, z0)) + 0.5;
+  ctx.strokeStyle = rgba(C.muted, 0.75); ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(sx, pr.y + 3); ctx.lineTo(sx, pr.y + pr.h - 3); ctx.stroke();
+  const fx = Math.round(xOf(P, 0)) + 0.5;
+  ctx.setLineDash([4, 3]); ctx.strokeStyle = rgba(C.fg, 0.8); ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(fx, pr.y); ctx.lineTo(fx, pr.y + pr.h); ctx.stroke(); ctx.setLineDash([]);
+  KINDS.forEach((kind, i) => {
+    const cy = pr.y + (i + 0.5) * laneH, col = C.kind[kind];
+    // lane line and label
+    ctx.strokeStyle = rgba(C.muted, 0.45); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pr.x, Math.round(cy) + 0.5); ctx.lineTo(pr.x + pr.w, Math.round(cy) + 0.5); ctx.stroke();
+    ctx.font = font(12, 'ui', '600'); ctx.fillStyle = rgba(C.fg, 0.9); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(NAME[kind], pr.x - 8, cy);
+    // one tick per step
+    let z = z0;
+    if (R) {
+      const zs = R.zs[kind], tk = Math.min(9, laneH * 0.36);
+      ctx.strokeStyle = rgba(col, C.dark ? 0.75 : 0.85); ctx.lineWidth = 1.25;
+      ctx.beginPath();
+      for (let j = 1; j < zs.length; j++) { const px = Math.round(xOf(P, zs[j])) + 0.5; ctx.moveTo(px, cy - tk); ctx.lineTo(px, cy + tk); }
+      ctx.stroke();
+      z = zs[zs.length - 1];
+    }
+    marker(ctx, kind, xOf(P, z), cy, 6.5, 2);
+    // live counter / result at the far end of the lane
+    let txt = '', strong = false;
+    if (R && R.k > 0) {
+      const n = R.zs[kind].length - 1;
+      if (R.done[kind] != null) { txt = `✓ ${goalTxt(Y)} after ${R.done[kind]} step${R.done[kind] === 1 ? '' : 's'}`; strong = true; }
+      else if (R.finished) txt = `not reached in ${MAX_STEPS} steps`;
+      else txt = `step ${n}`;
+    } else if (i === 0) txt = `start z = ${minus(z0)}`;
+    if (txt) {
+      ctx.font = font(12, 'ui', strong ? '600' : '400'); ctx.fillStyle = rgba(strong ? C.fg : C.muted, 1); ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(txt).width;
+      const tx = Y === 1 ? pr.x + pr.w - 6 - tw : pr.x + 6;
+      ctx.fillStyle = rgba(C.panel, 0.85); ctx.fillRect(tx - 3, cy - 8, tw + 6, 16);
+      ctx.fillStyle = rgba(strong ? C.fg : C.muted, 1); ctx.textAlign = 'left'; ctx.fillText(txt, tx, cy);
+    }
+  });
+  ctx.textBaseline = 'alphabetic';
+}
+
+/* ================= Controls & readouts ================= */
+const $ = id => document.getElementById(id);
+const els = {
+  run: $('btnRun'), pause: $('btnPause'), step: $('btnStep'), reset: $('btnReset'),
+  eta: $('eta'), etaVal: $('etaVal'), z: $('zIn'), zVal: $('zVal'),
+  rYhat: $('rYhat'), rDelta: $('rDelta'), rLsq: $('rLsq'), rLlog: $('rLlog'), rGsq: $('rGsq'), rGlog: $('rGlog'), ratio: $('rRatio'),
+  kSq: $('kSq'), kLog: $('kLog'), ySq: $('ySq'), yLog: $('yLog'), dSq: $('dSq'), dLog: $('dLog'), goalK: $('goalK'),
+  status: $('status'), statusTxt: $('statusTxt'), badge: $('statusBadge'),
+  chips: Array.from(document.querySelectorAll('.chip'))
+};
+const ICON_PLAY = '<svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true"><path d="M1 0.8 L10 6 L1 11.2 Z"/></svg>';
+function updateButtons() {
+  const R = S.race;
+  els.run.innerHTML = `${ICON_PLAY}Run gradient descent from z = ${S.Y === 1 ? '−6' : '+6'}`;
+  els.pause.disabled = !R || R.finished || R.k === 0;
+  els.pause.textContent = R && !R.running && !R.finished && R.k > 0 ? 'Resume' : 'Pause';
+  els.pause.setAttribute('aria-pressed', R && !R.running && !R.finished && R.k > 0 ? 'true' : 'false');
+  els.reset.disabled = !R;
+}
+const LOG_MIN = Math.log10(ETA_MIN), LOG_MAX = Math.log10(ETA_MAX);
+const sliderToEta = v => +Math.pow(10, LOG_MIN + v / 1000 * (LOG_MAX - LOG_MIN)).toPrecision(2);
+const etaToSlider = e => Math.round((Math.log10(e) - LOG_MIN) / (LOG_MAX - LOG_MIN) * 1000);
+function setEta(e, fromSlider) {
+  S.eta = Math.max(ETA_MIN, Math.min(ETA_MAX, e));
+  if (!fromSlider) els.eta.value = etaToSlider(S.eta);
+  els.etaVal.textContent = fEtaOut(S.eta);
+  for (const c of els.chips) c.setAttribute('aria-pressed', Math.abs(+c.dataset.eta - S.eta) < 1e-9 ? 'true' : 'false');
+  // a race always uses one η: restart it (and keep it running if it was)
+  if (S.race) { const was = S.race.running; S.race = newRace(); if (was) startRace(S.race); }
+  updateButtons(); markDirty();
+}
+function setZ(z, fromSlider) {
+  z = Math.max(ZR[0], Math.min(ZR[1], Math.round(z * 100) / 100));
+  S.z = z; S.focus = 'z';
+  if (!fromSlider) els.z.value = z;
+  els.zVal.textContent = fz(z);
+  markDirty();
+}
+function setY(Y) {
+  if (Y === S.Y) return;
+  S.Y = Y;
+  $(Y === 1 ? 'target1' : 'target0').checked = true;
+  els.goalK.innerHTML = `steps to <span class="m">Ŷ</span> ${Y === 1 ? '≥' : '≤'} 0.5`;
+  S.race = null;
+  setZ(-S.z);   // mirror the marker so it stays on the same side of "right" or "wrong"
+  updateButtons();
+}
+function startRace(R) { R.running = true; R.lastT = null; R.acc = R.k === 0 ? 1 : R.acc; S.focus = 'race'; }
+
+let lastStatus = '';
+function updateReadouts() {
+  const z = S.z, Y = S.Y, p = sigma(z), d = delta(z, Y), L = losses(z, Y), G = grads(z, Y);
+  els.rYhat.textContent = f4(p);
+  els.rDelta.textContent = f4(d);
+  els.rLsq.textContent = f4(L.sq); els.rLlog.textContent = f4(L.log);
+  els.rGsq.textContent = f4(G.sq); els.rGlog.textContent = f4(G.log);
+  const html = Math.abs(d) >= 0.05
+    ? `Log-loss gradient is <b>×${fRatio(1 / (2 * p * sigma(-z)))}</b> larger`
+    : 'Both gradients are ≈ 0: <span class="m">Ŷ</span> is already close to <span class="m">Y</span>';
+  if (els.ratio.innerHTML !== html) els.ratio.innerHTML = html;
+  els.ratio.classList.toggle('off', Math.abs(d) < 0.05);
+  const R = S.race;
+  for (const kind of KINDS) {
+    const K = kind === 'sq' ? 'Sq' : 'Log';
+    const zc = R ? curZ(R, kind) : raceStart(S.Y);
+    els['k' + K].textContent = String(R ? R.zs[kind].length - 1 : 0);
+    els['y' + K].textContent = f4(sigma(zc));
+    els['d' + K].textContent = R && R.done[kind] != null ? String(R.done[kind]) : (R && R.finished ? `> ${MAX_STEPS}` : 'not yet');
+  }
+  const [kind, txt] = classify();
+  if (txt !== lastStatus) {
+    els.statusTxt.textContent = txt; els.status.dataset.kind = kind; els.badge.textContent = BADGE[kind] || '•';
+    lastStatus = txt;
+  }
+}
+
+/* ================= Loop ================= */
+let dirty = true;
+function markDirty() { dirty = true; }
+function tick(t) {
+  const R = S.race;
+  if (R && R.running) {
+    if (R.lastT == null) R.lastT = t;
+    const dt = Math.min(100, t - R.lastT); R.lastT = t;
+    R.t += dt / 1000;
+    const rate = Math.min(RATE_MAX, RATE0 * Math.pow(2, R.t / RATE_DOUBLE));
+    R.acc += rate * dt / 1000;
+    let n = Math.floor(R.acc); R.acc -= n;
+    if (n > 40) n = 40;
+    for (let i = 0; i < n && R.running; i++) raceStep(R);
+    if (n > 0) dirty = true;
+    if (!R.running) updateButtons();
+  }
+  if (dirty) { render(); dirty = false; }
+  requestAnimationFrame(tick);
+}
+function render() {
+  drawCurves(plots.loss, 'loss');
+  drawCurves(plots.grad, 'grad');
+  drawRace();
+  updateReadouts();
+}
+
+/* ================= Events ================= */
+els.run.addEventListener('click', () => { S.race = newRace(); startRace(S.race); updateButtons(); markDirty(); });
+els.pause.addEventListener('click', () => {
+  const R = S.race; if (!R || R.finished) return;
+  if (R.running) R.running = false; else startRace(R);
+  S.focus = 'race'; updateButtons(); markDirty();
+});
+els.step.addEventListener('click', () => {
+  if (!S.race || S.race.finished) S.race = newRace();
+  S.race.running = false; raceStep(S.race); S.focus = 'race';
+  updateButtons(); markDirty();
+});
+els.reset.addEventListener('click', () => { S.race = null; S.focus = 'z'; updateButtons(); markDirty(); });
+els.eta.addEventListener('input', () => setEta(sliderToEta(+els.eta.value), true));
+for (const c of els.chips) c.addEventListener('click', () => setEta(+c.dataset.eta));
+els.z.addEventListener('input', () => setZ(+els.z.value, true));
+document.querySelectorAll('input[name="target"]').forEach(r => r.addEventListener('change', () => { if (r.checked) setY(+r.value); }));
+
+// Drag the z marker on either curve plot
+function zFromEvent(P, ev) {
+  const r = P.cv.getBoundingClientRect();
+  return ZR[0] + (ev.clientX - r.left - P.pr.x) / P.pr.w * (ZR[1] - ZR[0]);
+}
+for (const P of [plots.loss, plots.grad]) {
+  P.cv.addEventListener('pointerdown', ev => {
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    S.dragging = P;
+    try { P.cv.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    setZ(zFromEvent(P, ev));
+  });
+  P.cv.addEventListener('pointermove', ev => { if (S.dragging === P) setZ(zFromEvent(P, ev)); });
+  const end = () => { if (S.dragging === P) S.dragging = null; };
+  P.cv.addEventListener('pointerup', end);
+  P.cv.addEventListener('pointercancel', end);
+}
+
+// Resize & theme
+const ro = new ResizeObserver(() => { for (const k in plots) sizePlot(plots[k]); markDirty(); });
+for (const k in plots) ro.observe(plots[k].cv.parentElement);
+function onTheme() { readTheme(); markDirty(); }
+if (window.matchMedia) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', onTheme); else if (mq.addListener) mq.addListener(onTheme);
+}
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ================= Init ================= */
+readTheme();
+setEta(0.5);
+setZ(-4.5);
+updateButtons();
+for (const k in plots) sizePlot(plots[k]);
+requestAnimationFrame(tick);
+
+/* ================= Test hooks ================= */
+window.__demo = {
+  sigma: z => sigma(z),
+  grads: (z, Y) => grads(z, Y),
+  losses: (z, Y) => losses(z, Y),
+  race: (z0, Y, eta, maxSteps = MAX_STEPS) => race(z0, Y, eta, maxSteps),
+  setZ: z => setZ(z), setY: Y => setY(asY(Y)), setEta: e => setEta(e),
+  state: () => {
+    const R = S.race;
+    return { Y: S.Y, z: S.z, eta: S.eta, status: els.statusTxt.textContent,
+      race: R ? { k: R.k, running: R.running, finished: R.finished, sqSteps: R.done.sq, logSteps: R.done.log,
+        sqZ: curZ(R, 'sq'), logZ: curZ(R, 'log'), eta: R.eta, z0: R.z0 } : null };
+  }
+};
+})();
+</script>
+<script>
+  // Inside a slide deck: send presenter-remote keys (PageDown/PageUp) and arrow keys to the deck,
+  // except while a slider, menu or text box has focus (arrows adjust those).
+  (function () {
+    if (window.parent === window) return;
+    window.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var t = e.target, tag = t && t.tagName ? t.tagName.toUpperCase() : '';
+      var inControl = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable);
+      var dir = null;
+      if (e.key === 'PageDown') dir = 'next';
+      else if (e.key === 'PageUp') dir = 'prev';
+      else if (!inControl && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) dir = 'next';
+      else if (!inControl && (e.key === 'ArrowLeft' || e.key === 'ArrowUp')) dir = 'prev';
+      if (!dir) return;
+      e.preventDefault();
+      try { window.parent.postMessage({ type: 'deck-nav', dir: dir }, '*'); } catch (err) { /* ignore */ }
+    }, true);
+  })();
+</script>
+</body>
+</html>
